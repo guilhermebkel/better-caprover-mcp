@@ -1,8 +1,8 @@
-import appDefinitions from "@/Adapters/CapRover/fixtures/appDefinitions.json" with { type: "json" };
-import emptyOk from "@/Adapters/CapRover/fixtures/emptyOk.json" with { type: "json" };
-import login from "@/Adapters/CapRover/fixtures/login.json" with { type: "json" };
-import systemInfo from "@/Adapters/CapRover/fixtures/systemInfo.json" with { type: "json" };
-import versionInfo from "@/Adapters/CapRover/fixtures/versionInfo.json" with { type: "json" };
+import appDefinitions from "@/Testing/fixtures/appDefinitions.json" with { type: "json" };
+import emptyOk from "@/Testing/fixtures/emptyOk.json" with { type: "json" };
+import login from "@/Testing/fixtures/login.json" with { type: "json" };
+import systemInfo from "@/Testing/fixtures/systemInfo.json" with { type: "json" };
+import versionInfo from "@/Testing/fixtures/versionInfo.json" with { type: "json" };
 
 const API = "/api/v2";
 

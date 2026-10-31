@@ -15,6 +15,7 @@ const PROTOCOL_FILE = "src/Protocols/ChatProtocol.ts";
 const SERVICE_FILE = "src/Services/ChatService.ts";
 const TIME_UTIL_FILE = "src/Utils/TimeUtil.ts";
 const UNTYPED_MAP_CODE = "const KIND_TO_SIZE = { a: 1, b: 2 };";
+const ONE_CONSTANT = "export const ONE = 1;";
 const LIST_APPS_FILE = "src/Operations/ListAppsOperation.ts";
 
 const ruleTester = new RuleTester({ languageOptions: { ecmaVersion: 2024, sourceType: "module" } });
@@ -707,5 +708,25 @@ tsRuleTester.run("arrow-function", localRules.rules["arrow-function"], {
       output: "if (ready) { const show = () => { return 1; }; }",
       errors: [{ messageId: "declaration" }],
     },
+  ],
+});
+
+ruleTester.run("file-suffix", localRules.rules["file-suffix"], {
+  valid: [
+    { name: "a service with the Service suffix", code: ONE_CONSTANT, filename: SERVICE_FILE },
+    { name: "an entry point with the Runner suffix", code: ONE_CONSTANT, filename: "src/Setup/CliRunner.ts" },
+    { name: "a test whose name before .test carries the suffix", code: ONE_CONSTANT, filename: "src/Setup/CliRunner.test.ts" },
+    { name: "a file in a subfolder takes the suffix of the top folder", code: ONE_CONSTANT, filename: "src/Adapters/CapRover/CaproverClientAdapter.ts" },
+    { name: "index.ts is exempt", code: ONE_CONSTANT, filename: "src/Services/index.ts" },
+    { name: "src/main.ts is exempt", code: ONE_CONSTANT, filename: "src/main.ts" },
+    { name: "a declaration file is exempt", code: ONE_CONSTANT, filename: "src/types/BuildGlobals.d.ts" },
+    { name: "a folder that is not in the map is exempt", code: ONE_CONSTANT, filename: "src/Testing/MockCaproverServer.ts" },
+    { name: "a file outside src is not checked", code: ONE_CONSTANT, filename: "scripts/Anything.ts" },
+  ],
+  invalid: [
+    { name: "a service without the suffix", code: ONE_CONSTANT, filename: "src/Services/Policy.ts", errors: [{ messageId: "suffix", data: { file: "Policy.ts", folder: "Services", suffix: "Service" } }] },
+    { name: "a runner named like a builder", code: ONE_CONSTANT, filename: "src/Setup/ServerBuilder.ts", errors: [{ messageId: "suffix" }] },
+    { name: "a test whose name before .test lacks the suffix", code: ONE_CONSTANT, filename: "src/Setup/Cli.test.ts", errors: [{ messageId: "suffix" }] },
+    { name: "a file in a subfolder without the suffix of the top folder", code: ONE_CONSTANT, filename: "src/Adapters/CapRover/Client.ts", errors: [{ messageId: "suffix" }] },
   ],
 });

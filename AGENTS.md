@@ -2,7 +2,7 @@
 
 An unofficial MCP server for CapRover. It lets an agent (Claude, Cursor, Codex) operate a CapRover server, with setup in one command (`npx` or Docker) and safety by default: it starts read-only. Vocabulary is in `GLOSSARY.md`; decisions are in `docs/adr/`; planned work is in GitHub issues.
 
-Today the server exposes 14 operations on the `tools` surface (`src/Operations/OperationManifest.ts`). The `code` surface and the rest of the CapRover API are planned work; the docs below describe the rules they follow.
+Today the server exposes 14 operations on the `tools` surface (`src/Surfaces/OperationManifestSurface.ts`). The `code` surface and the rest of the CapRover API are planned work; the docs below describe the rules they follow.
 
 ## Layout
 
@@ -15,8 +15,10 @@ Folders are created when the first file needs them.
 - `src/Services/`: business rules (modes, policy, confirmation), dependencies through the constructor.
 - `src/Adapters/<Vendor>/`: one external service each (`CapRover/`, `Sandbox/`).
 - `src/Operations/`: one class per CapRover operation, names in English; each implements `OperationPort`.
-- `src/Surfaces/`: the `tools` and `code` surfaces that expose the operations over MCP.
-- `src/Server/`: the server builder and the transports; `src/main.ts` is the entry point.
+- `src/Surfaces/`: the `tools` and `code` surfaces that expose the operations over MCP, the operation manifest and the builders of the MCP server.
+- `src/Setup/`: the entry points that start the program (command line, stdio, HTTP, `init`); `src/main.ts` calls them. They never import an adapter.
+- `src/Testing/`: test doubles and fixtures; only tests import it.
+- `src/types/`: ambient declarations (`*.d.ts`).
 - `scripts/`: the harness (lint, checks, package smoke test, SDK drift check) and the integration tests.
 - `site/`: the GitHub Pages landing page, served at `better-caprover-mcp.guilherr.me`. `.github/workflows/pages.yml` publishes it on every push to `main` that touches it. Not part of the npm package.
 - `design/`: the brand kit (logo, web icons, deck, guidelines); see `design/README.md`. Not part of the npm package.
@@ -30,7 +32,7 @@ Folders are created when the first file needs them.
     pnpm test:integration # tests that need a real CapRover (CI starts one); run pnpm build first
     pnpm check:pack    # the package holds only what it should and is under the size limit (needs pnpm build)
     pnpm check:licenses # every package the bundle reads has an allowed license
-    pnpm sdk:drift     # fails when a CapRover SDK method is not classified in src/Adapters/CapRover/sdk-coverage.json
+    pnpm sdk:drift     # fails when a CapRover SDK method is not classified in scripts/sdk-coverage.json
     pnpm test:changed  # tests related to files changed against origin/main
     pnpm typecheck
     pnpm lint          # Oxlint and a minimal ESLint, in parallel

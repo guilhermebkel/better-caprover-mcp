@@ -235,7 +235,7 @@ const classMatchesFile = {
 
 const DESCRIBE_TARGET = /^([A-Z]\w*)\.(\w+)\(\)$/;
 const HIDDEN_ACCESSIBILITY = new Set(["private", "protected"]);
-const TEST_SUFFIX = /\.test$/;
+const TEST_FILE_SUFFIX = /\.test$/;
 const SOURCE_EXTENSION = ".ts";
 
 const isPublicMember = (member) => {
@@ -266,7 +266,7 @@ const describeTarget = {
     },
   },
   create(context) {
-    const className = getFileStem(context.filename).replace(TEST_SUFFIX, "");
+    const className = getFileStem(context.filename).replace(TEST_FILE_SUFFIX, "");
     const testFolder = dirname(resolve(context.filename));
     const sourcePath = join(testFolder, `${className}${SOURCE_EXTENSION}`);
     let publicMethods;
@@ -493,6 +493,51 @@ const errorLocation = {
         const messageId = ERROR_BASE.test(node.superClass.name) ? findErrorProblem(isInErrorsFolder, name) : null;
         if (messageId) {
           context.report({ node: node.id ?? node, data: { name }, messageId });
+        }
+      },
+    };
+  },
+};
+
+const FOLDER_TO_SUFFIX = {
+  Errors: "Error",
+  Protocols: "Protocol",
+  Schemas: "Schema",
+  Utils: "Util",
+  Services: "Service",
+  Adapters: "Adapter",
+  Operations: "Operation",
+  Surfaces: "Surface",
+  Setup: "Runner",
+};
+const SRC_FILE = /(^|\/)src\/([^/]+)\/(?:[^/]+\/)*([^/]+)\.ts$/;
+const FILE_SUFFIX_EXEMPT = /(^index|\.d)$/;
+
+const findExpectedSuffix = (filename) => {
+  const match = SRC_FILE.exec(filename.replaceAll("\\", "/"));
+  const [, , folder, fileName] = match ?? [];
+  const suffix = folder !== undefined && Object.hasOwn(FOLDER_TO_SUFFIX, folder) ? FOLDER_TO_SUFFIX[folder] : undefined;
+  const baseName = fileName?.replace(TEST_FILE_SUFFIX, "") ?? "";
+  const isExempt = FILE_SUFFIX_EXEMPT.test(baseName);
+  return suffix !== undefined && !isExempt && !baseName.endsWith(suffix) ? suffix : undefined;
+};
+
+const fileSuffix = {
+  meta: {
+    type: "suggestion",
+    messages: {
+      suffix: "The file \"{{file}}\" sits in src/{{folder}}/, so its name must end with \"{{suffix}}\" (before .ts and .test.ts).",
+    },
+  },
+  create(context) {
+    const filename = context.filename.replaceAll("\\", "/");
+    const expected = findExpectedSuffix(filename);
+    return {
+      "Program"(node) {
+        if (expected !== undefined) {
+          const [, , folder] = SRC_FILE.exec(filename) ?? [];
+          const file = filename.split("/").pop();
+          context.report({ node, messageId: "suffix", data: { file, folder, suffix: expected } });
         }
       },
     };
@@ -1006,6 +1051,7 @@ export const localRules = {
     "comment-marker": commentMarker,
     "literal-dispatch": literalDispatch,
     "class-matches-file": classMatchesFile,
+    "file-suffix": fileSuffix,
     "describe-target": describeTarget,
     "comment-placement": commentPlacement,
     "map-name": mapName,

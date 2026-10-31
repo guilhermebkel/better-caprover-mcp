@@ -1,4 +1,4 @@
-import { CliRunner } from "@/Server/CliRunner.ts";
+import { CliRunner } from "@/Setup/CliRunner.ts";
 import { LogUtil } from "@/Utils/LogUtil.ts";
 
 const FIRST_ARGUMENT_INDEX = 2;

@@ -1,8 +1,8 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { MockCaproverRouteBuilder } from "@/Adapters/CapRover/MockCaproverRouteBuilder.ts";
-import { MockCaproverServer } from "@/Adapters/CapRover/MockCaproverServer.ts";
-import { HealthRunner } from "@/Server/HealthRunner.ts";
-import { HttpRunner } from "@/Server/HttpRunner.ts";
+import { MockCaproverRouteBuilder } from "@/Testing/MockCaproverRouteBuilder.ts";
+import { MockCaproverServer } from "@/Testing/MockCaproverServer.ts";
+import { HealthRunner } from "@/Setup/HealthRunner.ts";
+import { HttpRunner } from "@/Setup/HttpRunner.ts";
 import { EnvUtil } from "@/Utils/EnvUtil.ts";
 import { FreePortUtil } from "@/Utils/FreePortUtil.ts";
 import { HttpModeMarkerUtil } from "@/Utils/HttpModeMarkerUtil.ts";

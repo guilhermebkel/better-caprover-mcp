@@ -14,8 +14,8 @@ import type { Env } from "@/Protocols/EnvProtocol.ts";
 import { HttpAuthService } from "@/Services/HttpAuthService.ts";
 import { HttpRateLimitService } from "@/Services/HttpRateLimitService.ts";
 import { HttpModeMarkerUtil } from "@/Utils/HttpModeMarkerUtil.ts";
-import { HttpSessionRunner } from "@/Server/HttpSessionRunner.ts";
-import { SharedMcpRuntimeBuilder } from "@/Server/SharedMcpRuntimeBuilder.ts";
+import { HttpSessionRunner } from "@/Setup/HttpSessionRunner.ts";
+import { SharedMcpRuntimeSurface } from "@/Surfaces/SharedMcpRuntimeSurface.ts";
 import { EnvUtil } from "@/Utils/EnvUtil.ts";
 import { HttpBodyUtil } from "@/Utils/HttpBodyUtil.ts";
 import { LogUtil } from "@/Utils/LogUtil.ts";
@@ -50,7 +50,7 @@ export class HttpRunner {
   static async start(env: Env = EnvUtil.read(), options: HttpRunnerStartOptions = {}): Promise<HttpServerHandle> {
     HttpRunner.assertBindAllowed(env);
     const getNowMs = (): number => Date.now();
-    const runtime = SharedMcpRuntimeBuilder.buildFromEnv(
+    const runtime = SharedMcpRuntimeSurface.buildFromEnv(
       env,
       getNowMs,
       undefined,

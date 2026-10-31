@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { FakeCaproverClientAdapter } from "@/Adapters/CapRover/FakeCaproverClientAdapter.ts";
-import { OperationManifest } from "@/Operations/OperationManifest.ts";
+import { FakeCaproverClientAdapter } from "@/Testing/FakeCaproverClientAdapter.ts";
+import { OperationManifestSurface } from "@/Surfaces/OperationManifestSurface.ts";
 import type { ToolDefinition } from "@/Protocols/OperationProtocol.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
 import type { CaproverClientFactory } from "@/Protocols/SharedMcpRuntimeProtocol.ts";
@@ -43,10 +43,10 @@ const buildTools = (): ToolDefinition[] => {
     limiter: new ConcurrencyLimiterService(5),
     getNowMs: () => 0,
   });
-  return OperationManifest.build(client, policy, runner);
+  return OperationManifestSurface.build(client, policy, runner);
 };
 
-describe("OperationManifest.build()", () => {
+describe("OperationManifestSurface.build()", () => {
   it("lists every operation once, with its tier", () => {
     const tools = buildTools().map((tool) => `${tool.name}:${tool.risk}`);
 

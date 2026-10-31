@@ -1,17 +1,17 @@
 import type { CaproverClientFactory, SharedRuntimeParts } from "@/Protocols/SharedMcpRuntimeProtocol.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
 import { CaproverClientAdapter } from "@/Adapters/CapRover/CaproverClientAdapter.ts";
-import { McpInstructionsBuilder } from "@/Server/McpInstructionsBuilder.ts";
+import { McpInstructionsSurface } from "@/Surfaces/McpInstructionsSurface.ts";
 import { McpServerMetadataUtil } from "@/Utils/McpServerMetadataUtil.ts";
 import { ConcurrencyLimiterService } from "@/Services/ConcurrencyLimiterService.ts";
 import { ConfirmationService } from "@/Services/ConfirmationService.ts";
 import { OperationRunnerService } from "@/Services/OperationRunnerService.ts";
 import { PolicyService } from "@/Services/PolicyService.ts";
-import { OperationManifest } from "@/Operations/OperationManifest.ts";
+import { OperationManifestSurface } from "@/Surfaces/OperationManifestSurface.ts";
 import { ToolsSurface } from "@/Surfaces/ToolsSurface.ts";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-export class SharedMcpRuntimeBuilder {
+export class SharedMcpRuntimeSurface {
   private readonly parts: SharedRuntimeParts;
 
   private constructor(parts: SharedRuntimeParts) {
@@ -23,10 +23,10 @@ export class SharedMcpRuntimeBuilder {
     getNowMs: () => number,
     createClient?: CaproverClientFactory,
     concurrencyQueueWaitMs?: number,
-  ): SharedMcpRuntimeBuilder {
+  ): SharedMcpRuntimeSurface {
     const client = createClient?.(env) ?? CaproverClientAdapter.buildFromEnv(env);
     const policy = new PolicyService(env.CAPROVER_MCP_MODE, env.CAPROVER_MCP_ALLOW_CRITICAL);
-    const secrets = SharedMcpRuntimeBuilder.collectSecrets(env);
+    const secrets = SharedMcpRuntimeSurface.collectSecrets(env);
     const limiter = new ConcurrencyLimiterService(
       env.CAPROVER_MCP_MAX_CONCURRENT,
       concurrencyQueueWaitMs,
@@ -39,7 +39,7 @@ export class SharedMcpRuntimeBuilder {
       client,
       getNowMs,
     };
-    return new SharedMcpRuntimeBuilder(parts);
+    return new SharedMcpRuntimeSurface(parts);
   }
 
   private static collectSecrets(env: Env): string[] {
@@ -65,11 +65,11 @@ export class SharedMcpRuntimeBuilder {
 
   buildMcpServer(): McpServer {
     const runner = this.buildRunner();
-    const tools = OperationManifest.build(this.parts.client, this.parts.policy, runner)
+    const tools = OperationManifestSurface.build(this.parts.client, this.parts.policy, runner)
       .filter((tool) => this.parts.policy.canRun(tool.risk));
     const server = new McpServer(
       { name: McpServerMetadataUtil.SERVER_NAME, version: __PACKAGE_VERSION__ },
-      { instructions: McpInstructionsBuilder.build(this.parts.policy) },
+      { instructions: McpInstructionsSurface.build(this.parts.policy) },
     );
     ToolsSurface.register(server, tools);
     return server;

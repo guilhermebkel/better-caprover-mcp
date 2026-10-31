@@ -2,7 +2,7 @@ import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 
 const SDK_TYPES_PATH = "node_modules/caprover-api/dist/api/ApiManager.d.ts";
-const COVERAGE_PATH = "src/Adapters/CapRover/sdk-coverage.json";
+const COVERAGE_PATH = "scripts/sdk-coverage.json";
 const API_MANAGER_DECLARATION = "export default class ApiManager";
 const METHOD_LINE = /^ {4}(\w+)\(/gm;
 const VALID_STATUSES = new Set(["operation", "planned", "excluded", "internal"]);

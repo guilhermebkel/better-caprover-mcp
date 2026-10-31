@@ -1,13 +1,13 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { FakeCaproverClientAdapter } from "@/Adapters/CapRover/FakeCaproverClientAdapter.ts";
+import { FakeCaproverClientAdapter } from "@/Testing/FakeCaproverClientAdapter.ts";
 import type { FakeCaproverOptions } from "@/Protocols/FakeCaproverClientProtocol.ts";
 import type { AccessMode } from "@/Protocols/AccessProtocol.ts";
 import type { CaproverApp } from "@/Protocols/CaproverClientProtocol.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
 import type { CaproverClientFactory } from "@/Protocols/SharedMcpRuntimeProtocol.ts";
-import { ServerBuilder } from "@/Server/ServerBuilder.ts";
+import { ServerSurface } from "@/Surfaces/ServerSurface.ts";
 
 const FAKE_PASSWORD = "fake-password-9876";
 const FAKE_ENV_VALUE = "fake-env-value-123";
@@ -48,7 +48,7 @@ const connect = async (options: SetupOptions = {}): Promise<Setup> => {
   const fake = new FakeCaproverClientAdapter(apps, fakeOptions);
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: "test-client", version: "0.0.0" });
-  await ServerBuilder.build(buildEnv(mode), getNowMs, buildTestClient(fake)).connect(serverTransport);
+  await ServerSurface.build(buildEnv(mode), getNowMs, buildTestClient(fake)).connect(serverTransport);
   await client.connect(clientTransport);
   return { client, fake };
 };
@@ -100,7 +100,7 @@ const READ_TOOLS = [
 
 const WRITE_TOOLS = ["create_app", "deploy_image", "set_env_vars", "scale_app", "add_custom_domain", "enable_ssl"];
 
-describe("ServerBuilder.build()", () => {
+describe("ServerSurface.build()", () => {
   describe("what a client sees", () => {
     it("introduces itself as the unofficial CapRover server", async () => {
       const { client } = await connect();

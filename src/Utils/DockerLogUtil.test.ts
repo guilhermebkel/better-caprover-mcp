@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import recordedLogsHex from "@/Adapters/CapRover/fixtures/recordedLogsHex.json" with { type: "json" };
+import recordedLogsHex from "@/Testing/fixtures/recordedLogsHex.json" with { type: "json" };
 import { DockerLogUtil } from "@/Utils/DockerLogUtil.ts";
 
 const buildFrame = (streamType: number, text: string): string => {

@@ -1,6 +1,6 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { FakeCaproverClientAdapter } from "@/Adapters/CapRover/FakeCaproverClientAdapter.ts";
-import { OperationManifest } from "@/Operations/OperationManifest.ts";
+import { FakeCaproverClientAdapter } from "@/Testing/FakeCaproverClientAdapter.ts";
+import { OperationManifestSurface } from "@/Surfaces/OperationManifestSurface.ts";
 import type { AccessMode } from "@/Protocols/AccessProtocol.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
 import type { ToolDefinition } from "@/Protocols/OperationProtocol.ts";
@@ -46,7 +46,7 @@ const buildTool = (mode: AccessMode, name: string, fake: FakeCaproverClientAdapt
     limiter: new ConcurrencyLimiterService(5),
     getNowMs: () => 0,
   });
-  const tools = OperationManifest.build(client, policy, runner);
+  const tools = OperationManifestSurface.build(client, policy, runner);
   const tool = tools.find((candidate) => candidate.name === name);
   if (tool === undefined) {
     throw new Error(`No tool ${name}`);

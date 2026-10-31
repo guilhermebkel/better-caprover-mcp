@@ -1,12 +1,12 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import appDefinitions from "@/Adapters/CapRover/fixtures/appDefinitions.json" with { type: "json" };
-import login from "@/Adapters/CapRover/fixtures/login.json" with { type: "json" };
-import systemInfo from "@/Adapters/CapRover/fixtures/systemInfo.json" with { type: "json" };
-import tokenInvalid from "@/Adapters/CapRover/fixtures/tokenInvalid.json" with { type: "json" };
-import versionInfo from "@/Adapters/CapRover/fixtures/versionInfo.json" with { type: "json" };
-import wrongPassword from "@/Adapters/CapRover/fixtures/wrongPassword.json" with { type: "json" };
-import { MockCaproverServer } from "@/Adapters/CapRover/MockCaproverServer.ts";
-import { InitRunner } from "@/Server/InitRunner.ts";
+import appDefinitions from "@/Testing/fixtures/appDefinitions.json" with { type: "json" };
+import login from "@/Testing/fixtures/login.json" with { type: "json" };
+import systemInfo from "@/Testing/fixtures/systemInfo.json" with { type: "json" };
+import tokenInvalid from "@/Testing/fixtures/tokenInvalid.json" with { type: "json" };
+import versionInfo from "@/Testing/fixtures/versionInfo.json" with { type: "json" };
+import wrongPassword from "@/Testing/fixtures/wrongPassword.json" with { type: "json" };
+import { MockCaproverServer } from "@/Testing/MockCaproverServer.ts";
+import { InitRunner } from "@/Setup/InitRunner.ts";
 
 const FAKE_PASSWORD = "fake-password-9876";
 

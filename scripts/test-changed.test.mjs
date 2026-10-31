@@ -6,10 +6,10 @@ const SUCCESS = { status: 0 };
 
 describe("filterSourcePaths()", () => {
   it("keeps TypeScript and mjs files and drops everything else", () => {
-    expect(filterSourcePaths([TIME_UTIL, "README.md", "scripts/lint.mjs", "src/Server/ServerBuilder.ts"])).toStrictEqual([
+    expect(filterSourcePaths([TIME_UTIL, "README.md", "scripts/lint.mjs", "src/Surfaces/ServerSurface.ts"])).toStrictEqual([
       TIME_UTIL,
       "scripts/lint.mjs",
-      "src/Server/ServerBuilder.ts",
+      "src/Surfaces/ServerSurface.ts",
     ]);
   });
 });

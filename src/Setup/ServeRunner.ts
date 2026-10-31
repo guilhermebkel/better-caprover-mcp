@@ -1,5 +1,5 @@
 import { UnknownCommandError } from "@/Errors/UnknownCommandError.ts";
-import { HttpRunner } from "@/Server/HttpRunner.ts";
+import { HttpRunner } from "@/Setup/HttpRunner.ts";
 
 export class ServeRunner {
   static async run(args: readonly string[]): Promise<void> {
