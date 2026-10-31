@@ -1,0 +1,81 @@
+name: Bug
+description: Something does not work as the product or the docs say.
+title: "[bug] "
+labels: ["bug", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        **Never paste a password, a token, the value of an environment variable or the content of an app.** Describe the shape ("a log read that returns an empty list") or use invented data.
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened
+      description: What was done and what was seen: the operation or tool called and its reply.
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What was expected
+      description: Cite the ADR, the standard or the glossary term when there is one.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      description: Steps with test or invented data. Say if it was not reproduced yet.
+  - type: dropdown
+    id: run-mode
+    attributes:
+      label: How the server runs
+      description: The way the client starts it.
+      options:
+        - npx
+        - Docker (docker run -i)
+        - Local build
+        - Not known
+    validations:
+      required: true
+  - type: input
+    id: caprover-version
+    attributes:
+      label: CapRover version
+      description: The version of the CapRover server it talks to, when known.
+  - type: input
+    id: access-mode
+    attributes:
+      label: Access mode
+      description: readonly, operate or admin.
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence
+      description: The stderr lines of the server, the commit or version and the shapes of the replies. No secrets and no app content.
+  - type: textarea
+    id: suspected-cause
+    attributes:
+      label: Suspected cause and where to look
+      description: Files and hypotheses, marked as hypotheses.
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: The failing case becomes a test; say which one.
+    validations:
+      required: true
+  - type: input
+    id: blocked-by
+    attributes:
+      label: Blocked by
+      placeholder: none
+    validations:
+      required: true
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: This issue has no real user data, message content or secrets.
+          required: true

@@ -1,0 +1,71 @@
+{
+  "name": "better-caprover-mcp",
+  "version": "0.0.0",
+  "description": "MCP server for CapRover: run it with npx or Docker. Unofficial, not affiliated with CapRover.",
+  "license": "MIT",
+  "author": "Guilherme Mota",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/guilhermebkel/better-caprover-mcp.git"
+  },
+  "homepage": "https://github.com/guilhermebkel/better-caprover-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/guilhermebkel/better-caprover-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "caprover",
+    "paas",
+    "docker"
+  ],
+  "type": "module",
+  "bin": {
+    "better-caprover-mcp": "dist/main.js"
+  },
+  "files": [
+    "dist",
+    "LICENSE",
+    "README.md"
+  ],
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@10.28.0",
+  "scripts": {
+    "build": "tsup",
+    "typecheck": "tsc --noEmit",
+    "lint": "node scripts/lint.mjs",
+    "lint:fix": "node scripts/lint.mjs --fix",
+    "lint:oxlint": "oxlint --type-aware",
+    "lint:eslint": "eslint --cache --cache-strategy content",
+    "quality": "knip && jscpd && dpdm --no-warning --no-tree --exit-code circular:1 --transform src/**/*.ts",
+    "test": "vitest run",
+    "test:changed": "node scripts/test-changed.mjs",
+    "smoke": "node scripts/package-smoke.mjs",
+    "ensure-deps": "node scripts/ensure-deps.mjs",
+    "lint-staged": "lint-staged",
+    "check:changed": "node scripts/check-changed.mjs",
+    "check": "pnpm ensure-deps && pnpm typecheck && pnpm lint && pnpm quality && pnpm test && pnpm build && pnpm smoke"
+  },
+  "devDependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "@stylistic/eslint-plugin": "^5.10.0",
+    "@types/node": "^26.6.5",
+    "@vitest/eslint-plugin": "^1.6.28",
+    "dpdm": "^4.3.0",
+    "eslint": "^10.13.0",
+    "eslint-plugin-sonarjs": "^4.2.2",
+    "globals": "^17.13.0",
+    "jscpd": "^5.4.2",
+    "knip": "^6.43.0",
+    "lint-staged": "^17.6.0",
+    "oxlint": "^1.90.0",
+    "oxlint-tsgolint": "^7.0.2005",
+    "tsup": "^9.0.0",
+    "typescript": "^6.0.3",
+    "typescript-eslint": "^8.72.0",
+    "vitest": "^5.0.5",
+    "zod": "^4.6.7"
+  }
+}

@@ -1,0 +1,10 @@
+node_modules/
+coverage/
+dist/
+.env*
+!.env.example
+*.tsbuildinfo
+.eslintcache
+.vitest/
+lint-fixtures-*/
+*.tgz
