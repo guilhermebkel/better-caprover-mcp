@@ -18,7 +18,7 @@ import { AppResolverService } from "@/Services/AppResolverService.ts";
 import type { OperationRunnerService } from "@/Services/OperationRunnerService.ts";
 import type { PolicyServicePort } from "@/Protocols/AccessProtocol.ts";
 
-export class OperationManifest {
+export class OperationManifestSurface {
   static build(
     client: CaproverClientPort,
     policy: PolicyServicePort,

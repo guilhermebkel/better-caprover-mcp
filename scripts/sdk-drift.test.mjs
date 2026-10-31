@@ -40,13 +40,13 @@ describe("findDrift()", () => {
 
   it("names a method of the SDK that nobody classified", () => {
     expect(findDrift(["login", "getAllApps", "wipeEverything"], coverage)).toStrictEqual([
-      "The SDK has the method wipeEverything, which is not classified in src/Adapters/CapRover/sdk-coverage.json.",
+      "The SDK has the method wipeEverything, which is not classified in scripts/sdk-coverage.json.",
     ]);
   });
 
   it("names a classified method the SDK no longer has", () => {
     expect(findDrift(["login"], coverage)).toStrictEqual([
-      "src/Adapters/CapRover/sdk-coverage.json lists getAllApps, which the SDK no longer has.",
+      "scripts/sdk-coverage.json lists getAllApps, which the SDK no longer has.",
     ]);
   });
 
@@ -70,7 +70,7 @@ describe("findDrift()", () => {
 
   it("finds no drift between the installed SDK and the coverage file", () => {
     const sdkMethods = readSdkMethods(readFileSync("node_modules/caprover-api/dist/api/ApiManager.d.ts", "utf8"));
-    const installed = JSON.parse(readFileSync("src/Adapters/CapRover/sdk-coverage.json", "utf8"));
+    const installed = JSON.parse(readFileSync("scripts/sdk-coverage.json", "utf8"));
 
     expect(findDrift(sdkMethods, installed)).toStrictEqual([]);
   });

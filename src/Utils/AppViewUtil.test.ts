@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { FakeCaproverClientAdapter } from "@/Adapters/CapRover/FakeCaproverClientAdapter.ts";
+import { FakeCaproverClientAdapter } from "@/Testing/FakeCaproverClientAdapter.ts";
 import { AppViewUtil } from "@/Utils/AppViewUtil.ts";
 
 const FAKE_SECRET = "fake-secret-value-123";

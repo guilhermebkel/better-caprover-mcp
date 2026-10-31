@@ -697,6 +697,7 @@
     "local/error-location": "error",
     "local/literal-dispatch": "error",
     "local/class-matches-file": "error",
+    "local/file-suffix": "error",
     "local/operation-name": "error",
     "local/operation-port": "error"
   },
@@ -783,7 +784,7 @@
                   "@modelcontextprotocol/sdk",
                   "@modelcontextprotocol/sdk/**"
                 ],
-                "message": "Import the MCP SDK only in src/Server/ and src/Surfaces/."
+                "message": "Import the MCP SDK only in src/Setup/ and src/Surfaces/."
               },
               {
                 "group": [
@@ -804,6 +805,12 @@
                   "node:child_process"
                 ],
                 "message": "No shell and no child process in the server: nothing runs commands on the host."
+              },
+              {
+                "group": [
+                  "@/**/Testing/**"
+                ],
+                "message": "Production code must not import test doubles: only tests may import src/Testing/."
               }
             ]
           }
@@ -842,7 +849,7 @@
                   "@modelcontextprotocol/sdk",
                   "@modelcontextprotocol/sdk/**"
                 ],
-                "message": "Import the MCP SDK only in src/Server/ and src/Surfaces/."
+                "message": "Import the MCP SDK only in src/Setup/ and src/Surfaces/."
               },
               {
                 "group": [
@@ -873,9 +880,15 @@
                   "@/**/Services/**",
                   "@/**/Operations/**",
                   "@/**/Surfaces/**",
-                  "@/**/Server/**"
+                  "@/**/Setup/**"
                 ],
-                "message": "Errors must not import Protocols, Schemas, Utils, Adapters, Services, Operations, Surfaces, Server: layers only import the ones below them."
+                "message": "Errors must not import Protocols, Schemas, Utils, Adapters, Services, Operations, Surfaces, Setup: layers only import the ones below them."
+              },
+              {
+                "group": [
+                  "@/**/Testing/**"
+                ],
+                "message": "Production code must not import test doubles: only tests may import src/Testing/."
               }
             ]
           }
@@ -914,7 +927,7 @@
                   "@modelcontextprotocol/sdk",
                   "@modelcontextprotocol/sdk/**"
                 ],
-                "message": "Import the MCP SDK only in src/Server/ and src/Surfaces/."
+                "message": "Import the MCP SDK only in src/Setup/ and src/Surfaces/."
               },
               {
                 "group": [
@@ -944,9 +957,15 @@
                   "@/**/Services/**",
                   "@/**/Operations/**",
                   "@/**/Surfaces/**",
-                  "@/**/Server/**"
+                  "@/**/Setup/**"
                 ],
-                "message": "Protocols must not import Schemas, Utils, Adapters, Services, Operations, Surfaces, Server: layers only import the ones below them."
+                "message": "Protocols must not import Schemas, Utils, Adapters, Services, Operations, Surfaces, Setup: layers only import the ones below them."
+              },
+              {
+                "group": [
+                  "@/**/Testing/**"
+                ],
+                "message": "Production code must not import test doubles: only tests may import src/Testing/."
               }
             ]
           }
@@ -985,7 +1004,7 @@
                   "@modelcontextprotocol/sdk",
                   "@modelcontextprotocol/sdk/**"
                 ],
-                "message": "Import the MCP SDK only in src/Server/ and src/Surfaces/."
+                "message": "Import the MCP SDK only in src/Setup/ and src/Surfaces/."
               },
               {
                 "group": [
@@ -1014,9 +1033,15 @@
                   "@/**/Services/**",
                   "@/**/Operations/**",
                   "@/**/Surfaces/**",
-                  "@/**/Server/**"
+                  "@/**/Setup/**"
                 ],
-                "message": "Schemas must not import Utils, Adapters, Services, Operations, Surfaces, Server: layers only import the ones below them."
+                "message": "Schemas must not import Utils, Adapters, Services, Operations, Surfaces, Setup: layers only import the ones below them."
+              },
+              {
+                "group": [
+                  "@/**/Testing/**"
+                ],
+                "message": "Production code must not import test doubles: only tests may import src/Testing/."
               }
             ]
           }
@@ -1055,7 +1080,7 @@
                   "@modelcontextprotocol/sdk",
                   "@modelcontextprotocol/sdk/**"
                 ],
-                "message": "Import the MCP SDK only in src/Server/ and src/Surfaces/."
+                "message": "Import the MCP SDK only in src/Setup/ and src/Surfaces/."
               },
               {
                 "group": [
@@ -1083,9 +1108,15 @@
                   "@/**/Services/**",
                   "@/**/Operations/**",
                   "@/**/Surfaces/**",
-                  "@/**/Server/**"
+                  "@/**/Setup/**"
                 ],
-                "message": "Utils must not import Adapters, Services, Operations, Surfaces, Server: layers only import the ones below them."
+                "message": "Utils must not import Adapters, Services, Operations, Surfaces, Setup: layers only import the ones below them."
+              },
+              {
+                "group": [
+                  "@/**/Testing/**"
+                ],
+                "message": "Production code must not import test doubles: only tests may import src/Testing/."
               }
             ]
           }
@@ -1124,7 +1155,7 @@
                   "@modelcontextprotocol/sdk",
                   "@modelcontextprotocol/sdk/**"
                 ],
-                "message": "Import the MCP SDK only in src/Server/ and src/Surfaces/."
+                "message": "Import the MCP SDK only in src/Setup/ and src/Surfaces/."
               },
               {
                 "group": [
@@ -1150,9 +1181,15 @@
                 "group": [
                   "@/**/Operations/**",
                   "@/**/Surfaces/**",
-                  "@/**/Server/**"
+                  "@/**/Setup/**"
                 ],
-                "message": "Services must not import Operations, Surfaces, Server: layers only import the ones below them."
+                "message": "Services must not import Operations, Surfaces, Setup: layers only import the ones below them."
+              },
+              {
+                "group": [
+                  "@/**/Testing/**"
+                ],
+                "message": "Production code must not import test doubles: only tests may import src/Testing/."
               }
             ]
           }
@@ -1191,7 +1228,7 @@
                   "@modelcontextprotocol/sdk",
                   "@modelcontextprotocol/sdk/**"
                 ],
-                "message": "Import the MCP SDK only in src/Server/ and src/Surfaces/."
+                "message": "Import the MCP SDK only in src/Setup/ and src/Surfaces/."
               },
               {
                 "group": [
@@ -1217,9 +1254,15 @@
                 "group": [
                   "@/**/Operations/**",
                   "@/**/Surfaces/**",
-                  "@/**/Server/**"
+                  "@/**/Setup/**"
                 ],
-                "message": "Adapters must not import Operations, Surfaces, Server: layers only import the ones below them."
+                "message": "Adapters must not import Operations, Surfaces, Setup: layers only import the ones below them."
+              },
+              {
+                "group": [
+                  "@/**/Testing/**"
+                ],
+                "message": "Production code must not import test doubles: only tests may import src/Testing/."
               }
             ]
           }
@@ -1258,7 +1301,7 @@
                   "@modelcontextprotocol/sdk",
                   "@modelcontextprotocol/sdk/**"
                 ],
-                "message": "Import the MCP SDK only in src/Server/ and src/Surfaces/."
+                "message": "Import the MCP SDK only in src/Setup/ and src/Surfaces/."
               },
               {
                 "group": [
@@ -1278,9 +1321,15 @@
                 "group": [
                   "@/**/Operations/**",
                   "@/**/Surfaces/**",
-                  "@/**/Server/**"
+                  "@/**/Setup/**"
                 ],
-                "message": "Adapters must not import Operations, Surfaces, Server: layers only import the ones below them."
+                "message": "Adapters must not import Operations, Surfaces, Setup: layers only import the ones below them."
+              },
+              {
+                "group": [
+                  "@/**/Testing/**"
+                ],
+                "message": "Production code must not import test doubles: only tests may import src/Testing/."
               }
             ]
           }
@@ -1319,7 +1368,7 @@
                   "@modelcontextprotocol/sdk",
                   "@modelcontextprotocol/sdk/**"
                 ],
-                "message": "Import the MCP SDK only in src/Server/ and src/Surfaces/."
+                "message": "Import the MCP SDK only in src/Setup/ and src/Surfaces/."
               },
               {
                 "group": [
@@ -1338,9 +1387,15 @@
                 "group": [
                   "@/**/Operations/**",
                   "@/**/Surfaces/**",
-                  "@/**/Server/**"
+                  "@/**/Setup/**"
                 ],
-                "message": "Adapters must not import Operations, Surfaces, Server: layers only import the ones below them."
+                "message": "Adapters must not import Operations, Surfaces, Setup: layers only import the ones below them."
+              },
+              {
+                "group": [
+                  "@/**/Testing/**"
+                ],
+                "message": "Production code must not import test doubles: only tests may import src/Testing/."
               }
             ]
           }
@@ -1379,7 +1434,7 @@
                   "@modelcontextprotocol/sdk",
                   "@modelcontextprotocol/sdk/**"
                 ],
-                "message": "Import the MCP SDK only in src/Server/ and src/Surfaces/."
+                "message": "Import the MCP SDK only in src/Setup/ and src/Surfaces/."
               },
               {
                 "group": [
@@ -1404,9 +1459,15 @@
               {
                 "group": [
                   "@/**/Surfaces/**",
-                  "@/**/Server/**"
+                  "@/**/Setup/**"
                 ],
-                "message": "Operations must not import Surfaces, Server: layers only import the ones below them."
+                "message": "Operations must not import Surfaces, Setup: layers only import the ones below them."
+              },
+              {
+                "group": [
+                  "@/**/Testing/**"
+                ],
+                "message": "Production code must not import test doubles: only tests may import src/Testing/."
               }
             ]
           }
@@ -1462,9 +1523,15 @@
               },
               {
                 "group": [
-                  "@/**/Server/**"
+                  "@/**/Setup/**"
                 ],
-                "message": "Surfaces must not import Server: layers only import the ones below them."
+                "message": "Surfaces must not import Setup: layers only import the ones below them."
+              },
+              {
+                "group": [
+                  "@/**/Testing/**"
+                ],
+                "message": "Production code must not import test doubles: only tests may import src/Testing/."
               }
             ]
           }
@@ -1473,7 +1540,71 @@
     },
     {
       "files": [
-        "src/Server/**/*.ts"
+        "src/Setup/**/*.ts"
+      ],
+      "rules": {
+        "no-restricted-imports": [
+          "error",
+          {
+            "patterns": [
+              {
+                "group": [
+                  "../*",
+                  "../**"
+                ],
+                "message": "Import from \"@/...\" instead of a relative parent path."
+              },
+              {
+                "group": [
+                  "./*",
+                  "./**"
+                ],
+                "message": "Import from \"@/...\" even within the same folder."
+              },
+              {
+                "regex": "^@/.*\\.js$",
+                "message": "Import the source file itself: \"@/....ts\" (allowImportingTsExtensions)."
+              },
+              {
+                "group": [
+                  "caprover-api"
+                ],
+                "message": "Import the CapRover SDK only in src/Adapters/CapRover/."
+              },
+              {
+                "group": [
+                  "quickjs-emscripten",
+                  "quickjs-emscripten/**"
+                ],
+                "message": "Import the sandbox engine only in src/Adapters/Sandbox/."
+              },
+              {
+                "group": [
+                  "child_process",
+                  "node:child_process"
+                ],
+                "message": "No shell and no child process in the server: nothing runs commands on the host."
+              },
+              {
+                "group": [
+                  "@/**/Testing/**"
+                ],
+                "message": "Production code must not import test doubles: only tests may import src/Testing/."
+              },
+              {
+                "group": [
+                  "@/**/Adapters/**"
+                ],
+                "message": "Setup files only start the program: build what is needed through a Surface or a Service, never import an adapter."
+              }
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "files": [
+        "src/Testing/**/*.ts"
       ],
       "rules": {
         "no-restricted-imports": [
@@ -1567,8 +1698,7 @@
         "src/**/*.test.ts",
         "scripts/**/*.test.mjs",
         "*.test.mjs",
-        "src/**/*Builder.ts",
-        "src/**/fixtures/**"
+        "src/Testing/**"
       ],
       "rules": {
         "no-restricted-properties": "off",

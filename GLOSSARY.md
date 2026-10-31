@@ -15,7 +15,7 @@ One thing the server can do on a CapRover server, such as listing apps or deploy
 _Avoid_: tool (that is how a client sees an operation), endpoint, command
 
 **Manifest**:
-The single list of operations, `src/Operations/OperationManifest.ts`. The surfaces read it. The SDK drift check reads `src/Adapters/CapRover/sdk-coverage.json`, which says for every SDK method if it is an operation, planned, excluded or internal.
+The single list of operations, `src/Surfaces/OperationManifestSurface.ts`. The surfaces read it. The SDK drift check reads `scripts/sdk-coverage.json`, which says for every SDK method if it is an operation, planned, excluded or internal.
 _Avoid_: catalog, registry
 
 **Surface**:

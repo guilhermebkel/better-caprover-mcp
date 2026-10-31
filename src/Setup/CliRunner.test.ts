@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { UnknownCommandError } from "@/Errors/UnknownCommandError.ts";
-import { CliRunner } from "@/Server/CliRunner.ts";
+import { CliRunner } from "@/Setup/CliRunner.ts";
 
 describe("CliRunner.run()", () => {
   it("refuses a command it does not know and says which ones exist", async () => {

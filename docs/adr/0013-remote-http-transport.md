@@ -45,3 +45,5 @@ Phase 5 lets a client reach the MCP server over the network. Stdio on the same m
 ## Related
 
 - ADR 0005 (safety in code), ADR 0010 (password only), ADR 0011 (confirmation token). ADR 0006 covers the QuickJS sandbox for the planned `code` surface, not this HTTP transport.
+
+Moved by ADR 0014: `SharedMcpRuntimeBuilder` is now `src/Surfaces/SharedMcpRuntimeSurface.ts` and the runners are in `src/Setup/`.

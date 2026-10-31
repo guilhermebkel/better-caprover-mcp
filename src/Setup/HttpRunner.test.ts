@@ -1,10 +1,10 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
-import { MockCaproverRouteBuilder } from "@/Adapters/CapRover/MockCaproverRouteBuilder.ts";
-import { MockCaproverServer } from "@/Adapters/CapRover/MockCaproverServer.ts";
+import { MockCaproverRouteBuilder } from "@/Testing/MockCaproverRouteBuilder.ts";
+import { MockCaproverServer } from "@/Testing/MockCaproverServer.ts";
 import { HttpBindForbiddenError } from "@/Errors/HttpBindForbiddenError.ts";
-import { HttpRunner } from "@/Server/HttpRunner.ts";
+import { HttpRunner } from "@/Setup/HttpRunner.ts";
 import type { HttpRunnerStartOptions } from "@/Protocols/HttpRunnerProtocol.ts";
 import { FreePortUtil } from "@/Utils/FreePortUtil.ts";
 import { EnvUtil } from "@/Utils/EnvUtil.ts";
