@@ -218,7 +218,7 @@ Without `CAPROVER_URL` and `CAPROVER_PASSWORD`, `init` only prints the configura
 | `CAPROVER_MCP_HTTP_HOST` | `127.0.0.1` | Address for `serve --http` |
 | `CAPROVER_MCP_HTTP_PORT` | `3100` | Port for `serve --http` |
 | `CAPROVER_MCP_MAX_HTTP_BODY_BYTES` | `1048576` | Max POST body size on `/mcp` |
-| `CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE` | `120` | Max MCP HTTP requests per minute. Failed auth is counted per client remote address; authenticated traffic shares one bucket. Behind a reverse proxy, failed-auth throttling is often shared (this server does not read `X-Forwarded-For`). |
+| `CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE` | `120` | Max MCP HTTP requests per minute, counted in two buckets: failed auth and authenticated traffic. Each bucket is shared by every caller. |
 | `CAPROVER_MCP_MAX_HTTP_SESSIONS` | `64` | Max concurrent Streamable HTTP MCP sessions |
 | `CAPROVER_MCP_HTTP_SESSION_TTL_MS` | `86400000` | Max idle lifetime of an HTTP MCP session (ms) |
 | `CAPROVER_MCP_MAX_CONCURRENT` | `5` | Max parallel tool runs in this MCP instance |

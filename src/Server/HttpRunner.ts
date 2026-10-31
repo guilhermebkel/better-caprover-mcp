@@ -24,11 +24,11 @@ const HTTP_PAYLOAD_TOO_LARGE = 413;
 const HTTP_TOO_MANY_REQUESTS = 429;
 const HTTP_INTERNAL_ERROR = 500;
 const PLAIN_TEXT = "text/plain";
-const AUTHENTICATED_RATE_LIMIT_KEY = "authenticated";
 
 type HttpRequestContext = {
   auth: HttpAuthService;
-  rateLimit: HttpRateLimitService;
+  failedAuthRateLimit: HttpRateLimitService;
+  authenticatedRateLimit: HttpRateLimitService;
   sessions: HttpSessionRunner;
   env: Env;
   getNowMs: () => number;
@@ -62,14 +62,22 @@ export class HttpRunner {
       options.concurrencyQueueWaitMs,
     );
     const auth = new HttpAuthService(env.CAPROVER_MCP_HTTP_TOKEN);
-    const rateLimit = new HttpRateLimitService(env.CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE);
+    const failedAuthRateLimit = new HttpRateLimitService(env.CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE);
+    const authenticatedRateLimit = new HttpRateLimitService(env.CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE);
     const sessions = new HttpSessionRunner(
       () => runtime.buildMcpServer(),
       getNowMs,
       env.CAPROVER_MCP_MAX_HTTP_SESSIONS,
       env.CAPROVER_MCP_HTTP_SESSION_TTL_MS,
     );
-    const context: HttpRequestContext = { auth, rateLimit, sessions, env, getNowMs };
+    const context: HttpRequestContext = {
+      auth,
+      authenticatedRateLimit,
+      env,
+      failedAuthRateLimit,
+      getNowMs,
+      sessions,
+    };
     const httpServer = createServer((request, response) => {
       void HttpRunner.handleHttpRequest(request, response, context).catch((error: unknown) => {
         LogUtil.logError("http_request_failed", error instanceof Error ? error.name : "unknown");
@@ -128,7 +136,7 @@ export class HttpRunner {
     response: ServerResponse,
     context: HttpRequestContext,
   ): Promise<void> {
-    const { auth, rateLimit, sessions, env } = context;
+    const { auth, authenticatedRateLimit, failedAuthRateLimit, sessions, env } = context;
     const url = request.url ?? "";
     if (request.method === "GET" && url.startsWith(HEALTH_PATH)) {
       response.writeHead(HTTP_OK, { "Content-Type": PLAIN_TEXT });
@@ -142,12 +150,12 @@ export class HttpRunner {
     }
     try {
       if (!auth.verifyRequest(request)) {
-        rateLimit.assertAllowed(HttpRunner.buildRateLimitAddressKey(request), context.getNowMs());
+        failedAuthRateLimit.assertAllowed(context.getNowMs());
         response.writeHead(HTTP_UNAUTHORIZED, { "Content-Type": PLAIN_TEXT });
         response.end("Unauthorized");
         return;
       }
-      rateLimit.assertAllowed(AUTHENTICATED_RATE_LIMIT_KEY, context.getNowMs());
+      authenticatedRateLimit.assertAllowed(context.getNowMs());
       const parsedBody = await HttpRunner.readParsedBody(request, env);
       await sessions.handleRequest(request, response, parsedBody);
     } catch (error) {
@@ -168,10 +176,6 @@ export class HttpRunner {
       }
       throw error;
     }
-  }
-
-  private static buildRateLimitAddressKey(request: IncomingMessage): string {
-    return request.socket.remoteAddress ?? "unknown";
   }
 
   private static readParsedBody(request: IncomingMessage, env: Env): Promise<unknown> {

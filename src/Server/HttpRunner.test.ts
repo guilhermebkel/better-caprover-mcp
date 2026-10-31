@@ -281,7 +281,7 @@ describe("HttpRunner.start()", () => {
     }
   });
 
-  it("returns 429 when the request rate limit is exceeded, including failed auth", async () => {
+  it("returns 429 when the failed-auth rate limit is exceeded", async () => {
     const handle = await startHttpRunner({
       CAPROVER_MCP_HTTP_TOKEN: TEST_TOKEN,
       CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE: "1",
@@ -292,6 +292,24 @@ describe("HttpRunner.start()", () => {
       expect(first.status).toBe(401);
       const second = await fetch(`${handle.url}/mcp`, { method: "POST", body: "{}", headers: headers });
       expect(second.status).toBe(429);
+    } finally {
+      await handle.close();
+    }
+  });
+
+  it("does not let a full failed-auth bucket block authenticated initialize", async () => {
+    const handle = await startHttpRunner({
+      CAPROVER_MCP_HTTP_TOKEN: TEST_TOKEN,
+      CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE: "1",
+    });
+    try {
+      const badHeaders = { "Authorization": `Bearer ${WRONG_TOKEN}`, "Content-Type": "application/json" };
+      const firstBad = await fetch(`${handle.url}/mcp`, { method: "POST", body: "{}", headers: badHeaders });
+      expect(firstBad.status).toBe(401);
+      const secondBad = await fetch(`${handle.url}/mcp`, { method: "POST", body: "{}", headers: badHeaders });
+      expect(secondBad.status).toBe(429);
+      const ok = await postMcp(handle.url, TEST_TOKEN, buildInitializeJson("after-failed-auth-cap"));
+      expect(ok.status).toBe(200);
     } finally {
       await handle.close();
     }

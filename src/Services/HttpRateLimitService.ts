@@ -2,33 +2,24 @@ import { HttpRateLimitError } from "@/Errors/HttpRateLimitError.ts";
 
 const WINDOW_MS = 60_000;
 
-type ClientWindow = {
+type RateWindow = {
   windowStartedAtMs: number;
   count: number;
 };
 
 export class HttpRateLimitService {
-  private readonly clientKeyToWindow = new Map<string, ClientWindow>();
+  private window: RateWindow | undefined;
 
   constructor(private readonly maxRequestsPerWindow: number) {}
 
-  assertAllowed(clientKey: string, nowMs: number): void {
-    if (this.maxRequestsPerWindow <= 0) {
+  assertAllowed(nowMs: number): void {
+    if (this.window === undefined || nowMs - this.window.windowStartedAtMs >= WINDOW_MS) {
+      this.window = { windowStartedAtMs: nowMs, count: 1 };
       return;
     }
-    for (const [key, window] of this.clientKeyToWindow.entries()) {
-      if (nowMs - window.windowStartedAtMs >= WINDOW_MS) {
-        this.clientKeyToWindow.delete(key);
-      }
-    }
-    const window = this.clientKeyToWindow.get(clientKey);
-    if (window === undefined || nowMs - window.windowStartedAtMs >= WINDOW_MS) {
-      this.clientKeyToWindow.set(clientKey, { windowStartedAtMs: nowMs, count: 1 });
-      return;
-    }
-    if (window.count >= this.maxRequestsPerWindow) {
+    if (this.window.count >= this.maxRequestsPerWindow) {
       throw new HttpRateLimitError();
     }
-    window.count += 1;
+    this.window.count += 1;
   }
 }
