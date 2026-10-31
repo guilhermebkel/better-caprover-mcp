@@ -30,6 +30,7 @@ type SetupOptions = FakeCaproverOptions & {
 const buildEnv = (mode: AccessMode): Env => ({
   CAPROVER_MCP_MODE: mode,
   CAPROVER_MCP_ALLOW_CRITICAL: false,
+  CAPROVER_MCP_TRANSPORT: "stdio",
   CAPROVER_URL: "https://captain.example.com",
   CAPROVER_PASSWORD: FAKE_PASSWORD,
   CAPROVER_MCP_HTTP_HOST: "127.0.0.1",

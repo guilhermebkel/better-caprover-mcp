@@ -15,6 +15,10 @@ export const MIN_HTTP_TOKEN_LENGTH = 8;
 
 const HttpTokenSchema: z.ZodType<string> = z.string().min(MIN_HTTP_TOKEN_LENGTH);
 
+const TransportSchema = OptionalTextSchema.pipe(
+  z.enum(["stdio", "http"], { error: "CAPROVER_MCP_TRANSPORT must be stdio or http." }).optional(),
+).transform((transport) => transport ?? "stdio");
+
 const parsePositiveIntFromEnv = (name: string, defaultValue: number): z.ZodType<number> => (
   z.string().optional().transform((text, context) => {
     if (text === undefined || text === "") {
@@ -47,6 +51,7 @@ const httpTokenFromEnv = z.string().optional().transform((text, context) => {
 export type RawEnvValues = {
   CAPROVER_MCP_MODE: Env["CAPROVER_MCP_MODE"];
   CAPROVER_MCP_ALLOW_CRITICAL: boolean;
+  CAPROVER_MCP_TRANSPORT: Env["CAPROVER_MCP_TRANSPORT"];
   CAPROVER_URL?: string;
   CAPROVER_PASSWORD?: string;
   CAPROVER_MCP_HTTP_HOST: string;
@@ -62,6 +67,7 @@ export type RawEnvValues = {
 export const RawEnvSchema: z.ZodType<RawEnvValues> = z.object({
   CAPROVER_MCP_MODE: AccessModeSchema.default("readonly"),
   CAPROVER_MCP_ALLOW_CRITICAL: z.string().optional().transform((text) => text === "1"),
+  CAPROVER_MCP_TRANSPORT: TransportSchema,
   CAPROVER_URL: OptionalTextSchema.pipe(
     z.url({ protocol: /^https?$/, error: "CAPROVER_URL must be a URL that starts with http:// or https://" })
       .transform((url) => new URL(url).origin)

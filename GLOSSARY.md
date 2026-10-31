@@ -23,7 +23,7 @@ A way of exposing the operations over MCP. The `tools` surface exposes named too
 _Avoid_: mode (that means the access mode), interface
 
 **Remote HTTP**:
-An optional way to run the MCP server with Streamable HTTP (`better-caprover-mcp serve --http`) so a client on another host can connect. Each instance uses one CapRover server (`CAPROVER_URL` / `CAPROVER_PASSWORD`). Local stdio remains the default. `CAPROVER_MCP_HTTP_TOKEN` protects non-local binds.
+An optional way to run the MCP server with Streamable HTTP (`better-caprover-mcp serve --http`) so a client on another host can connect. Each instance uses one CapRover server (`CAPROVER_URL` / `CAPROVER_PASSWORD`). Local stdio remains the default. `CAPROVER_MCP_TRANSPORT=http` selects HTTP without changing the command (for deployments that only set environment variables); `stdio` is the default. `CAPROVER_MCP_HTTP_TOKEN` protects non-local binds.
 _Avoid_: SSE-only transport
 
 **Toolset**:

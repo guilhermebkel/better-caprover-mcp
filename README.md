@@ -217,6 +217,7 @@ The mode decides which operations the client sees at all. Only the person can ch
 | `CAPROVER_PASSWORD` | none | The CapRover password |
 | `CAPROVER_MCP_MODE` | `readonly` | `readonly`, `operate` or `admin` |
 | `CAPROVER_MCP_ALLOW_CRITICAL` | off | Set to `1` to unlock critical operations in `admin` mode. No operation is critical yet |
+| `CAPROVER_MCP_TRANSPORT` | `stdio` | `stdio` or `http`. `http` makes a plain start (no arguments) serve Streamable HTTP, same as `serve --http` |
 | `CAPROVER_MCP_HTTP_TOKEN` | none | Bearer secret for `serve --http` (minimum 8 characters); required for non-local HTTP bind |
 | `CAPROVER_MCP_HTTP_HOST` | `127.0.0.1` | Address for `serve --http` |
 | `CAPROVER_MCP_HTTP_PORT` | `3100` | Port for `serve --http` |
