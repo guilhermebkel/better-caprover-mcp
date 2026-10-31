@@ -6,6 +6,7 @@ import { MockCaproverServer } from "@/Adapters/CapRover/MockCaproverServer.ts";
 import { HttpBindForbiddenError } from "@/Errors/HttpBindForbiddenError.ts";
 import { HttpRunner } from "@/Server/HttpRunner.ts";
 import type { HttpRunnerStartOptions } from "@/Protocols/HttpRunnerProtocol.ts";
+import { FreePortUtil } from "@/Utils/FreePortUtil.ts";
 import { EnvUtil } from "@/Utils/EnvUtil.ts";
 
 const CONCURRENCY_REFUSAL_MESSAGE = "Too many concurrent tool calls (limit 1). Wait for other calls to finish, then try again.";
@@ -76,23 +77,19 @@ afterEach(async () => {
   vi.restoreAllMocks();
 });
 
-let nextHttpPort = 32_000 + (process.pid % 10_000);
 let nextHttpMarkerId = 0;
-
-const pickNextHttpPort = (): number => {
-  const port = nextHttpPort;
-  nextHttpPort += 1;
-  return port;
-};
 
 const FAKE_PASSWORD = "fake-password-9876";
 
-const readHttpEnv = (overrides: Record<string, string | undefined> = {}): ReturnType<typeof EnvUtil.read> => {
+const readHttpEnv = (
+  port: number,
+  overrides: Record<string, string | undefined> = {},
+): ReturnType<typeof EnvUtil.read> => {
   vi.stubEnv("CAPROVER_MCP_MODE", overrides.CAPROVER_MCP_MODE ?? "readonly");
   vi.stubEnv("CAPROVER_MCP_HTTP_HOST", overrides.CAPROVER_MCP_HTTP_HOST ?? "127.0.0.1");
   vi.stubEnv(
     "CAPROVER_MCP_HTTP_PORT",
-    overrides.CAPROVER_MCP_HTTP_PORT ?? String(pickNextHttpPort()),
+    overrides.CAPROVER_MCP_HTTP_PORT ?? String(port),
   );
   vi.stubEnv("CAPROVER_MCP_HTTP_TOKEN", overrides.CAPROVER_MCP_HTTP_TOKEN);
   vi.stubEnv("CAPROVER_MCP_MAX_HTTP_BODY_BYTES", overrides.CAPROVER_MCP_MAX_HTTP_BODY_BYTES ?? "1048576");
@@ -105,13 +102,14 @@ const readHttpEnv = (overrides: Record<string, string | undefined> = {}): Return
   return EnvUtil.read();
 };
 
-const startHttpRunner = (
+const startHttpRunner = async (
   overrides: Record<string, string | undefined> = {},
   runnerOptions: Omit<HttpRunnerStartOptions, "httpMarkerPath"> = {},
 ): ReturnType<typeof HttpRunner.start> => {
   nextHttpMarkerId += 1;
   const markerPath = `/tmp/better-caprover-mcp-http.test-${process.pid}-${nextHttpMarkerId}.active`;
-  return HttpRunner.start(readHttpEnv(overrides), { httpMarkerPath: markerPath, ...runnerOptions });
+  const port = await FreePortUtil.find();
+  return HttpRunner.start(readHttpEnv(port, overrides), { httpMarkerPath: markerPath, ...runnerOptions });
 };
 
 const readToolSummary = (content: unknown): string => {
@@ -140,7 +138,7 @@ const sortCallOutcomes = (left: ToolCallOutcome, right: ToolCallOutcome): number
 
 describe("HttpRunner.assertBindAllowed()", () => {
   it("refuses a public bind without CAPROVER_MCP_HTTP_TOKEN", () => {
-    const env = readHttpEnv({ CAPROVER_MCP_HTTP_HOST: "0.0.0.0" });
+    const env = readHttpEnv(3100, { CAPROVER_MCP_HTTP_HOST: "0.0.0.0" });
 
     expect(() => {
       HttpRunner.assertBindAllowed(env);
@@ -151,7 +149,7 @@ describe("HttpRunner.assertBindAllowed()", () => {
   });
 
   it("allows localhost without CAPROVER_MCP_HTTP_TOKEN", () => {
-    const env = readHttpEnv({ CAPROVER_MCP_HTTP_HOST: "127.0.0.1" });
+    const env = readHttpEnv(3100, { CAPROVER_MCP_HTTP_HOST: "127.0.0.1" });
 
     expect(() => {
       HttpRunner.assertBindAllowed(env);
