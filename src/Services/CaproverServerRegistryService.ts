@@ -23,10 +23,12 @@ export class CaproverServerRegistryService {
   private constructor(
     private readonly nameToServer: ReadonlyMap<string, ServerRecord>,
     private readonly isMultiServer: boolean,
+    private readonly httpSecrets: readonly string[],
   ) {}
 
   static buildFromEnv(env: Env): CaproverServerRegistryService {
     const nameToServer = new Map<string, ServerRecord>();
+    const isMultiServer = nameToServer.size > 1;
     for (const entry of env.servers) {
       let client: CaproverClientAdapter;
       if (entry.url !== undefined && entry.password !== undefined) {
@@ -34,15 +36,26 @@ export class CaproverServerRegistryService {
       } else {
         client = new CaproverClientAdapter(undefined);
       }
-      const policy = new PolicyService(entry.mode, entry.isCriticalAllowed);
+      const policy = new PolicyService(entry.mode, entry.isCriticalAllowed, isMultiServer);
       const secrets = entry.password === undefined ? [] : [entry.password];
       nameToServer.set(entry.name, { name: entry.name, client, policy, secrets });
     }
-    return new CaproverServerRegistryService(nameToServer, nameToServer.size > 1);
+    const httpSecrets = env.CAPROVER_MCP_HTTP_TOKENS === undefined
+      ? []
+      : Object.values(env.CAPROVER_MCP_HTTP_TOKENS);
+    return new CaproverServerRegistryService(nameToServer, isMultiServer, httpSecrets);
   }
 
-  static buildForTest(servers: readonly ActiveServerTarget[], isMultiServer = false): CaproverServerRegistryService {
-    return new CaproverServerRegistryService(new Map(servers.map((server) => [server.name, server])), isMultiServer);
+  static buildForTest(
+    servers: readonly ActiveServerTarget[],
+    isMultiServer = false,
+    httpSecrets: readonly string[] = [],
+  ): CaproverServerRegistryService {
+    return new CaproverServerRegistryService(
+      new Map(servers.map((server) => [server.name, server])),
+      isMultiServer,
+      httpSecrets,
+    );
   }
 
   getIsMultiServer(): boolean {
@@ -68,7 +81,7 @@ export class CaproverServerRegistryService {
   }
 
   collectAllSecrets(): string[] {
-    const secrets: string[] = [];
+    const secrets: string[] = [...this.httpSecrets];
     for (const record of this.nameToServer.values()) {
       secrets.push(...record.secrets);
     }

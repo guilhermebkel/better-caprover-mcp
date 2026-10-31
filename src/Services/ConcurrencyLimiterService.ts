@@ -1,12 +1,16 @@
 import { ConcurrencyLimitError } from "@/Errors/ConcurrencyLimitError.ts";
 
 const DEFAULT_WAIT_MS = 30_000;
-const POLL_MS = 10;
+
+type Waiter = {
+  resolve: () => void;
+  reject: (error: Error) => void;
+};
 
 type ServerLimiter = {
   limit: number;
   active: number;
-  waiters: (() => void)[];
+  waiters: Waiter[];
 };
 
 export class ConcurrencyLimiterService {
@@ -24,19 +28,29 @@ export class ConcurrencyLimiterService {
   }
 
   private async acquire(serverName: string): Promise<void> {
-    const deadlineMs = Date.now() + DEFAULT_WAIT_MS;
-    while (Date.now() < deadlineMs) {
-      const limiter = this.getLimiter(serverName);
-      if (limiter.active < limiter.limit) {
-        limiter.active += 1;
-        return;
-      }
-      await new Promise<void>((resolve) => {
-        limiter.waiters.push(resolve);
-        setTimeout(resolve, POLL_MS);
-      });
+    const limiter = this.getLimiter(serverName);
+    if (limiter.active < limiter.limit) {
+      limiter.active += 1;
+      return;
     }
-    throw new ConcurrencyLimitError(serverName, this.maxConcurrent);
+    await new Promise<void>((resolve, reject) => {
+      const waiter: Waiter = {
+        resolve: () => {
+          limiter.active += 1;
+          resolve();
+        },
+        reject,
+      };
+      limiter.waiters.push(waiter);
+      setTimeout(() => {
+        const index = limiter.waiters.indexOf(waiter);
+        if (index === -1) {
+          return;
+        }
+        limiter.waiters.splice(index, 1);
+        reject(new ConcurrencyLimitError(serverName, this.maxConcurrent));
+      }, DEFAULT_WAIT_MS);
+    });
   }
 
   private release(serverName: string): void {
@@ -44,7 +58,7 @@ export class ConcurrencyLimiterService {
     limiter.active = Math.max(0, limiter.active - 1);
     const next = limiter.waiters.shift();
     if (next !== undefined) {
-      next();
+      next.resolve();
     }
   }
 

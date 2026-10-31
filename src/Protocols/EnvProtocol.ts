@@ -19,6 +19,7 @@ export type Env = {
   CAPROVER_MCP_HTTP_PORT: number;
   CAPROVER_MCP_HTTP_TOKENS?: ClientNameToHttpToken;
   CAPROVER_MCP_MAX_HTTP_BODY_BYTES: number;
+  CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE: number;
   CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER: number;
   servers: ResolvedCaproverServer[];
 };

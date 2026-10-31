@@ -20,6 +20,7 @@ export class PolicyService {
   constructor(
     private readonly mode: AccessMode,
     private readonly isCriticalAllowed: boolean,
+    private readonly isPerServerConfig = false,
   ) {}
 
   getMode(): AccessMode {
@@ -42,10 +43,13 @@ export class PolicyService {
     }
     const requiredMode = PolicyService.RISK_TO_MODE[risk];
     const extra = TIERS_NEEDING_SWITCH.has(risk) ? " and CAPROVER_MCP_ALLOW_CRITICAL=1" : "";
+    const criticalHint = TIERS_NEEDING_SWITCH.has(risk) ? " with critical allowed" : "";
+    const restartHint = this.isPerServerConfig
+      ? `Tell the person to set this server's mode to "${requiredMode}"${criticalHint} in the CapRover servers configuration and restart.`
+      : `Tell the person that CAPROVER_MCP_MODE=${requiredMode}${extra} is needed, and that they must set it themselves and restart the server.`;
     throw new OperationDeniedError(
       `${toolName} is a ${risk} operation. This server runs in "${this.mode}" mode, which does not allow it. `
-      + `Do not try another way. Tell the person that CAPROVER_MCP_MODE=${requiredMode}${extra} is needed, `
-      + "and that they must set it themselves and restart the server.",
+      + `Do not try another way. ${restartHint}`,
     );
   }
 }

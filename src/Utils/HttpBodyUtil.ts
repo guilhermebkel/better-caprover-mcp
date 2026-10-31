@@ -1,4 +1,5 @@
 import type { IncomingMessage } from "node:http";
+import { HttpBadJsonError } from "@/Errors/HttpBadJsonError.ts";
 import { HttpBodyTooLargeError } from "@/Errors/HttpBodyTooLargeError.ts";
 
 export class HttpBodyUtil {
@@ -17,6 +18,10 @@ export class HttpBodyUtil {
     if (text === "") {
       return undefined;
     }
-    return JSON.parse(text) as unknown;
+    try {
+      return JSON.parse(text) as unknown;
+    } catch {
+      throw new HttpBadJsonError();
+    }
   }
 }

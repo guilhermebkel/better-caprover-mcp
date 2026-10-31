@@ -95,10 +95,10 @@ describe("ServerBuilder.build()", () => {
       expect(client.getServerVersion()?.name).toBe("better-caprover-mcp");
     });
 
-    it("tells the client how servers and modes work", async () => {
+    it("tells the client the mode and the enabled tiers", async () => {
       const { client } = await connect({ mode: "operate" });
 
-      expect(client.getInstructions()).toContain("This MCP server talks to one CapRover server.");
+      expect(client.getInstructions()).toContain("Access mode: operate. Enabled risk tiers: read, write.");
     });
 
     it("registers only the read tools in readonly mode", async () => {

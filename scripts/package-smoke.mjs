@@ -1,4 +1,5 @@
-import { spawn } from "node:child_process";
+import { spawn, spawnSync } from "node:child_process";
+import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
@@ -17,6 +18,7 @@ const HTTP_PORT = "3100";
 const HTTP_OK = 200;
 const HEALTH_WAIT_MS = 15_000;
 const HEALTH_POLL_MS = 200;
+const SIGTERM = "SIGTERM";
 
 export const buildRequestLines = () => {
   const initialize = {
@@ -54,16 +56,49 @@ export const checkReplies = (replies) => {
   if (result.serverInfo?.name !== SERVER_NAME) {
     problems.push(`serverInfo.name is ${JSON.stringify(result.serverInfo?.name)}, expected ${SERVER_NAME}`);
   }
-  if (!String(result.instructions ?? "").includes("readonly")) {
-    problems.push("the instructions do not mention readonly mode");
+  if (!String(result.instructions ?? "").includes("Access mode: readonly")) {
+    problems.push("the instructions do not say the server starts in readonly mode");
   }
   return problems;
 };
 
 export const parseCommand = (argv) => {
-  const [first, ...rest] = argv;
-  const args = ARGUMENT_SEPARATORS.has(first) ? rest : argv;
-  return args.length === 0 ? DEFAULT_COMMAND : args;
+  let args = argv;
+  if (ARGUMENT_SEPARATORS.has(argv[0])) {
+    args = argv.slice(1);
+  }
+  const modeFlags = {
+    "--stdio-only": "stdioOnly",
+    "--http-only": "httpOnly",
+  };
+  const flags = { stdioOnly: false, httpOnly: false };
+  const command = [];
+  for (const token of args) {
+    const flagKey = modeFlags[token];
+    if (flagKey !== undefined) {
+      flags[flagKey] = true;
+      continue;
+    }
+    command.push(token);
+  }
+  const resolved = command.length === 0 ? DEFAULT_COMMAND : command;
+  return { command: resolved, stdioOnly: flags.stdioOnly, httpOnly: flags.httpOnly };
+};
+
+const stopChildProcessTree = (child) => {
+  if (child.pid === undefined) {
+    child.kill();
+    return;
+  }
+  if (process.platform === "win32") {
+    spawnSync("taskkill", ["/pid", String(child.pid), "/T", "/F"]);
+    return;
+  }
+  try {
+    process.kill(-child.pid, SIGTERM);
+  } catch {
+    child.kill(SIGTERM);
+  }
 };
 
 const hasInitializeReply = (text) => {
@@ -80,7 +115,7 @@ const runServer = (command) => {
     const child = spawn(program, args, { stdio: ["pipe", "pipe", "inherit"] });
     let stdout = "";
     const timer = setTimeout(() => {
-      child.kill();
+      stopChildProcessTree(child);
       reject(new Error(`no reply to initialize after ${TIMEOUT_MS} ms`));
     }, TIMEOUT_MS);
     child.on("error", reject);
@@ -88,7 +123,7 @@ const runServer = (command) => {
       stdout += chunk.toString();
       if (hasInitializeReply(stdout)) {
         child.stdin.end();
-        setTimeout(() => child.kill(), GRACE_MS);
+        setTimeout(() => stopChildProcessTree(child), GRACE_MS);
       }
     });
     child.on("close", () => {
@@ -133,10 +168,12 @@ export const runHttpSmoke = async (command) => {
     ...globalThis.process.env,
     CAPROVER_MCP_HTTP_PORT: HTTP_PORT,
     CAPROVER_MCP_HTTP_TOKENS: JSON.stringify({ smoke: HTTP_SMOKE_TOKEN }),
+    CAPROVER_MCP_HTTP_HOST: "127.0.0.1",
   };
   const child = spawn(program, httpArgs, {
     env: childEnv,
     stdio: "inherit",
+    detached: process.platform !== "win32",
   });
   const baseUrl = `http://127.0.0.1:${HTTP_PORT}`;
   try {
@@ -153,8 +190,8 @@ export const runHttpSmoke = async (command) => {
     if (name !== SERVER_NAME) {
       problems.push(`HTTP serverInfo.name is ${JSON.stringify(name)}, expected ${SERVER_NAME}`);
     }
-    if (!instructions.includes("readonly")) {
-      problems.push("HTTP instructions do not mention readonly mode");
+    if (!instructions.includes("Access mode: readonly")) {
+      problems.push("HTTP instructions do not say readonly mode");
     }
     if (problems.length > 0) {
       process.stderr.write(`${problems.join("\n")}\n`);
@@ -163,19 +200,24 @@ export const runHttpSmoke = async (command) => {
     process.stdout.write(`smoke http ok: ${[program, ...httpArgs].join(" ")}\n`);
     return 0;
   } finally {
-    child.kill();
+    stopChildProcessTree(child);
   }
 };
 
-const runAllSmoke = async (command) => {
+const runAllSmoke = async ({ command, stdioOnly, httpOnly }) => {
+  if (httpOnly) {
+    return runHttpSmoke(command);
+  }
   const stdioCode = await runSmoke(command);
-  if (stdioCode !== 0) {
+  if (stdioCode !== 0 || stdioOnly) {
     return stdioCode;
   }
   return runHttpSmoke(command);
 };
 
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
-  const command = parseCommand(process.argv.slice(FIRST_USER_ARG));
-  process.exit(await runAllSmoke(command));
+  const parsed = parseCommand(process.argv.slice(FIRST_USER_ARG));
+  process.exit(await runAllSmoke(parsed));
 }
+
+export const readPackageVersion = () => JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;

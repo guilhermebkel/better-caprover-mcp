@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { ConcurrencyLimitError } from "@/Errors/ConcurrencyLimitError.ts";
 import { MissingPreviewError } from "@/Errors/MissingPreviewError.ts";
 import { OperationDeniedError } from "@/Errors/OperationDeniedError.ts";
 import { ToolFailureError } from "@/Errors/ToolFailureError.ts";
@@ -36,31 +37,37 @@ export class OperationRunnerService {
   }
 
   private async run<Input>(toolName: string, operation: OperationPort<Input>, rawInput: unknown): Promise<ToolOutcome> {
-    const control = ControlFieldsSchema.parse(rawInput);
-    let target;
     try {
-      target = this.registry.resolve(control.server);
+      const control = ControlFieldsSchema.parse(rawInput);
+      let target;
+      try {
+        target = this.registry.resolve(control.server);
+      } catch (error) {
+        const outcome = OperationRunnerService.buildFailure(toolName, error);
+        this.writeAudit(toolName, "unknown", operation.risk, outcome.isError ? "error" : "ok");
+        return this.redactOutcome(outcome);
+      }
+      return await this.limiter.run(target.name, async () => (
+        CaproverServerRegistryService.activeStorage.run(target, async () => {
+          try {
+            target.policy.assertCanRun(toolName, operation.risk);
+            const input = operation.inputSchema.parse(InputStripUtil.stripControlFields(rawInput));
+            const outcome = await this.dispatch(toolName, operation, input, control);
+            this.writeAudit(toolName, target.name, operation.risk, outcome.isError ? "error" : "ok");
+            return this.redactOutcome(outcome);
+          } catch (error) {
+            const result: AuditResult = error instanceof OperationDeniedError ? "denied" : "error";
+            const outcome = this.redactOutcome(OperationRunnerService.buildFailure(toolName, error));
+            this.writeAudit(toolName, target.name, operation.risk, result);
+            return outcome;
+          }
+        })
+      ));
     } catch (error) {
-      const outcome = OperationRunnerService.buildFailure(toolName, error);
-      this.writeAudit(toolName, control.server ?? "unknown", operation.risk, outcome.isError ? "error" : "ok");
-      return this.redactOutcome(outcome);
+      const outcome = this.redactOutcome(OperationRunnerService.buildFailure(toolName, error));
+      this.writeAudit(toolName, "unknown", operation.risk, "error");
+      return outcome;
     }
-    return this.limiter.run(target.name, async () => (
-      CaproverServerRegistryService.activeStorage.run(target, async () => {
-        try {
-          target.policy.assertCanRun(toolName, operation.risk);
-          const input = operation.inputSchema.parse(InputStripUtil.stripControlFields(rawInput));
-          const outcome = await this.dispatch(toolName, operation, input, control);
-          this.writeAudit(toolName, target.name, operation.risk, outcome.isError ? "error" : "ok");
-          return this.redactOutcome(outcome);
-        } catch (error) {
-          const result: AuditResult = error instanceof OperationDeniedError ? "denied" : "error";
-          const outcome = this.redactOutcome(OperationRunnerService.buildFailure(toolName, error));
-          this.writeAudit(toolName, target.name, operation.risk, result);
-          return outcome;
-        }
-      })
-    ));
   }
 
   private writeAudit(tool: string, server: string, risk: RiskTier, result: AuditResult): void {
@@ -133,7 +140,8 @@ export class OperationRunnerService {
     }
     const isToolFailure = error instanceof ToolFailureError
       || error instanceof UnknownServerError
-      || error instanceof OperationDeniedError;
+      || error instanceof OperationDeniedError
+      || error instanceof ConcurrencyLimitError;
     if (isToolFailure) {
       return { isError: true, summary: error.message, data: {} };
     }

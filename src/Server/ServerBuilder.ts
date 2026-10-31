@@ -34,12 +34,17 @@ export class ServerBuilder {
     const serverHint = registry.getIsMultiServer()
       ? "Several CapRover servers are configured: every call needs a `server` parameter with a configured name."
       : "This MCP server talks to one CapRover server.";
+    const modeLine = registry.getIsMultiServer()
+      ? "Access modes apply per configured server. Enabled tools are the union of what any server allows; each call is checked against that server's mode."
+      : (() => {
+          const policy = registry.resolve(undefined).policy;
+          return `Access mode: ${policy.getMode()}. Enabled risk tiers: ${policy.getEnabledTiers().join(", ")}.`;
+        })();
     return [
       "better-caprover-mcp is an unofficial MCP server for CapRover.",
       serverHint,
-      "Access modes apply per configured server. Enabled tools are the union of what any server allows; each call is checked against that server's mode.",
+      modeLine,
       "Modes: `readonly` only reads; `operate` also changes apps; `admin` also deletes.",
-      "The default access mode is readonly when not set per server.",
       "Only the person can raise the mode, by restarting the server with another CAPROVER_MCP_MODE. Do not look for a way around it.",
       "Start with `get_overview`. Read an app with `get_app` before you change it.",
       "A changing call takes `dry_run` to preview without writing.",

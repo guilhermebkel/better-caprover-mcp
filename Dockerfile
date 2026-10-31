@@ -14,6 +14,5 @@ LABEL org.opencontainers.image.description="Unofficial MCP server for CapRover"
 LABEL org.opencontainers.image.licenses="MIT"
 COPY --from=build --chmod=755 /app/dist/main.js /usr/local/bin/better-caprover-mcp
 EXPOSE 3100
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD wget -qO- http://127.0.0.1:3100/health || exit 1
 USER node
 ENTRYPOINT ["better-caprover-mcp"]

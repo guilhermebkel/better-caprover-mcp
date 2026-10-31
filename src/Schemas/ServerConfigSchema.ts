@@ -21,7 +21,7 @@ export const CaproverServerEntrySchema: z.ZodType<CaproverServerEntryConfig> = z
   isCriticalAllowed: z.boolean().optional(),
   passwordEnv: z.string().min(1).max(MAX_PASSWORD_ENV_LENGTH).optional(),
   passwordFile: z.string().min(1).max(MAX_PASSWORD_FILE_LENGTH).optional(),
-}).superRefine((entry, context) => {
+}).strict().superRefine((entry, context) => {
   const hasEnv = entry.passwordEnv !== undefined;
   const hasFile = entry.passwordFile !== undefined;
   if (hasEnv === hasFile) {

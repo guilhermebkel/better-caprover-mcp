@@ -13,6 +13,7 @@ import { PolicyService } from "@/Services/PolicyService.ts";
 
 const READONLY_SECRET = "readonly-server-secret-abc";
 const OPERATE_SECRET = "operate-server-secret-xyz";
+const HTTP_TOKEN_SECRET = "http-bearer-token-secret-99";
 
 const buildMultiRunner = (): {
   readonlyFake: FakeCaproverClientAdapter;
@@ -26,13 +27,13 @@ const buildMultiRunner = (): {
     {
       name: "readonly",
       client: readonlyFake,
-      policy: new PolicyService("readonly", false),
+      policy: new PolicyService("readonly", false, true),
       secrets: [READONLY_SECRET],
     },
     {
       name: "operate",
       client: operateFake,
-      policy: new PolicyService("operate", false),
+      policy: new PolicyService("operate", false, true),
       secrets: [OPERATE_SECRET],
     },
   ], true);
@@ -80,7 +81,7 @@ describe("CaproverServerRegistryService.buildForTest()", () => {
     const allowed = await scaleApp.call({ server: "operate", app_name: "api", instance_count: 2 });
 
     expect(denied.isError).toBe(true);
-    expect(denied.summary).toContain("CAPROVER_MCP_MODE=operate");
+    expect(denied.summary).toContain("CapRover servers configuration");
     expect(readonlyFake.calls).toStrictEqual([]);
     expect(allowed.isError).toBe(false);
     expect(operateFake.calls).toContain("setInstanceCount:api:2");
@@ -92,16 +93,21 @@ describe("CaproverServerRegistryService.buildForTest()", () => {
       {
         name: "readonly",
         client: readonlyFake,
-        policy: new PolicyService("readonly", false),
+        policy: new PolicyService("readonly", false, true),
         secrets: [READONLY_SECRET],
       },
       {
         name: "operate",
         client: new FakeCaproverClientAdapter([]),
-        policy: new PolicyService("operate", false),
+        policy: new PolicyService("operate", false, true),
         secrets: [OPERATE_SECRET],
       },
-    ], true);
+    ], true, [HTTP_TOKEN_SECRET]);
+    const lines: string[] = [];
+    const spy = vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+      lines.push(String(chunk));
+      return true;
+    });
     const runner = new OperationRunnerService(
       registry,
       new ConfirmationService(() => 0),
@@ -114,9 +120,71 @@ describe("CaproverServerRegistryService.buildForTest()", () => {
 
     const reply = await listApps.call({ server: "readonly" });
 
+    spy.mockRestore();
     expect(reply.summary).toBe("login failed [REDACTED]");
     expect(JSON.stringify(reply)).not.toContain(READONLY_SECRET);
     expect(JSON.stringify(reply)).not.toContain(OPERATE_SECRET);
+    expect(JSON.stringify(reply)).not.toContain(HTTP_TOKEN_SECRET);
+    const audit = lines.map((line) => JSON.parse(line.trim()) as Record<string, string>).find((entry) => entry.level === "audit");
+    expect(audit?.server).toBe("readonly");
+    expect(JSON.stringify(lines)).not.toContain(READONLY_SECRET);
+    expect(JSON.stringify(lines)).not.toContain(OPERATE_SECRET);
+    expect(JSON.stringify(lines)).not.toContain(HTTP_TOKEN_SECRET);
+  });
+
+  it("does not echo an unknown server name in the tool error or audit", async () => {
+    const { runner, registry } = buildMultiRunner();
+    const lines: string[] = [];
+    const spy = vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {
+      lines.push(String(chunk));
+      return true;
+    });
+    const tools = buildTools(registry, runner);
+    const listApps = findTool(tools, "list_apps");
+
+    const outcome = await listApps.call({ server: "missing-prod-name" });
+
+    spy.mockRestore();
+    expect(outcome.isError).toBe(true);
+    expect(outcome.summary).toContain("Unknown server name.");
+    expect(outcome.summary).not.toContain("missing-prod-name");
+    const audit = lines.map((line) => JSON.parse(line.trim()) as Record<string, string>).find((entry) => entry.level === "audit");
+    expect(audit?.server).toBe("unknown");
+  });
+
+  it("returns a concurrency message after waiting when the per-server limit is saturated", async () => {
+    vi.useFakeTimers();
+    let releaseFirst = (): void => undefined;
+    const hangFirst = new Promise<void>((resolve) => {
+      releaseFirst = resolve;
+    });
+    const fake = new FakeCaproverClientAdapter([FakeCaproverClientAdapter.buildApp()], {
+      hangUntilReleased: () => hangFirst,
+    });
+    const registry = CaproverServerRegistryService.buildForTest([{
+      name: DEFAULT_SERVER_NAME,
+      client: fake,
+      policy: new PolicyService("admin", false),
+      secrets: [],
+    }]);
+    const runner = new OperationRunnerService(
+      registry,
+      new ConfirmationService(() => 0),
+      new AuditLogService(),
+      new ConcurrencyLimiterService(1),
+      () => 0,
+    );
+    const tools = buildTools(registry, runner);
+    const listApps = findTool(tools, "list_apps");
+    const first = listApps.call({});
+    const second = listApps.call({});
+    await vi.advanceTimersByTimeAsync(30_001);
+    const blocked = await second;
+    releaseFirst();
+    vi.useRealTimers();
+    await first;
+    expect(blocked.isError).toBe(true);
+    expect(blocked.summary).toContain("Too many concurrent calls");
   });
 
   it("writes one audit line per call without argument values", async () => {

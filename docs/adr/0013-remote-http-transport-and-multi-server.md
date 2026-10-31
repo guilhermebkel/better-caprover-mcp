@@ -43,8 +43,16 @@ OAuth and user accounts stay out of scope (issue out of scope).
 
 ### HTTP limits (S9)
 
-- Maximum request body size: 1 MiB (`CAPROVER_MCP_MAX_HTTP_BODY_BYTES`, default `1048576`).
-- Maximum concurrent in-flight tool executions **per CapRover server name**: 5 (`CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER`). Extra calls wait; if the wait exceeds 30 seconds, the call fails with a clear message (AC7).
+- Maximum request body size: 1 MiB (`CAPROVER_MCP_MAX_HTTP_BODY_BYTES`, default `1048576`). Oversized bodies return **413**; invalid JSON returns **400** (the server does not log parse error text that could quote body content).
+- **Request rate limit**: `CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE` (default `120`) per bearer token (or per anonymous client key on localhost). Excess requests return **429**.
+- Maximum concurrent in-flight tool executions **per CapRover server name**: 5 (`CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER`). Extra calls wait in a **FIFO queue**; if the wait exceeds 30 seconds, the call fails with a clear message (AC7).
+
+### HTTP sessions (S2)
+
+- Streamable HTTP runs in **stateful session mode**: each successful `initialize` creates a dedicated `StreamableHTTPServerTransport` connected to its own `McpServer` instance, keyed by `Mcp-Session-Id`.
+- Follow-up requests must send that header; unknown session IDs return **404**.
+- Requests without a session header that are not `initialize` return **400** without creating a session.
+- Several clients can initialize concurrently; sessions are torn down when the transport closes.
 
 ### Release timing (Needs input)
 
@@ -73,7 +81,7 @@ OAuth and user accounts stay out of scope (issue out of scope).
 - `EnvUtil` and `EnvSchema` grow; `CaproverServerRegistryService` centralizes resolution and secrets collection.
 - Operations keep a single `CaproverClientPort` in the manifest via `RoutingCaproverClientAdapter` and `AsyncLocalStorage` for the active server.
 - `OperationRunnerService` resolves `server`, applies per-server policy, audit, and concurrency, and redacts with all configured secrets.
-- Docker exposes `3100`, sets `HEALTHCHECK` on `/health`, and documents HTTP mode in README and `docs/product/remote-http.md`.
+- Docker exposes `3100`. For HTTP deployments, terminate TLS at a reverse proxy and optionally add a container `HEALTHCHECK` against `GET /health` (the default image has no health check so stdio-only containers stay healthy).
 - Phase 2 (#3) stable manifest and toolsets are not complete on `main`; this work builds on the existing 14-operation manifest and notes that dependency in the pull request.
 
 ## Related

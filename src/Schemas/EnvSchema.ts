@@ -9,6 +9,7 @@ const OptionalTextSchema = z.string().optional().transform((text) => (text === u
 const DEFAULT_HTTP_HOST = "127.0.0.1";
 const DEFAULT_HTTP_PORT = 3100;
 const DEFAULT_MAX_HTTP_BODY_BYTES = 1_048_576;
+const DEFAULT_MAX_HTTP_REQUESTS_PER_MINUTE = 120;
 const DEFAULT_MAX_CONCURRENT_PER_SERVER = 5;
 
 const parsePositiveIntFromEnv = (defaultValue: number): z.ZodType<number> => z.string().optional().transform((text) => {
@@ -43,6 +44,7 @@ export type RawEnvValues = {
   CAPROVER_MCP_HTTP_PORT: number;
   CAPROVER_MCP_HTTP_TOKENS?: Env["CAPROVER_MCP_HTTP_TOKENS"];
   CAPROVER_MCP_MAX_HTTP_BODY_BYTES: number;
+  CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE: number;
   CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER: number;
   CAPROVER_MCP_SERVERS?: string;
   CAPROVER_MCP_SERVERS_FILE?: string;
@@ -61,6 +63,7 @@ export const RawEnvSchema: z.ZodType<RawEnvValues> = z.object({
   CAPROVER_MCP_HTTP_PORT: parsePositiveIntFromEnv(DEFAULT_HTTP_PORT),
   CAPROVER_MCP_HTTP_TOKENS: httpTokensFromEnv,
   CAPROVER_MCP_MAX_HTTP_BODY_BYTES: parsePositiveIntFromEnv(DEFAULT_MAX_HTTP_BODY_BYTES),
+  CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE: parsePositiveIntFromEnv(DEFAULT_MAX_HTTP_REQUESTS_PER_MINUTE),
   CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER: parsePositiveIntFromEnv(DEFAULT_MAX_CONCURRENT_PER_SERVER),
   CAPROVER_MCP_SERVERS: OptionalTextSchema,
   CAPROVER_MCP_SERVERS_FILE: OptionalTextSchema,

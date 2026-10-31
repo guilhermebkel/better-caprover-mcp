@@ -80,4 +80,18 @@ describe("EnvUtil.read()", () => {
       expect(EnvUtil.read().CAPROVER_PASSWORD).toBe("fake password with spaces");
     });
   });
+
+  describe("when several servers are configured", () => {
+    it("rejects inline passwords in the JSON list", () => {
+      vi.stubEnv("CAPROVER_MCP_SERVERS", JSON.stringify([{
+        name: "prod",
+        url: "https://captain.example.com",
+        mode: "readonly",
+        password: "secret",
+        passwordEnv: "CAPROVER_PASSWORD",
+      }]));
+
+      expect(() => EnvUtil.read()).toThrow(/Unrecognized key/);
+    });
+  });
 });
