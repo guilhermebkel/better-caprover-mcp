@@ -12,7 +12,6 @@ const PROTOCOL_VERSION = "2025-06-18";
 const SERVER_NAME = "better-caprover-mcp";
 const DEFAULT_COMMAND = ["node", "dist/main.js"];
 const MAX_SHOWN_CHARS = 80;
-const ARGUMENT_SEPARATORS = new Set(["--"]);
 const HTTP_SMOKE_TOKEN = "smoke-http-token-12345678";
 const HTTP_PORT = "3100";
 const HTTP_OK = 200;
