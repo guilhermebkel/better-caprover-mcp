@@ -5,7 +5,7 @@ import type { CaproverApp, CaproverClientPort } from "@/Protocols/CaproverClient
 import type { OperationPort, OperationResult } from "@/Protocols/OperationProtocol.ts";
 import { SetEnvVarsInputSchema } from "@/Schemas/AppInputSchema.ts";
 import type { AppResolverService } from "@/Services/AppResolverService.ts";
-import { DotenvUtil } from "@/Utils/DotenvUtil.ts";
+import { EnvVarsPlanUtil } from "@/Utils/EnvVarsPlanUtil.ts";
 import { SetEnvVarsOutputSchema } from "@/Schemas/AppOutputSchema.ts";
 
 export class SetEnvVarsOperation implements OperationPort<SetEnvVarsInput> {
@@ -28,29 +28,15 @@ export class SetEnvVarsOperation implements OperationPort<SetEnvVarsInput> {
 
   async describeChange(input: SetEnvVarsInput): Promise<OperationResult> {
     const app = await this.resolver.getApp(input.app_name);
-    const plan = SetEnvVarsOperation.buildPlan(app, input);
+    const plan = EnvVarsPlanUtil.build(app, input);
     return { summary: SetEnvVarsOperation.describePlan(app.appName, plan, "Would change"), data: SetEnvVarsOperation.buildData(app, plan) };
   }
 
   async execute(input: SetEnvVarsInput): Promise<OperationResult> {
     const app = await this.resolver.getApp(input.app_name);
-    const plan = SetEnvVarsOperation.buildPlan(app, input);
+    const plan = EnvVarsPlanUtil.build(app, input);
     await this.client.setEnvVars(app.appName, plan.merged);
     return { summary: SetEnvVarsOperation.describePlan(app.appName, plan, "Changed"), data: SetEnvVarsOperation.buildData(app, plan) };
-  }
-
-  private static buildPlan(app: CaproverApp, input: SetEnvVarsInput): EnvVarsPlan {
-    const requested = DotenvUtil.parse(input.env_vars ?? "");
-    const removeKeys = new Set(input.remove_keys ?? []);
-    const currentKeys = new Set(app.envVars.map((envVar) => envVar.key));
-    const requestedKeys = new Set(requested.map((envVar) => envVar.key));
-    const kept = app.envVars.filter((envVar) => !removeKeys.has(envVar.key) && !requestedKeys.has(envVar.key));
-    return {
-      merged: [...kept, ...requested.filter((envVar) => !removeKeys.has(envVar.key))],
-      addedKeys: [...requestedKeys].filter((key) => !currentKeys.has(key) && !removeKeys.has(key)),
-      updatedKeys: [...requestedKeys].filter((key) => currentKeys.has(key) && !removeKeys.has(key)),
-      removedKeys: [...removeKeys].filter((key) => currentKeys.has(key)),
-    };
   }
 
   private static describePlan(appName: string, plan: EnvVarsPlan, verb: string): string {

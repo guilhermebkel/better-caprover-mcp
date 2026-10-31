@@ -73,12 +73,16 @@ const CONTRACT_ROWS: ContractRow[] = [
   ["get_app_runtime", { app_name: "web" }],
   ["get_app_logs", { app_name: "web" }],
   ["get_build_logs", { app_name: "web" }],
+  ["diagnose_app", { app_name: "web" }],
+  ["find_issues", {}],
   ["list_apps_runtime", {}],
   ["create_app", { app_name: "new-app" }],
   ["deploy_image", { app_name: "web", image_name: "nginx:1.27" }],
+  ["redeploy_app", { app_name: "web" }],
   ["deploy_archive", { app_name: "web", source_archive: "dGFyLWJ5dGVz" }],
   ["start_build", { webhook_path: "/user/apps/webhooks/triggerbuild?namespace=captain&token=planted-hook-token-55" }],
   ["set_env_vars", { app_name: "web", env_vars: "LEVEL=info" }],
+  ["bulk_env_update", { app_names: ["web"], env_vars: "LEVEL=info" }],
   ["scale_app", { app_name: "web", instance_count: 2 }],
   ["rename_app", { app_name: "web", new_app_name: "web-two" }],
   ["delete_app", { app_name: "web" }],
@@ -194,12 +198,16 @@ describe("OperationManifestSurface.build()", () => {
       "get_app_runtime:read",
       "get_app_logs:read",
       "get_build_logs:read",
+      "diagnose_app:read",
+      "find_issues:read",
       "list_apps_runtime:read",
       "create_app:write",
       "deploy_image:write",
+      "redeploy_app:write",
       "deploy_archive:write",
       "start_build:write",
       "set_env_vars:write",
+      "bulk_env_update:write",
       "scale_app:write",
       "rename_app:write",
       "delete_app:destructive",
@@ -256,11 +264,11 @@ describe("OperationManifestSurface.build()", () => {
     ]);
   });
 
-  it("has 29 read, 24 write, 6 destructive and 8 critical operations", () => {
+  it("has 31 read, 26 write, 6 destructive and 8 critical operations", () => {
     const tiers = buildTools().map((tool) => tool.risk);
     const count = (risk: string): number => tiers.filter((tier) => tier === risk).length;
 
-    expect([count("read"), count("write"), count("destructive"), count("critical")]).toStrictEqual([29, 24, 6, 8]);
+    expect([count("read"), count("write"), count("destructive"), count("critical")]).toStrictEqual([31, 26, 6, 8]);
   });
 
   it("puts every operation in the toolset of its area", () => {
@@ -274,13 +282,14 @@ describe("OperationManifestSurface.build()", () => {
     ]);
     expect(toolsetToNames.get("core")).toStrictEqual([
       "get_overview", "get_access", "get_guide", "list_apps", "get_app", "get_app_runtime", "get_app_logs", "get_build_logs",
+      "diagnose_app", "find_issues",
     ]);
   });
 
   it("starts the description of every read operation with Read-only.", () => {
     const readTools = buildTools().filter((tool) => tool.risk === "read");
 
-    expect(readTools).toHaveLength(29);
+    expect(readTools).toHaveLength(31);
     expect(readTools.filter((tool) => !tool.description.startsWith("Read-only. "))).toStrictEqual([]);
   });
 

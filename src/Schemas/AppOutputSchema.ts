@@ -121,3 +121,23 @@ export const DeployArchiveOutputSchema = buildChangeOutputSchema({
   appName: TextOutputSchema,
   archiveBytes: CountOutputSchema,
 });
+
+export const DiagnoseAppOutputSchema = buildReadOutputSchema({
+  appName: TextOutputSchema,
+  findings: RowListOutputSchema,
+  rulesRun: TextListOutputSchema,
+  rulesSkipped: RowListOutputSchema,
+});
+
+export const FindIssuesOutputSchema = buildListOutputSchema("findings");
+
+export const RedeployAppOutputSchema = buildChangeOutputSchema({
+  appName: TextOutputSchema,
+  imageName: TextOutputSchema,
+});
+
+export const BulkEnvUpdateOutputSchema = buildChangeOutputSchema({
+  applied: TextListOutputSchema,
+  notApplied: TextListOutputSchema,
+  plans: RowListOutputSchema,
+});

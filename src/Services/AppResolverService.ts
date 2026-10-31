@@ -9,6 +9,15 @@ export class AppResolverService {
 
   async getApp(appName: string): Promise<CaproverApp> {
     const { apps } = await this.client.listApps();
+    return AppResolverService.pickApp(apps, appName);
+  }
+
+  async getApps(appNames: readonly string[]): Promise<CaproverApp[]> {
+    const { apps } = await this.client.listApps();
+    return appNames.map((appName) => AppResolverService.pickApp(apps, appName));
+  }
+
+  private static pickApp(apps: readonly CaproverApp[], appName: string): CaproverApp {
     const found = apps.find((app) => app.appName === appName);
     if (found !== undefined) {
       return found;

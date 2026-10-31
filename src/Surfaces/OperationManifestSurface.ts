@@ -1,6 +1,10 @@
 import type { CaproverClientPort } from "@/Protocols/CaproverClientProtocol.ts";
 import type { ManifestOptions } from "@/Protocols/ManifestProtocol.ts";
 import type { ToolDefinition } from "@/Protocols/OperationProtocol.ts";
+import { BulkEnvUpdateOperation } from "@/Operations/BulkEnvUpdateOperation.ts";
+import { DiagnoseAppOperation } from "@/Operations/DiagnoseAppOperation.ts";
+import { FindIssuesOperation } from "@/Operations/FindIssuesOperation.ts";
+import { RedeployAppOperation } from "@/Operations/RedeployAppOperation.ts";
 import { AddCustomDomainOperation } from "@/Operations/AddCustomDomainOperation.ts";
 import { AddNodeOperation } from "@/Operations/AddNodeOperation.ts";
 import { AddOneClickRepoOperation } from "@/Operations/AddOneClickRepoOperation.ts";
@@ -69,6 +73,7 @@ import { UpdateProjectOperation } from "@/Operations/UpdateProjectOperation.ts";
 import { UpdateRegistryOperation } from "@/Operations/UpdateRegistryOperation.ts";
 import { UpdateRootDomainOperation } from "@/Operations/UpdateRootDomainOperation.ts";
 import { AppResolverService } from "@/Services/AppResolverService.ts";
+import { DiagnosisService } from "@/Services/DiagnosisService.ts";
 import type { OperationRunnerService } from "@/Services/OperationRunnerService.ts";
 import type { PolicyServicePort } from "@/Protocols/AccessProtocol.ts";
 
@@ -80,6 +85,7 @@ export class OperationManifestSurface {
     options: ManifestOptions = { toolsets: [], isElicitationAvailable: () => false },
   ): ToolDefinition[] {
     const resolver = new AppResolverService(client);
+    const diagnosis = new DiagnosisService(client);
     const { toolsets, isElicitationAvailable, surface } = options;
     return [
       runner.buildTool(GetOverviewOperation.NAME, new GetOverviewOperation(client, policy), "core"),
@@ -90,12 +96,16 @@ export class OperationManifestSurface {
       runner.buildTool(GetAppRuntimeOperation.NAME, new GetAppRuntimeOperation(client, resolver), "core"),
       runner.buildTool(GetAppLogsOperation.NAME, new GetAppLogsOperation(client, resolver), "core"),
       runner.buildTool(GetBuildLogsOperation.NAME, new GetBuildLogsOperation(client, resolver), "core"),
+      runner.buildTool(DiagnoseAppOperation.NAME, new DiagnoseAppOperation(resolver, diagnosis), "core"),
+      runner.buildTool(FindIssuesOperation.NAME, new FindIssuesOperation(client, diagnosis), "core"),
       runner.buildTool(ListAppsRuntimeOperation.NAME, new ListAppsRuntimeOperation(client), "apps"),
       runner.buildTool(CreateAppOperation.NAME, new CreateAppOperation(client), "apps"),
       runner.buildTool(DeployImageOperation.NAME, new DeployImageOperation(client, resolver), "apps"),
+      runner.buildTool(RedeployAppOperation.NAME, new RedeployAppOperation(client, resolver), "apps"),
       runner.buildTool(DeployArchiveOperation.NAME, new DeployArchiveOperation(client, resolver), "apps"),
       runner.buildTool(StartBuildOperation.NAME, new StartBuildOperation(client), "apps"),
       runner.buildTool(SetEnvVarsOperation.NAME, new SetEnvVarsOperation(client, resolver), "apps"),
+      runner.buildTool(BulkEnvUpdateOperation.NAME, new BulkEnvUpdateOperation(client, resolver), "apps"),
       runner.buildTool(ScaleAppOperation.NAME, new ScaleAppOperation(client, resolver), "apps"),
       runner.buildTool(RenameAppOperation.NAME, new RenameAppOperation(client, resolver), "apps"),
       runner.buildTool(DeleteAppOperation.NAME, new DeleteAppOperation(client, resolver), "apps"),

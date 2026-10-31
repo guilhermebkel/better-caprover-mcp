@@ -198,12 +198,12 @@ The mode decides which operations the client sees at all. Only the person can ch
 
 ## Operations
 
-67 operations in ten toolsets. The tier and toolset of every one, and the SDK method behind it, are in [`docs/product/risk-tiers.md`](docs/product/risk-tiers.md). A changing call takes `dry_run`; a deleting or critical call returns a preview and a `confirmation_token` first, and asks the person through the client when the client supports it.
+71 operations in ten toolsets. The tier and toolset of every one, and the SDK method behind it, are in [`docs/product/risk-tiers.md`](docs/product/risk-tiers.md). A changing call takes `dry_run`; a deleting or critical call returns a preview and a `confirmation_token` first, and asks the person through the client when the client supports it.
 
 | Toolset | Operations |
 | --- | --- |
-| `core` | `get_overview`, `get_access`, `get_guide`; `list_apps`, `get_app`, `get_app_runtime`, `get_app_logs`, `get_build_logs` (env var values are never returned, only `isSet`; logs are redacted) |
-| `apps` | `list_apps_runtime`; `create_app`, `deploy_image`, `deploy_archive`, `start_build`, `set_env_vars`, `scale_app`, `rename_app`; `delete_app` |
+| `core` | `get_overview`, `get_access`, `get_guide`; `list_apps`, `get_app`, `get_app_runtime`, `get_app_logs`, `get_build_logs` (env var values are never returned, only `isSet`; logs are redacted); `diagnose_app`, `find_issues` (findings with evidence, never a fix) |
+| `apps` | `list_apps_runtime`; `create_app`, `deploy_image`, `redeploy_app`, `deploy_archive`, `start_build`, `set_env_vars`, `bulk_env_update`, `scale_app`, `rename_app`; `delete_app` |
 | `domains` | `add_custom_domain`, `enable_ssl`, `enable_root_ssl`, `set_force_ssl`; `remove_custom_domain`; critical: `update_root_domain` |
 | `projects` | `list_projects`, `create_project`, `update_project`, `delete_projects` |
 | `oneclick` | `list_one_click_apps`, `get_one_click_app`, `list_one_click_repos`, `add_one_click_repo`, `delete_one_click_repo`, `deploy_one_click`, `get_one_click_deploy_progress` |
@@ -300,7 +300,7 @@ The endpoint it uses is missing in older CapRover versions (1.15.5 has none). Th
 
 - [x] **Core:** the first 14 operations on the `tools` surface, access modes, `dry_run`, confirmation token, redaction, tested against a real CapRover.
 - [x] **The rest of the CapRover API:** [#3](https://github.com/guilhermebkel/better-caprover-mcp/issues/3) — 67 operations in ten toolsets; four SDK methods stay planned, with reasons.
-- [ ] **Diagnostics** (`diagnose_app`, `find_issues`): [#4](https://github.com/guilhermebkel/better-caprover-mcp/issues/4)
+- [x] **Diagnostics** (`diagnose_app`, `find_issues`, `redeploy_app`, `bulk_env_update`): [#4](https://github.com/guilhermebkel/better-caprover-mcp/issues/4)
 - [ ] **Code Mode** (`search` and `execute` in a sandbox) and a benchmark: [#5](https://github.com/guilhermebkel/better-caprover-mcp/issues/5) — the `code` surface and the sandbox are built (`CAPROVER_MCP_SURFACE`); the benchmark that picks the default is still to run
 - [x] **Remote HTTP (one CapRover server per MCP instance):** [#6](https://github.com/guilhermebkel/better-caprover-mcp/issues/6) — multi-server in one process is out of scope; run one instance per Captain.
 

@@ -108,6 +108,6 @@ describe("The built server, started the way a client starts it, against a real C
   it("registers every operation of every toolset except the 8 critical ones, which stay locked", async () => {
     const { tools } = await client.listTools();
 
-    expect(tools).toHaveLength(59);
+    expect(tools).toHaveLength(63);
   });
 });
