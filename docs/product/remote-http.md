@@ -11,7 +11,7 @@ export CAPROVER_MCP_HTTP_TOKEN='choose-a-long-random-secret'
 better-caprover-mcp serve --http
 ```
 
-The server listens on `127.0.0.1:3100` by default. MCP endpoint: `http://127.0.0.1:3100/mcp`. Health: `http://127.0.0.1:3100/health`.
+MCP traffic uses path **`/mcp`** on the configured bind address and port (defaults in the README [**Configuration**](../../README.md#configuration) table). **`GET /health`** on the same listener returns `ok` for Docker and proxies.
 
 Clients must send `Authorization: Bearer <secret>` on every MCP request. The secret must match `CAPROVER_MCP_HTTP_TOKEN`.
 
@@ -35,14 +35,7 @@ The MCP process does not terminate TLS itself; CapRover’s nginx edge handles c
 
 ## Docker
 
-```bash
-docker run -d --name caprover-mcp -p 3100:3100 \
-  -e CAPROVER_URL -e CAPROVER_PASSWORD \
-  -e CAPROVER_MCP_HTTP_HOST=0.0.0.0 \
-  -e CAPROVER_MCP_HTTP_TOKEN='your-long-random-secret' \
-  ghcr.io/guilhermebkel/better-caprover-mcp:latest \
-  serve --http
-```
+For a `docker run` example (localhost bind, env vars, and client JSON), see the README [**Quick start** — Server and client](../../README.md#2-server-and-client).
 
 The image exposes port `3100` and defines a Docker `HEALTHCHECK` via `scripts/docker-healthcheck.sh`. In HTTP mode (`serve --http`) the process writes a marker file (default `/tmp/better-caprover-mcp-http.active`) and the check requires `GET /health` to return body `ok`. The healthcheck script accepts optional `CAPROVER_MCP_HTTP_MARKER_PATH` to point at that file; it is not a variable on the MCP server itself. Stdio-only runs leave no HTTP marker, so the script exits success and a plain `docker run` without `serve --http` stays healthy.
 

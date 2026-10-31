@@ -69,7 +69,7 @@ Env var values are never returned (only `isSet`). The password and the values of
 
 ## Quick start
 
-### Directly on the client
+### 1. Directly on the client
 
 ```json
 {
@@ -86,10 +86,12 @@ Env var values are never returned (only `isSet`). The password and the values of
 }
 ```
 
-### Server and client
+### 2. Server and client
+
+Bind to localhost only (`127.0.0.1:3100`). Put TLS in front when clients reach the server over the network.
 
 ```bash
-docker run -d --name caprover-mcp -p 3100:3100 \
+docker run -d --name caprover-mcp -p 127.0.0.1:3100:3100 \
   -e CAPROVER_URL=https://captain.your-domain.com \
   -e CAPROVER_PASSWORD='your CapRover password' \
   -e CAPROVER_MCP_HTTP_HOST=0.0.0.0 \
@@ -219,7 +221,7 @@ Without `CAPROVER_URL` and `CAPROVER_PASSWORD`, `init` only prints the configura
 | `CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE` | `120` | Max MCP HTTP requests per minute. Failed auth is counted per client remote address; authenticated traffic shares one bucket. Behind a reverse proxy, failed-auth throttling is often shared (this server does not read `X-Forwarded-For`). |
 | `CAPROVER_MCP_MAX_HTTP_SESSIONS` | `64` | Max concurrent Streamable HTTP MCP sessions |
 | `CAPROVER_MCP_HTTP_SESSION_TTL_MS` | `86400000` | Max idle lifetime of an HTTP MCP session (ms) |
-| `CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER` | `5` | Max parallel tool runs in this MCP instance |
+| `CAPROVER_MCP_MAX_CONCURRENT` | `5` | Max parallel tool runs in this MCP instance |
 
 Without `CAPROVER_URL` and `CAPROVER_PASSWORD` the server still starts, and every call tells the model what is missing.
 
