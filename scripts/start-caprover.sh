@@ -9,16 +9,17 @@ PASSWORD="${CAPROVER_TEST_PASSWORD:-captain42}"
 GOOD_NEEDED=10
 MAX_ATTEMPTS=240
 
-if docker ps -a --format '{{.Names}}' | grep -qx "$NAME"; then
-  echo "A container named $NAME exists already. Remove it first: docker rm -f $NAME" >&2
-  exit 1
+# Why: the install container exits once CapRover runs as a swarm service, and the service stays after it, so a second
+# run reuses the CapRover that is there and skips the slow install.
+if docker service ls --format '{{.Name}}' 2>/dev/null | grep -qx 'captain-captain'; then
+  echo "CapRover is installed already; waiting for it to be ready."
+else
+  docker rm -f "$NAME" > /dev/null 2>&1 || true
+  # MAIN_NODE_IP_ADDRESS skips CapRover's search for a public address.
+  docker run -d --name "$NAME" --network host -e ACCEPTED_TERMS=true -e MAIN_NODE_IP_ADDRESS=127.0.0.1 \
+    -v /var/run/docker.sock:/var/run/docker.sock -v /captain:/captain caprover/caprover > /dev/null
 fi
 
-# MAIN_NODE_IP_ADDRESS skips CapRover's search for a public address.
-docker run -d --name "$NAME" --network host -e ACCEPTED_TERMS=true -e MAIN_NODE_IP_ADDRESS=127.0.0.1 \
-  -v /var/run/docker.sock:/var/run/docker.sock -v /captain:/captain caprover/caprover > /dev/null
-
-# Why: curl fails while CapRover is not listening yet, and that must not stop the loop under `set -e`.
 # CapRover answers the login before it is ready, and only the system info says "not ready yet".
 # It also restarts once as a service, so the wait needs ten good answers of the system info in a row.
 good=0
@@ -38,6 +39,6 @@ for _ in $(seq 1 "$MAX_ATTEMPTS"); do
 done
 
 docker service ls || true
-docker logs "$NAME" || true
+docker logs "$NAME" 2>/dev/null || true
 echo "CapRover did not stay up." >&2
 exit 1

@@ -97,7 +97,7 @@ pnpm install
 pnpm check   # typecheck, lint, dead code, duplication, SDK drift, tests, build and a smoke run of the bundle
 ```
 
-`pnpm test:integration` runs the tests that need a real CapRover (CI starts one; locally, `scripts/start-caprover.sh` starts a throwaway CapRover in Docker with its default password and waits until it is ready; or set `CAPROVER_TEST_URL` and `CAPROVER_TEST_PASSWORD` to use your own), and needs `pnpm build` first. Remove it afterwards with `docker rm -f captain-install`. `pnpm sdk:drift` fails when the CapRover SDK has a method that is not classified in `src/Adapters/CapRover/sdk-coverage.json`.
+`pnpm test:integration` runs the tests that need a real CapRover (CI starts one; locally, `scripts/start-caprover.sh` starts a throwaway CapRover in Docker with its default password and waits until it is ready; or set `CAPROVER_TEST_URL` and `CAPROVER_TEST_PASSWORD` to use your own), and needs `pnpm build` first. A second run reuses the CapRover that is installed, so it is fast. To remove it: `docker swarm leave --force` and `docker rm -f captain-install`. `pnpm sdk:drift` fails when the CapRover SDK has a method that is not classified in `src/Adapters/CapRover/sdk-coverage.json`.
 
 `pnpm smoke -- docker run -i --rm <image>` runs the same smoke test against an image. Read `AGENTS.md` first: it says what to read for each kind of task.
 
