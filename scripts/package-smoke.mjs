@@ -198,7 +198,7 @@ export const runHttpSmoke = async (command) => {
   const childEnv = {
     ...globalThis.process.env,
     CAPROVER_MCP_HTTP_PORT: HTTP_PORT,
-    CAPROVER_MCP_HTTP_TOKENS: JSON.stringify({ smoke: HTTP_SMOKE_TOKEN }),
+    CAPROVER_MCP_HTTP_TOKEN: HTTP_SMOKE_TOKEN,
     CAPROVER_MCP_HTTP_HOST: "127.0.0.1",
   };
   const child = spawn(program, httpArgs, {

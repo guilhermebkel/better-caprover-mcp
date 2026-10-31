@@ -130,7 +130,7 @@ describe("CaproverServerRegistryService.buildFromEnv()", () => {
     ]));
     vi.stubEnv("CAPROVER_MCP_TEST_PW_READONLY", READONLY_SECRET);
     vi.stubEnv("CAPROVER_MCP_TEST_PW_OPERATE", OPERATE_SECRET);
-    vi.stubEnv("CAPROVER_MCP_HTTP_TOKENS", JSON.stringify({ cursor: HTTP_TOKEN_SECRET }));
+    vi.stubEnv("CAPROVER_MCP_HTTP_TOKEN", HTTP_TOKEN_SECRET);
     const env = EnvUtil.read();
     const lines: string[] = [];
     const spy = vi.spyOn(process.stderr, "write").mockImplementation((chunk) => {

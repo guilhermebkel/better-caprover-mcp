@@ -10,7 +10,6 @@ import { EnvUtil } from "@/Utils/EnvUtil.ts";
 
 const TEST_TOKEN = "test-token-12345678";
 const WRONG_TOKEN = "wrong-token-123456789";
-const TEST_TOKEN_B = "other-token-123456789";
 const CONCURRENCY_TEST_QUEUE_WAIT_MS = 50;
 
 const connectAuthorizedClient = async (baseUrl: string, clientName: string, token = TEST_TOKEN): Promise<Client> => {
@@ -76,7 +75,7 @@ const readHttpEnv = (overrides: Record<string, string | undefined> = {}): Return
     "CAPROVER_MCP_HTTP_PORT",
     overrides.CAPROVER_MCP_HTTP_PORT ?? String(pickNextHttpPort()),
   );
-  vi.stubEnv("CAPROVER_MCP_HTTP_TOKENS", overrides.CAPROVER_MCP_HTTP_TOKENS);
+  vi.stubEnv("CAPROVER_MCP_HTTP_TOKEN", overrides.CAPROVER_MCP_HTTP_TOKEN);
   vi.stubEnv("CAPROVER_MCP_MAX_HTTP_BODY_BYTES", overrides.CAPROVER_MCP_MAX_HTTP_BODY_BYTES ?? "1048576");
   vi.stubEnv("CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE", overrides.CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE ?? "120");
   vi.stubEnv("CAPROVER_MCP_MAX_HTTP_SESSIONS", overrides.CAPROVER_MCP_MAX_HTTP_SESSIONS ?? "64");
@@ -107,7 +106,7 @@ const readToolSummary = (content: unknown): string => {
 };
 
 describe("HttpRunner.assertBindAllowed()", () => {
-  it("refuses a public bind without CAPROVER_MCP_HTTP_TOKENS", () => {
+  it("refuses a public bind without CAPROVER_MCP_HTTP_TOKEN", () => {
     const env = readHttpEnv({ CAPROVER_MCP_HTTP_HOST: "0.0.0.0" });
 
     expect(() => {
@@ -115,7 +114,7 @@ describe("HttpRunner.assertBindAllowed()", () => {
     }).toThrow(HttpBindForbiddenError);
     expect(() => {
       HttpRunner.assertBindAllowed(env);
-    }).toThrow(/CAPROVER_MCP_HTTP_TOKENS/);
+    }).toThrow(/CAPROVER_MCP_HTTP_TOKEN/);
   });
 
   it("allows localhost without tokens", () => {
@@ -143,7 +142,7 @@ describe("HttpRunner.start()", () => {
     mockServers.push(mock);
     const captainUrl = await mock.start();
     const handle = await startHttpRunner({
-      CAPROVER_MCP_HTTP_TOKENS: JSON.stringify({ cursor: TEST_TOKEN }),
+      CAPROVER_MCP_HTTP_TOKEN: TEST_TOKEN,
       CAPROVER_URL: captainUrl,
       CAPROVER_PASSWORD: FAKE_PASSWORD,
     });
@@ -182,7 +181,7 @@ describe("HttpRunner.start()", () => {
 
   it("returns 413 for an oversized body", async () => {
     const handle = await startHttpRunner({
-      CAPROVER_MCP_HTTP_TOKENS: JSON.stringify({ cursor: TEST_TOKEN }),
+      CAPROVER_MCP_HTTP_TOKEN: TEST_TOKEN,
       CAPROVER_MCP_MAX_HTTP_BODY_BYTES: "32",
     });
     try {
@@ -198,8 +197,7 @@ describe("HttpRunner.start()", () => {
   });
 
   it("returns 400 for invalid JSON", async () => {
-    const tokens = JSON.stringify({ cursor: TEST_TOKEN });
-    const handle = await startHttpRunner({ CAPROVER_MCP_HTTP_TOKENS: tokens });
+    const handle = await startHttpRunner({ CAPROVER_MCP_HTTP_TOKEN: TEST_TOKEN });
     try {
       const response = await fetch(`${handle.url}/mcp`, {
         method: "POST",
@@ -213,8 +211,7 @@ describe("HttpRunner.start()", () => {
   });
 
   it("lets two clients initialize separate sessions", async () => {
-    const tokens = JSON.stringify({ cursor: TEST_TOKEN });
-    const handle = await startHttpRunner({ CAPROVER_MCP_HTTP_TOKENS: tokens });
+    const handle = await startHttpRunner({ CAPROVER_MCP_HTTP_TOKEN: TEST_TOKEN });
     try {
       const first = await connectAuthorizedClient(handle.url, "client-a");
       const second = await connectAuthorizedClient(handle.url, "client-b");
@@ -229,7 +226,7 @@ describe("HttpRunner.start()", () => {
 
   it("returns 429 when the request rate limit is exceeded, including failed auth", async () => {
     const handle = await startHttpRunner({
-      CAPROVER_MCP_HTTP_TOKENS: JSON.stringify({ cursor: TEST_TOKEN }),
+      CAPROVER_MCP_HTTP_TOKEN: TEST_TOKEN,
       CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE: "1",
     });
     try {
@@ -243,18 +240,16 @@ describe("HttpRunner.start()", () => {
     }
   });
 
-  it("returns 429 when the authenticated request rate limit is exceeded per bearer token", async () => {
+  it("returns 429 when authenticated MCP requests share one rate limit bucket", async () => {
     const handle = await startHttpRunner({
-      CAPROVER_MCP_HTTP_TOKENS: JSON.stringify({ a: TEST_TOKEN, b: TEST_TOKEN_B }),
+      CAPROVER_MCP_HTTP_TOKEN: TEST_TOKEN,
       CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE: "1",
     });
     try {
-      const firstSameToken = await postMcp(handle.url, TEST_TOKEN, buildInitializeJson("rate-limit-a"));
-      expect(firstSameToken.status).toBe(200);
-      const secondSameToken = await postMcp(handle.url, TEST_TOKEN, buildInitializeJson("rate-limit-a2", 2));
-      expect(secondSameToken.status).toBe(429);
-      const otherToken = await postMcp(handle.url, TEST_TOKEN_B, buildInitializeJson("rate-limit-b"));
-      expect(otherToken.status).toBe(200);
+      const first = await postMcp(handle.url, TEST_TOKEN, buildInitializeJson("rate-limit-a"));
+      expect(first.status).toBe(200);
+      const second = await postMcp(handle.url, TEST_TOKEN, buildInitializeJson("rate-limit-a2", 2));
+      expect(second.status).toBe(429);
     } finally {
       await handle.close();
     }
@@ -262,7 +257,7 @@ describe("HttpRunner.start()", () => {
 
   it("returns 503 when the HTTP session cap is reached", async () => {
     const handle = await startHttpRunner({
-      CAPROVER_MCP_HTTP_TOKENS: JSON.stringify({ cursor: TEST_TOKEN }),
+      CAPROVER_MCP_HTTP_TOKEN: TEST_TOKEN,
       CAPROVER_MCP_MAX_HTTP_SESSIONS: "1",
     });
     try {
@@ -277,9 +272,9 @@ describe("HttpRunner.start()", () => {
     }
   });
 
-  it("returns 404 when a session id is reused with another bearer token", async () => {
+  it("returns 401 when a session id is sent with the wrong bearer token", async () => {
     const handle = await startHttpRunner({
-      CAPROVER_MCP_HTTP_TOKENS: JSON.stringify({ a: TEST_TOKEN, b: WRONG_TOKEN }),
+      CAPROVER_MCP_HTTP_TOKEN: TEST_TOKEN,
     });
     try {
       const first = await postMcp(handle.url, TEST_TOKEN, buildInitializeJson("session-owner"));
@@ -292,8 +287,8 @@ describe("HttpRunner.start()", () => {
         JSON.stringify({ jsonrpc: "2.0", method: "ping" }),
         sessionId ?? undefined,
       );
-      expect(response.status).toBe(404);
-      expect(await response.text()).toBe("Not Found");
+      expect(response.status).toBe(401);
+      expect(await response.text()).toBe("Unauthorized");
     } finally {
       await handle.close();
     }
@@ -311,7 +306,7 @@ describe("HttpRunner.start()", () => {
     const captainUrl = await mock.start();
     const refusalMessage = `Too many concurrent calls for server "${DEFAULT_SERVER_NAME}" (limit 1). Wait for other calls to finish, then try again.`;
     const handle = await startHttpRunner({
-      CAPROVER_MCP_HTTP_TOKENS: JSON.stringify({ cursor: TEST_TOKEN }),
+      CAPROVER_MCP_HTTP_TOKEN: TEST_TOKEN,
       CAPROVER_URL: captainUrl,
       CAPROVER_PASSWORD: FAKE_PASSWORD,
       CAPROVER_MCP_MODE: "admin",
@@ -378,7 +373,7 @@ describe("HttpRunner.start()", () => {
 
   it("drops HTTP sessions after TTL", async () => {
     const handle = await startHttpRunner({
-      CAPROVER_MCP_HTTP_TOKENS: JSON.stringify({ cursor: TEST_TOKEN }),
+      CAPROVER_MCP_HTTP_TOKEN: TEST_TOKEN,
       CAPROVER_MCP_HTTP_SESSION_TTL_MS: "200",
     });
     try {

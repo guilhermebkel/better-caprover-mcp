@@ -24,6 +24,7 @@ const HTTP_PAYLOAD_TOO_LARGE = 413;
 const HTTP_TOO_MANY_REQUESTS = 429;
 const HTTP_INTERNAL_ERROR = 500;
 const PLAIN_TEXT = "text/plain";
+const AUTHENTICATED_RATE_LIMIT_KEY = "authenticated";
 
 type HttpRequestContext = {
   auth: HttpAuthService;
@@ -60,7 +61,7 @@ export class HttpRunner {
       undefined,
       options.concurrencyQueueWaitMs,
     );
-    const auth = new HttpAuthService(HttpAuthService.extractTokenSecrets(env.CAPROVER_MCP_HTTP_TOKENS));
+    const auth = new HttpAuthService(env.CAPROVER_MCP_HTTP_TOKEN);
     const rateLimit = new HttpRateLimitService(env.CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE);
     const sessions = new HttpSessionRunner(
       () => runtime.buildMcpServer(),
@@ -102,9 +103,8 @@ export class HttpRunner {
 
   static assertBindAllowed(env: Env): void {
     const isLocal = NetworkBindUtil.isLocalBindHost(env.CAPROVER_MCP_HTTP_HOST);
-    const hasTokens = env.CAPROVER_MCP_HTTP_TOKENS !== undefined
-      && Object.keys(env.CAPROVER_MCP_HTTP_TOKENS).length > 0;
-    if (!isLocal && !hasTokens) {
+    const hasToken = env.CAPROVER_MCP_HTTP_TOKEN !== undefined && env.CAPROVER_MCP_HTTP_TOKEN !== "";
+    if (!isLocal && !hasToken) {
       throw new HttpBindForbiddenError();
     }
   }
@@ -147,15 +147,9 @@ export class HttpRunner {
         response.end("Unauthorized");
         return;
       }
-      const tokenKey = auth.resolveTokenKey(request);
-      if (tokenKey === undefined) {
-        response.writeHead(HTTP_UNAUTHORIZED, { "Content-Type": PLAIN_TEXT });
-        response.end("Unauthorized");
-        return;
-      }
-      rateLimit.assertAllowed(tokenKey, context.getNowMs());
+      rateLimit.assertAllowed(AUTHENTICATED_RATE_LIMIT_KEY, context.getNowMs());
       const parsedBody = await HttpRunner.readParsedBody(request, env);
-      await sessions.handleRequest(request, response, parsedBody, tokenKey);
+      await sessions.handleRequest(request, response, parsedBody);
     } catch (error) {
       if (error instanceof HttpBodyTooLargeError) {
         response.writeHead(HTTP_PAYLOAD_TOO_LARGE, { "Content-Type": PLAIN_TEXT });

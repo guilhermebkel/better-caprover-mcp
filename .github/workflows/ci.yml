@@ -89,12 +89,12 @@ jobs:
       - run: node scripts/package-smoke.mjs --stdio-only -- docker run -i --rm better-caprover-mcp:ci
       - name: Docker HTTP smoke
         env:
-          CAPROVER_MCP_HTTP_TOKENS: '{"smoke":"smoke-http-token-12345678"}'
+          CAPROVER_MCP_HTTP_TOKEN: smoke-http-token-12345678
         run: |
           node scripts/package-smoke.mjs --http-only -- \
             docker run --rm -p 3100:3100 \
             -e CAPROVER_MCP_HTTP_HOST=0.0.0.0 \
-            -e "CAPROVER_MCP_HTTP_TOKENS=${CAPROVER_MCP_HTTP_TOKENS}" \
+            -e "CAPROVER_MCP_HTTP_TOKEN=${CAPROVER_MCP_HTTP_TOKEN}" \
             better-caprover-mcp:ci
 
   integration:

@@ -25,7 +25,7 @@ export class CaproverServerRegistryService {
   private constructor(
     private readonly nameToServer: ReadonlyMap<string, ServerRecord>,
     private readonly isMultiServer: boolean,
-    private readonly httpSecrets: readonly string[],
+    private readonly httpToken: string | undefined,
   ) {}
 
   static buildFromEnv(
@@ -40,10 +40,8 @@ export class CaproverServerRegistryService {
       const secrets = entry.password === undefined ? [] : [entry.password];
       nameToServer.set(entry.name, { name: entry.name, client, policy, secrets });
     }
-    const httpSecrets = env.CAPROVER_MCP_HTTP_TOKENS === undefined
-      ? []
-      : Object.values(env.CAPROVER_MCP_HTTP_TOKENS);
-    return new CaproverServerRegistryService(nameToServer, isMultiServer, httpSecrets);
+    const httpToken = env.CAPROVER_MCP_HTTP_TOKEN;
+    return new CaproverServerRegistryService(nameToServer, isMultiServer, httpToken);
   }
 
   private static createDefaultClient(entry: ResolvedCaproverServer): CaproverClientPort {
@@ -76,7 +74,10 @@ export class CaproverServerRegistryService {
   }
 
   collectAllSecrets(): string[] {
-    const secrets: string[] = [...this.httpSecrets];
+    const secrets: string[] = [];
+    if (this.httpToken !== undefined) {
+      secrets.push(this.httpToken);
+    }
     for (const record of this.nameToServer.values()) {
       secrets.push(...record.secrets);
     }

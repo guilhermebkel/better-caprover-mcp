@@ -15,7 +15,6 @@ export type McpServerBuilder = () => ConnectableMcpServer;
 
 type SessionRecord = {
   transport: StreamableHTTPServerTransport;
-  tokenKey: string;
   expiresAtMs: number;
 };
 
@@ -47,7 +46,6 @@ export class HttpSessionRunner {
     request: IncomingMessage,
     response: ServerResponse,
     parsedBody: unknown,
-    tokenKey: string,
   ): Promise<void> {
     this.dropExpiredSessions();
     const sessionHeader = request.headers["mcp-session-id"];
@@ -55,11 +53,6 @@ export class HttpSessionRunner {
     if (sessionId !== undefined) {
       const session = this.sessionIdToSession.get(sessionId);
       if (session === undefined) {
-        response.writeHead(HTTP_NOT_FOUND, { "Content-Type": PLAIN_TEXT });
-        response.end("Not Found");
-        return;
-      }
-      if (session.tokenKey !== tokenKey) {
         response.writeHead(HTTP_NOT_FOUND, { "Content-Type": PLAIN_TEXT });
         response.end("Not Found");
         return;
@@ -83,7 +76,6 @@ export class HttpSessionRunner {
       onsessioninitialized: (id) => {
         this.sessionIdToSession.set(id, {
           transport,
-          tokenKey,
           expiresAtMs: this.getNowMs() + this.sessionTtlMs,
         });
       },

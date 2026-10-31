@@ -1,7 +1,6 @@
 import { z } from "zod";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
 import { AccessModeSchema } from "@/Schemas/AccessSchema.ts";
-import { HttpTokensSchema } from "@/Schemas/ServerConfigSchema.ts";
 
 const OptionalTextSchema = z.string().optional().transform((text) => (text === undefined || text === "" ? undefined : text));
 
@@ -12,6 +11,9 @@ const DEFAULT_MAX_HTTP_REQUESTS_PER_MINUTE = 120;
 const DEFAULT_MAX_HTTP_SESSIONS = 64;
 const DEFAULT_HTTP_SESSION_TTL_MS = 86_400_000;
 const DEFAULT_MAX_CONCURRENT_PER_SERVER = 5;
+const MIN_HTTP_TOKEN_LENGTH = 8;
+
+const HttpTokenSchema: z.ZodType<string> = z.string().min(MIN_HTTP_TOKEN_LENGTH);
 
 const parsePositiveIntFromEnv = (name: string, defaultValue: number): z.ZodType<number> => (
   z.string().optional().transform((text, context) => {
@@ -27,16 +29,16 @@ const parsePositiveIntFromEnv = (name: string, defaultValue: number): z.ZodType<
   })
 );
 
-const httpTokensFromEnv = z.string().optional().transform((text, context) => {
+const httpTokenFromEnv = z.string().optional().transform((text, context) => {
   if (text === undefined || text === "") {
     return undefined;
   }
-  try {
-    return HttpTokensSchema.parse(JSON.parse(text));
-  } catch {
-    context.addIssue({ code: "custom", message: "CAPROVER_MCP_HTTP_TOKENS must be a JSON object of client names to secrets." });
+  const result = HttpTokenSchema.safeParse(text);
+  if (!result.success) {
+    context.addIssue({ code: "custom", message: "CAPROVER_MCP_HTTP_TOKEN must be at least 8 characters." });
     return z.NEVER;
   }
+  return result.data;
 });
 
 export type RawEnvValues = {
@@ -46,7 +48,7 @@ export type RawEnvValues = {
   CAPROVER_PASSWORD?: string;
   CAPROVER_MCP_HTTP_HOST: string;
   CAPROVER_MCP_HTTP_PORT: number;
-  CAPROVER_MCP_HTTP_TOKENS?: Env["CAPROVER_MCP_HTTP_TOKENS"];
+  CAPROVER_MCP_HTTP_TOKEN?: string;
   CAPROVER_MCP_MAX_HTTP_BODY_BYTES: number;
   CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE: number;
   CAPROVER_MCP_MAX_HTTP_SESSIONS: number;
@@ -67,7 +69,7 @@ export const RawEnvSchema: z.ZodType<RawEnvValues> = z.object({
   CAPROVER_PASSWORD: OptionalTextSchema,
   CAPROVER_MCP_HTTP_HOST: z.string().optional().transform((text) => (text === undefined || text === "" ? DEFAULT_HTTP_HOST : text)),
   CAPROVER_MCP_HTTP_PORT: parsePositiveIntFromEnv("CAPROVER_MCP_HTTP_PORT", DEFAULT_HTTP_PORT),
-  CAPROVER_MCP_HTTP_TOKENS: httpTokensFromEnv,
+  CAPROVER_MCP_HTTP_TOKEN: httpTokenFromEnv,
   CAPROVER_MCP_MAX_HTTP_BODY_BYTES: parsePositiveIntFromEnv("CAPROVER_MCP_MAX_HTTP_BODY_BYTES", DEFAULT_MAX_HTTP_BODY_BYTES),
   CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE: parsePositiveIntFromEnv("CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE", DEFAULT_MAX_HTTP_REQUESTS_PER_MINUTE),
   CAPROVER_MCP_MAX_HTTP_SESSIONS: parsePositiveIntFromEnv("CAPROVER_MCP_MAX_HTTP_SESSIONS", DEFAULT_MAX_HTTP_SESSIONS),

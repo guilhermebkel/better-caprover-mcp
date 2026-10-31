@@ -4,13 +4,17 @@ import { TimingSafeCompareUtil } from "@/Utils/TimingSafeCompareUtil.ts";
 const BEARER_PREFIX = /^Bearer\s+/i;
 
 export class HttpAuthService {
-  constructor(private readonly tokenSecrets: readonly string[]) {}
+  constructor(private readonly expectedToken: string | undefined) {}
 
   verifyRequest(request: IncomingMessage): boolean {
-    return this.resolveTokenKey(request) !== undefined;
+    const token = HttpAuthService.readBearerToken(request);
+    if (token === undefined || this.expectedToken === undefined) {
+      return false;
+    }
+    return TimingSafeCompareUtil.isSecretMatching(token, this.expectedToken);
   }
 
-  resolveTokenKey(request: IncomingMessage): string | undefined {
+  static readBearerToken(request: IncomingMessage): string | undefined {
     const header = request.headers.authorization;
     if (typeof header !== "string") {
       return undefined;
@@ -20,19 +24,6 @@ export class HttpAuthService {
       return undefined;
     }
     const token = header.slice(match[0].length).trim();
-    if (token === "") {
-      return undefined;
-    }
-    if (!TimingSafeCompareUtil.isAnySecretMatching(token, this.tokenSecrets)) {
-      return undefined;
-    }
-    return header;
-  }
-
-  static extractTokenSecrets(tokens: Record<string, string> | undefined): string[] {
-    if (tokens === undefined) {
-      return [];
-    }
-    return Object.values(tokens);
+    return token === "" ? undefined : token;
   }
 }
