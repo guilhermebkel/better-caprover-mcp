@@ -15,12 +15,13 @@ if not GEIST or not GEIST_MONO:
 ROOT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..")
 TITLE = "better-caprover-mcp"
 TAGLINE = "UNOFFICIAL  \u00b7  MCP SERVER FOR CAPROVER"
-# Why: the colours are the ones of the landing page: a near-black background, a lime accent and soft greys.
-INK, TEXT, LIME, LIME_DEEP = "#0A0C10", "#F2F4F6", "#B6F259", "#4D7C0F"
+# Why: the warm colours are the red-orange, orange and yellow chosen for the logo; the ink and the greys are the ones of the landing page.
+INK, TEXT = "#0A0C10", "#F2F4F6"
+RED, ORANGE, YELLOW = "#EF5C24", "#F4941C", "#F4E40C"
 GREY, GREY_DARK = "#5B6168", "#90969D"
 THEMES = {
-    "light": {"ink": INK, "accent": LIME_DEEP, "tagline": GREY},
-    "dark": {"ink": TEXT, "accent": LIME, "tagline": GREY_DARK},
+    "light": {"ink": INK, "rim": RED, "accent": ORANGE, "tagline": GREY},
+    "dark": {"ink": TEXT, "rim": RED, "accent": YELLOW, "tagline": GREY_DARK},
 }
 MONO = {"black": "#000000", "white": "#ffffff"}
 FRAME, FRAME_SMALL = 18, 30
@@ -131,23 +132,23 @@ def symbol_svg(frame, ink, accent):
     return wrap("0 0 256 256", symbol_group(frame, ink, accent))
 
 
-def horizontal_svg(ink, accent, tagline_color):
+def horizontal_svg(ink, rim, accent, tagline_color):
     word, word_end = text_path(TITLE, 96, 300, 150, -1.6)
     tag, tag_end = text_path(TAGLINE, 28, 304, 206, 2.4, "mono")
     width = int(max(word_end, tag_end)) + 40
-    body = (symbol_group(FRAME, ink, accent) + f'<g id="palavra"><path d="{word}" fill="{ink}"/></g>'
+    body = (symbol_group(FRAME, rim, accent) + f'<g id="palavra"><path d="{word}" fill="{ink}"/></g>'
             f'<g id="slogan"><path d="{tag}" fill="{tagline_color}"/></g>')
     return wrap(f"0 0 {width} 256", body)
 
 
-def stacked_svg(ink, accent, tagline_color):
+def stacked_svg(ink, rim, accent, tagline_color):
     word_width = text_width(TITLE, 56, -0.9)
     tag_width = text_width(TAGLINE, 17, 1.6, "mono")
     width = int(max(word_width, 256)) + 80
     center = width / 2
     word, _ = text_path(TITLE, 56, center - word_width / 2, 330, -0.9)
     tag, _ = text_path(TAGLINE, 17, center - tag_width / 2, 372, 1.6, "mono")
-    body = (symbol_group(FRAME, ink, accent, center - 128) + f'<g id="palavra"><path d="{word}" fill="{ink}"/></g>'
+    body = (symbol_group(FRAME, rim, accent, center - 128) + f'<g id="palavra"><path d="{word}" fill="{ink}"/></g>'
             f'<g id="slogan"><path d="{tag}" fill="{tagline_color}"/></g>')
     return wrap(f"0 0 {width} 400", body)
 
@@ -158,19 +159,19 @@ def write(folder, name, content):
 
 
 for theme, colors in THEMES.items():
-    ink, accent, tagline = colors["ink"], colors["accent"], colors["tagline"]
-    write("svg", f"symbol-{theme}.svg", symbol_svg(FRAME, ink, accent))
-    write("svg", f"symbol-small-{theme}.svg", symbol_svg(FRAME_SMALL, ink, accent))
-    write("svg", f"horizontal-{theme}.svg", horizontal_svg(ink, accent, tagline))
-    write("svg", f"stacked-{theme}.svg", stacked_svg(ink, accent, tagline))
+    ink, rim, accent, tagline = colors["ink"], colors["rim"], colors["accent"], colors["tagline"]
+    write("svg", f"symbol-{theme}.svg", symbol_svg(FRAME, rim, accent))
+    write("svg", f"symbol-small-{theme}.svg", symbol_svg(FRAME_SMALL, rim, accent))
+    write("svg", f"horizontal-{theme}.svg", horizontal_svg(ink, rim, accent, tagline))
+    write("svg", f"stacked-{theme}.svg", stacked_svg(ink, rim, accent, tagline))
 
 for name, color in MONO.items():
     write("mono", f"symbol-{name}.svg", symbol_svg(FRAME, color, color))
-    write("mono", f"horizontal-{name}.svg", horizontal_svg(color, color, color))
-    write("mono", f"stacked-{name}.svg", stacked_svg(color, color, color))
+    write("mono", f"horizontal-{name}.svg", horizontal_svg(color, color, color, color))
+    write("mono", f"stacked-{name}.svg", stacked_svg(color, color, color, color))
 
 write("web", "better-caprover-mcp-app-icon.svg", wrap(
     "0 0 256 256",
     f'<rect width="256" height="256" rx="56" fill="{INK}"/><g transform="translate(32 32) scale(0.75)">'
-    + symbol_group(FRAME_SMALL, TEXT, LIME) + "</g>"))
+    + symbol_group(FRAME_SMALL, RED, YELLOW) + "</g>"))
 print("kit written")

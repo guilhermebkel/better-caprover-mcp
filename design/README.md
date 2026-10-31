@@ -10,7 +10,7 @@ Brand kit for better-caprover-mcp: the logo, its variants, the web icons and the
 | `presentation/` | The identity deck (`index.html`, `slide-*.png`) and the `spec.json` it is built from. |
 | `social-preview.png` | The 1280 x 640 image for the GitHub social preview (Settings, General, Social preview). |
 | `GUIDELINES.md` | Clear space, minimum sizes, colours and what not to do. |
-| `source/` | The scripts that generate the SVG files, the deck and the social preview. |
+| `source/` | The scripts that generate the SVG files, the deck, the social preview and the Open Graph image (`og.html`, written to `site/og.png`). |
 
 ## Rebuild
 
