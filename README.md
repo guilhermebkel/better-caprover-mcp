@@ -263,7 +263,7 @@ Found a way around any of this? Open an issue without secrets in it.
 <details>
 <summary><b>Does it work with CapRover's two-factor login?</b></summary>
 
-No. The code lasts 30 seconds and a client starts this server again every session, so it cannot be kept in an environment variable. The server logs in with the password only ([ADR 0010](docs/adr/0010-the-server-logs-in-with-the-password-only.md)).
+No. The code lasts 30 seconds. Over stdio, a client restarts the server each session; over HTTP the process is long-lived, but the server still has no way to obtain a fresh code, so it cannot be kept in an environment variable. The server logs in with the password only ([ADR 0010](docs/adr/0010-the-server-logs-in-with-the-password-only.md)).
 
 </details>
 
