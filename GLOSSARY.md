@@ -52,7 +52,12 @@ _Avoid_: help page, manual
 
 **Batch**:
 An operation that applies one change to a list of items, one call per item, in order. It stops at the first failure and returns `applied` and `notApplied`. CapRover has no transactions, so the applied items stay applied and a batch is never called atomic.
+`bulk_env_update` is a batch; its name comes from the plan of the diagnostics phase.
 _Avoid_: bulk, transaction
+
+**Finding**:
+One fact that a diagnosis rule found, returned by `diagnose_app` and `find_issues`. It has a `severity` (`error`, `warning` or `info`), a `kind` from a closed list, a one-sentence `statement` and the `evidence` (the field or the log lines that show it, redacted). A finding never says what to change, and log text appears only inside `evidence`, as data. The rules are in `src/Utils/DiagnosisRuleUtil.ts`; a rule whose input CapRover cannot give is skipped and named in `rulesSkipped`.
+_Avoid_: alert, issue (that means a GitHub issue), recommendation
 
 **Policy**:
 The rule of which risk tiers a mode allows, kept in `PolicyService`. `OperationRunnerService` applies it to every call, together with `dry_run`, the confirmation of destructive calls and the masking of secrets.

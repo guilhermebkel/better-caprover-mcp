@@ -2,7 +2,7 @@
 
 An unofficial MCP server for CapRover. It lets an agent (Claude, Cursor, Codex) operate a CapRover server, with setup in one command (`npx` or Docker) and safety by default: it starts read-only. Vocabulary is in `GLOSSARY.md`; decisions are in `docs/adr/`; planned work is in GitHub issues.
 
-Today the server exposes 67 operations on the `tools` surface (`src/Surfaces/OperationManifestSurface.ts`), in ten toolsets that `CAPROVER_MCP_TOOLSETS` picks. Every SDK method is an operation, internal, excluded or planned with a reason (`scripts/sdk-coverage.json`). The `code` surface is planned work; the docs below describe the rules it follows.
+Today the server exposes 71 operations on the `tools` surface (`src/Surfaces/OperationManifestSurface.ts`), in ten toolsets that `CAPROVER_MCP_TOOLSETS` picks. Every SDK method is an operation, internal, excluded or planned with a reason (`scripts/sdk-coverage.json`). The `code` surface is planned work; the docs below describe the rules it follows.
 
 ## Layout
 

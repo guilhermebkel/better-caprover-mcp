@@ -72,6 +72,7 @@ export class FakeCaproverClientAdapter implements CaproverClientPort {
       currentVersion: "1.14.1",
       latestVersion: "1.14.1",
       canUpdate: false,
+      ...this.options.systemInfo,
     };
   }
 
@@ -88,6 +89,7 @@ export class FakeCaproverClientAdapter implements CaproverClientPort {
       desiredInstances: 1,
       runningInstances: 1,
       tasks: [{ state: "running", image: "nginx:1.27", message: "started" }],
+      ...this.options.runtime,
     };
   }
 
@@ -98,7 +100,7 @@ export class FakeCaproverClientAdapter implements CaproverClientPort {
 
   async getBuildLogs(appName: string): Promise<CaproverBuildLogs> {
     await this.record(`getBuildLogs:${appName}`);
-    return { isBuilding: false, isFailed: false, lines: this.options.buildLines ?? [] };
+    return { isBuilding: false, isFailed: false, lines: this.options.buildLines ?? [], ...this.options.buildState };
   }
 
   async listOneClickApps(): Promise<CaproverOneClickApp[]> {
@@ -139,7 +141,14 @@ export class FakeCaproverClientAdapter implements CaproverClientPort {
 
   async listAppsRuntime(): Promise<CaproverAppRuntime[]> {
     await this.record("listAppsRuntime");
-    return this.apps.map((app) => ({ appName: app.appName, status: "running", desiredInstances: 1, runningInstances: 1, tasks: [] }));
+    return this.apps.map((app) => ({
+      appName: app.appName,
+      status: "running",
+      desiredInstances: 1,
+      runningInstances: 1,
+      tasks: [],
+      ...this.options.runtime,
+    }));
   }
 
   async renameApp(appName: string, newAppName: string): Promise<void> {
@@ -301,13 +310,13 @@ export class FakeCaproverClientAdapter implements CaproverClientPort {
     return [{
       nodeId: "node-1",
       hostname: "captain-1",
-      disks: [{ totalBytes: 100, usedBytes: 40, availableBytes: 60, severity: "normal" }],
+      disks: [{ totalBytes: 100, usedBytes: 40, availableBytes: 60, severity: this.options.diskSeverity ?? "normal" }],
     }];
   }
 
   async listUnusedImages(mostRecentLimit: number): Promise<CaproverUnusedImage[]> {
     await this.record(`listUnusedImages:${mostRecentLimit}`);
-    return [{ imageId: "sha256:aaa", tags: ["old:1"] }, { imageId: "sha256:bbb", tags: [] }];
+    return this.options.unusedImages ?? [{ imageId: "sha256:aaa", tags: ["old:1"] }, { imageId: "sha256:bbb", tags: [] }];
   }
 
   async deleteImages(imageIds: string[]): Promise<void> {

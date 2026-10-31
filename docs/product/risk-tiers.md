@@ -31,8 +31,8 @@ This is the list the issue proposed. It stays a proposal until the maintainer co
 
 | Toolset | Holds |
 | --- | --- |
-| `core` | the overview, access, guide, and the reads of apps, logs and runtime |
-| `apps` | create, deploy (image, archive, build webhook), env vars, scale, rename, delete |
+| `core` | the overview, access, guide, the reads of apps, logs and runtime, and the diagnosis |
+| `apps` | create, deploy (image, redeploy, archive, build webhook), env vars (one app or several), scale, rename, delete |
 | `domains` | custom domains, HTTPS, the root domain and the HTTPS redirect |
 | `projects` | the projects that group apps |
 | `oneclick` | the one-click catalog, its repositories and the install |
@@ -63,6 +63,8 @@ This is the list the issue proposed. It stays a proposal until the maintainer co
 | `forceSsl` | `set_force_ssl` | write | domains |
 | `getAllApps` | `list_apps` | read | core |
 | `getAllApps` | `get_app` | read | core |
+| `getAllApps` | `diagnose_app` | read | core |
+| `getAllApps` | `find_issues` | read | core |
 | `getAllProjects` | `list_projects` | read | projects |
 | `getAppsRuntime` | `list_apps_runtime` | read | apps |
 | `getAppRuntime` | `get_app_runtime` | read | core |
@@ -73,7 +75,9 @@ This is the list the issue proposed. It stays a proposal until the maintainer co
 | `registerProject` | `create_project` | write | projects |
 | `updateProject` | `update_project` | write | projects |
 | `uploadCaptainDefinitionContent` | `deploy_image` | write | apps |
+| `uploadCaptainDefinitionContent` | `redeploy_app` | write | apps |
 | `patchAppDefinition` | `set_env_vars` | write | apps |
+| `patchAppDefinition` | `bulk_env_update` | write | apps |
 | `patchAppDefinition` | `scale_app` | write | apps |
 | `renameApp` | `rename_app` | write | apps |
 | `registerNewApp` | `create_app` | write | apps |

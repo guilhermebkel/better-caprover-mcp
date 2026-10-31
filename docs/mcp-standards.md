@@ -5,7 +5,7 @@ How the operations of this server are designed. `pnpm lint` enforces the rules m
 ## Scope
 
 - **One operation per thing a person does (review).** An operation is a task, not a copy of an endpoint, unless the endpoint is already the task.
-- **A sequence always run together is one operation (review).** `diagnoseApp`, `findIssues`, `redeployProject` and `bulkEnvUpdate` exist because the agent would otherwise call the same three reads in a row.
+- **A sequence always run together is one operation (review).** `diagnoseApp`, `findIssues`, `redeployApp` and `bulkEnvUpdate` exist because the agent would otherwise call the same three reads in a row.
 - **Filtering, aggregation and ranking happen in the server (review).** A list operation takes `fields`, `filter` and `limit` (200 at most) through `ListUtil`; it never returns everything for the model to sift, and a cut result says `isTruncated` and which parameter returns the rest (test).
 - **Names are a verb and an object, and the surface name is derived (test).** The class `NAME` is camelCase (`listApps`); `OperationBuilderUtil` derives the tool name (`list_apps`); a test fails when two operations collapse to the same tool name.
 - **No service prefix (review).** The client already shows the server name; a prefix costs tokens in every turn.

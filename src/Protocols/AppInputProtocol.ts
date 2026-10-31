@@ -45,3 +45,21 @@ export type RenameAppInput = AppNameInput & Pick<ControlFields, "dry_run"> & { n
 export type StartBuildInput = Pick<ControlFields, "dry_run"> & { webhook_path: string };
 
 export type DeployArchiveInput = AppNameInput & Pick<ControlFields, "dry_run"> & { source_archive: string };
+
+export type RedeployTarget = {
+  appName: string;
+  imageName: string;
+};
+
+export type FindIssuesInput = {
+  name_contains?: string;
+  limit?: number;
+};
+
+export type RedeployAppInput = AppNameInput & Pick<ControlFields, "dry_run">;
+
+export type BulkEnvUpdateInput = Pick<ControlFields, "dry_run"> & {
+  app_names: string[];
+  env_vars?: string;
+  remove_keys?: string[];
+};
