@@ -5,7 +5,7 @@
 ## Considered options
 
 - Using the SDK everywhere: rejected. The SDK is marked experimental and offers no guarantee of compatibility; one adapter turns its change into a one-folder fix.
-- Writing our own HTTP client: rejected for now. The SDK already covers login, two-factor codes and every route; direct HTTP stays an option for a call it lacks.
+- Writing our own HTTP client: rejected for now. The SDK already covers login and every route; direct HTTP stays an option for a call it lacks.
 
 ## Consequences
 

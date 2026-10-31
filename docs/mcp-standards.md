@@ -36,7 +36,7 @@ How the operations of this server are designed. `pnpm lint` enforces the rules m
 - **MCP annotations follow the tier (lint, planned: `local/operation-metadata`).** `read`: `readOnlyHint` true, `idempotentHint` true. `write`: `readOnlyHint` false, `destructiveHint` false. `destructive` and `critical`: `destructiveHint` true. `openWorldHint` is false for all, because the server talks to one configured CapRover. Annotations are hints for the client, never the security.
 - **A destructive operation takes `user_confirmed`, default `false` (test).** Without it nothing changes; the response lists what would happen and carries a `confirmation_token` tied to that preview. With `user_confirmed: true` and the token it runs.
 - **The flag makes the model show the list; it does not stop a manipulated model (review).** The barriers are the mode and, where the client supports elicitation, the interactive confirmation. In the `code` surface a destructive call without elicitation is refused (test).
-- **A critical operation also needs `CAPROVER_MCP_ALLOW_CRITICAL=1` (test).** The generic API call of the SDK is not an operation.
+- **A critical operation also needs `CAPROVER_MCP_ALLOW_CRITICAL=1` (test).** Two SDK methods are not operations: the generic API call (it would bypass the mode) and the one that turns two-factor login on (it would lock this server out).
 - **A destructive description says it runs only when the user asked, never to tidy up, and says what cannot be undone (review).**
 
 ## Descriptions
