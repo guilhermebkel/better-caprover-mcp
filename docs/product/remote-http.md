@@ -37,7 +37,7 @@ The MCP process does not terminate TLS itself; CapRover’s nginx edge handles c
 
 If the deployment can only set environment variables and cannot change the command, set `CAPROVER_MCP_TRANSPORT=http` instead of passing `serve --http`. It defaults to `stdio`, and `serve --http` keeps working either way.
 
-For a `docker run` example (localhost bind, env vars, and client JSON), see the README [**Quick start** — Run it as a server over HTTP](../../README.md#run-it-as-a-server-over-http).
+For a `docker run` example (localhost bind, env vars, and client JSON), see the README [**Quick start** — Providing on your own server to any AI](../../README.md#2-providing-on-your-own-server-to-any-ai).
 
 The image exposes port `3100` and defines a Docker `HEALTHCHECK` that runs `better-caprover-mcp health`. In HTTP mode (`serve --http`) the process writes a marker file (`/tmp/better-caprover-mcp-http.active`) and the check requires `GET /health` on `CAPROVER_MCP_HTTP_PORT` to return body `ok`. Without `serve --http` (stdio) the check always passes. The process stops cleanly on `SIGTERM`, so `docker stop` does not wait for the kill timeout.
 

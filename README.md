@@ -24,7 +24,7 @@
 
 **Giving an agent the keys to a server is the hard part.** A CapRover password is full access, and a model that can call "delete app" will sooner or later call it when it should not.
 
-`better-caprover-mcp` gives the agent 14 named operations over the CapRover API and puts the safety in code, not in a prompt. The server starts in `readonly` mode and a mode only goes up when you restart it with another setting. Every change can be previewed with `dry_run`. Deleting does nothing until the person has seen what would be lost and said yes, and the password and the values of your environment variables never come back in a reply.
+`better-caprover-mcp` gives the agent all possible CapRover actions over its API and puts the safety in code, not in a prompt. The server starts in `readonly` mode and a mode only goes up when you restart it with another setting. Every change can be previewed with `dry_run`. Deleting does nothing until the person has seen what would be lost and said yes, and the password and the values of your environment variables never come back in a reply.
 
 > **The mode is the barrier, not the model's good manners.** In `readonly` the write tools are not even registered, and every call is checked again when it runs.
 
@@ -71,18 +71,9 @@ Env var values are never returned (only `isSet`). The password and the values of
 
 You need the address of your CapRover (`https://captain.your-domain.com`) and its password. CapRover has no user name, and servers with two-factor login turned on are not supported ([ADR 0010](docs/adr/0010-the-server-logs-in-with-the-password-only.md)).
 
-### 1. Add it to your client
+### 1. Coding Agent
 
-Claude Code:
-
-```bash
-claude mcp add caprover \
-  -e CAPROVER_URL=https://captain.your-domain.com \
-  -e CAPROVER_PASSWORD=your-password \
-  -- npx -y better-caprover-mcp
-```
-
-Claude Desktop, Cursor and other clients, with `npx`:
+Add this to the MCP servers of your client (Claude Code, Claude Desktop, Cursor, Codex and others):
 
 ```json
 {
@@ -100,53 +91,21 @@ Claude Desktop, Cursor and other clients, with `npx`:
 }
 ```
 
-Or with Docker (`-i` is required: the server talks over stdin and stdout):
+### 2. Providing on your own server to any AI
 
-```json
-{
-  "mcpServers": {
-    "caprover": {
-      "command": "docker",
-      "args": ["run", "-i", "--rm", "-e", "CAPROVER_URL", "-e", "CAPROVER_PASSWORD", "-e", "CAPROVER_MCP_MODE", "ghcr.io/guilhermebkel/better-caprover-mcp:latest"],
-      "env": {
-        "CAPROVER_URL": "https://captain.your-domain.com",
-        "CAPROVER_PASSWORD": "your CapRover password",
-        "CAPROVER_MCP_MODE": "readonly"
-      }
-    }
-  }
-}
-```
-
-### 2. Check the login
-
-```bash
-CAPROVER_URL=https://captain.your-domain.com CAPROVER_PASSWORD=... npx -y better-caprover-mcp init
-```
-
-`init` tests the login and prints the client configuration above. Without the two variables it only prints the configuration.
-
-### 3. Ask
-
-```text
-Which of my apps run an image tagged latest?
-Set LOG_LEVEL=debug on the api app, but show me what changes first.
-```
-
-To let the agent change apps, set `CAPROVER_MCP_MODE=operate`; for deleting, `admin`.
-
-### Run it as a server over HTTP
-
-Use this when the client reaches the server over the network. Bind to localhost only (`127.0.0.1:3100`), and put TLS in front for anything else.
+Run the server over HTTP on a machine you control, and point any MCP client at it. Bind to localhost only (`127.0.0.1:3100`), and put TLS in front for anything else.
 
 ```bash
 docker run -d --name caprover-mcp -p 127.0.0.1:3100:3100 \
   -e CAPROVER_URL=https://captain.your-domain.com \
   -e CAPROVER_PASSWORD='your CapRover password' \
+  -e CAPROVER_MCP_MODE=readonly \
+  -e CAPROVER_MCP_TRANSPORT=http \
   -e CAPROVER_MCP_HTTP_HOST=0.0.0.0 \
   -e CAPROVER_MCP_HTTP_TOKEN='your-long-random-secret' \
-  ghcr.io/guilhermebkel/better-caprover-mcp:latest \
-  serve --http
+  -e CAPROVER_MCP_LOG_LEVEL=info \
+  -e CAPROVER_MCP_SURFACE=tools \
+  ghcr.io/guilhermebkel/better-caprover-mcp:latest
 ```
 
 Then point the client at it:
@@ -165,6 +124,23 @@ Then point the client at it:
 ```
 
 More on HTTP bind and TLS: [`docs/product/remote-http.md`](docs/product/remote-http.md). Limits and other variables: [Configuration](#configuration).
+
+### Check the login
+
+```bash
+CAPROVER_URL=https://captain.your-domain.com CAPROVER_PASSWORD=... npx -y better-caprover-mcp init
+```
+
+`init` tests the login and prints the client configuration. Without the two variables it only prints the configuration.
+
+### Ask
+
+```text
+Which of my apps run an image tagged latest?
+Set LOG_LEVEL=debug on the api app, but show me what changes first.
+```
+
+To let the agent change apps, set `CAPROVER_MCP_MODE=operate`; for deleting, `admin`.
 
 ## Example
 
@@ -189,16 +165,16 @@ The mode decides which operations the client sees at all. Only the person can ch
 
 | Mode | Operations available |
 | --- | --- |
-| `readonly` (default) | The <!-- operations:read -->31<!-- /operations:read --> read operations |
-| `operate` | Read, plus the <!-- operations:write -->26<!-- /operations:write --> that change something and can be changed back |
-| `admin` | Read, change, plus the <!-- operations:destructive -->6<!-- /operations:destructive --> that delete (`delete_app`, `remove_custom_domain`, `delete_projects`, `delete_one_click_repo`, `delete_registry`, `delete_theme`) |
-| `admin` with `CAPROVER_MCP_ALLOW_CRITICAL=1` | All of the above, plus the <!-- operations:critical -->8<!-- /operations:critical --> critical ones |
+| `readonly` (default) | All possible CapRover actions that only read |
+| `operate` | Read, plus all possible actions that change something and can be changed back |
+| `admin` | Read, change, plus all possible actions that delete (`delete_app`, `remove_custom_domain`, `delete_projects`, `delete_one_click_repo`, `delete_registry`, `delete_theme`) |
+| `admin` with `CAPROVER_MCP_ALLOW_CRITICAL=1` | All of the above, plus all the critical ones |
 
 `CAPROVER_MCP_TOOLSETS` then picks which groups of operations are registered. The default is `core,apps,domains,oneclick`; the other toolsets are opt-in so the tool list stays short. Ask `get_access` what is on and why a call was denied.
 
 ## Operations
 
-<!-- operations:count -->71<!-- /operations:count --> operations in ten toolsets. The tier and toolset of every one, and the SDK method behind it, are in [`docs/product/risk-tiers.md`](docs/product/risk-tiers.md). A changing call takes `dry_run`; a deleting or critical call returns a preview and a `confirmation_token` first, and asks the person through the client when the client supports it.
+The server exposes <!-- operations:count -->71<!-- /operations:count --> operations in ten toolsets. The tier and toolset of every one, and the SDK method behind it, are in [`docs/product/risk-tiers.md`](docs/product/risk-tiers.md). A changing call takes `dry_run`; a deleting or critical call returns a preview and a `confirmation_token` first, and asks the person through the client when the client supports it.
 
 | Toolset | Operations |
 | --- | --- |
@@ -213,7 +189,7 @@ The mode decides which operations the client sees at all. Only the person can ch
 | `monitoring` | `get_net_data` (never a token), `set_net_data`, `get_go_access`, `set_go_access`, `list_go_access_reports` |
 | `account` | `get_two_factor_status`, `get_pro_state`, `set_pro_api_key`, `list_pro_alerts`, `list_themes`, `get_current_theme`, `set_current_theme`, `save_theme`, `delete_theme`; critical: `set_password` |
 
-Four SDK methods are kept for later, each with its reason in `scripts/sdk-coverage.json`: `updateConfigAndSave` (the `code` surface), `setProConfigs`, `getGoAccessReport` and `createBackup`. `get_app_runtime` and `list_apps_runtime` need a CapRover version that has the runtime endpoint (1.15.5 has none).
+Some SDK methods are kept for later, each with its reason in `scripts/sdk-coverage.json`: `updateConfigAndSave` (the `code` surface), `setProConfigs`, `getGoAccessReport` and `createBackup`. `get_app_runtime` and `list_apps_runtime` need a CapRover version that has the runtime endpoint (1.15.5 has none).
 
 ## Configuration
 
@@ -298,10 +274,10 @@ The endpoint it uses is missing in older CapRover versions (1.15.5 has none). Th
 
 ## Roadmap
 
-- [x] **Core:** the first 14 operations on the `tools` surface, access modes, `dry_run`, confirmation token, redaction, tested against a real CapRover.
-- [x] **The rest of the CapRover API:** [#3](https://github.com/guilhermebkel/better-caprover-mcp/issues/3) — 67 operations in ten toolsets; four SDK methods stay planned, with reasons.
+- [x] **Core:** the first operations on the `tools` surface, access modes, `dry_run`, confirmation token, redaction, tested against a real CapRover.
+- [x] **The rest of the CapRover API:** [#3](https://github.com/guilhermebkel/better-caprover-mcp/issues/3) — all possible CapRover actions in toolsets; some SDK methods stay planned, with reasons.
 - [x] **Diagnostics** (`diagnose_app`, `find_issues`, `redeploy_app`, `bulk_env_update`): [#4](https://github.com/guilhermebkel/better-caprover-mcp/issues/4)
-- [ ] **Code Mode** (`search` and `execute` in a sandbox) and a benchmark: [#5](https://github.com/guilhermebkel/better-caprover-mcp/issues/5) — the `code` surface and the sandbox are built (`CAPROVER_MCP_SURFACE`); the benchmark that picks the default is still to run
+- [x] **Code Mode** (`search` and `execute` in a sandbox) and a benchmark: [#5](https://github.com/guilhermebkel/better-caprover-mcp/issues/5) — the `code` surface and the sandbox are built (`CAPROVER_MCP_SURFACE`); the benchmark that picks the default is still to run
 - [x] **Remote HTTP (one CapRover server per MCP instance):** [#6](https://github.com/guilhermebkel/better-caprover-mcp/issues/6) — multi-server in one process is out of scope; run one instance per Captain.
 
 ## Contributing
