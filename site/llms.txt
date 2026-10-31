@@ -1,0 +1,14 @@
+# better-caprover-mcp
+
+> An unofficial MCP server that lets Claude, Cursor and Codex deploy and manage apps on a self-hosted CapRover. It starts read-only, and deletes need a single-use confirmation token.
+
+Limits are enforced in code, not in the prompt: modes (readonly, operate, admin), dry_run previews, secret redaction and a 5-minute single-use token for delete_app. 14 operations, no raw-request tool. No telemetry; the only network traffic goes to your CAPROVER_URL. Not supported yet: CapRover servers with two-factor auth.
+
+## Docs
+
+- [GitHub repository and README](https://github.com/guilhermebkel/better-caprover-mcp): install, configuration, tools, architecture
+- [npm package](https://www.npmjs.com/package/better-caprover-mcp): npx -y better-caprover-mcp
+
+## Optional
+
+- [Open issues and roadmap](https://github.com/guilhermebkel/better-caprover-mcp/issues)

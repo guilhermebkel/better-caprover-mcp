@@ -12,7 +12,7 @@ A release publishes the npm package `better-caprover-mcp`, the GitHub Release an
 ## Each release
 
 1. Actions, Release, "Run workflow" on `main`. Choose `patch`, `minor` or `major`; `none` releases the current version as is (use it for the first release after step 1 above, so only the tag, the GitHub Release and the image are made).
-2. The workflow bumps `package.json`, runs `pnpm check` (typecheck, lint, quality, SDK drift, tests, build, pack check, license check, smoke), commits `release: vX.Y.Z [skip ci]`, tags `vX.Y.Z`, pushes both, publishes to npm with provenance and creates the GitHub Release with generated notes.
+2. The workflow bumps `package.json`, sets the version and the date on the landing page (`scripts/site-version.mjs`), runs `pnpm check` (typecheck, lint, quality, SDK drift, tests, build, pack check, license check, smoke), commits `release: vX.Y.Z [skip ci]` with `package.json` and `site/`, tags `vX.Y.Z`, pushes both, publishes to npm with provenance and creates the GitHub Release with generated notes and starts the Pages workflow, because a push made with the workflow token does not start it.
 3. The `image` job then builds from the tag and pushes a `linux/amd64` and `linux/arm64` image tagged with the version and `latest`.
 4. Run the smoke test against the published artifacts: `pnpm smoke -- npx -y better-caprover-mcp` and `pnpm smoke -- docker run -i --rm ghcr.io/guilhermebkel/better-caprover-mcp:latest`.
 
