@@ -63,4 +63,12 @@ describe("parseCommand()", () => {
   it("records smoke mode flags", () => {
     expect(parseCommand(["--http-only", "--", "node", "dist/main.js"])).toMatchObject({ httpOnly: true, stdioOnly: false });
   });
+
+  it("drops flags and the separator before the command", () => {
+    expect(parseCommand(["--stdio-only", "--", "docker", "run", "-i"])).toMatchObject({
+      command: ["docker", "run", "-i"],
+      stdioOnly: true,
+      httpOnly: false,
+    });
+  });
 });

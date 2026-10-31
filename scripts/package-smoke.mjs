@@ -63,23 +63,23 @@ export const checkReplies = (replies) => {
 };
 
 export const parseCommand = (argv) => {
-  let args = argv;
-  if (ARGUMENT_SEPARATORS.has(argv[0])) {
-    args = argv.slice(1);
-  }
   const modeFlags = {
     "--stdio-only": "stdioOnly",
     "--http-only": "httpOnly",
   };
   const flags = { stdioOnly: false, httpOnly: false };
-  const command = [];
-  for (const token of args) {
+  const separatorIndex = argv.indexOf("--");
+  const beforeSeparator = separatorIndex === -1 ? argv : argv.slice(0, separatorIndex);
+  const afterSeparator = separatorIndex === -1 ? [] : argv.slice(separatorIndex + 1);
+  for (const token of beforeSeparator) {
     const flagKey = modeFlags[token];
     if (flagKey !== undefined) {
       flags[flagKey] = true;
-      continue;
     }
-    command.push(token);
+  }
+  let command = afterSeparator;
+  if (separatorIndex === -1) {
+    command = argv.filter((token) => modeFlags[token] === undefined);
   }
   const resolved = command.length === 0 ? DEFAULT_COMMAND : command;
   return { command: resolved, stdioOnly: flags.stdioOnly, httpOnly: flags.httpOnly };
