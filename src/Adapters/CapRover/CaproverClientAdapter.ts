@@ -1,3 +1,4 @@
+import type { CaproverApiClass } from "@/Protocols/CaproverAdapterProtocol.ts";
 import CapRoverApi, { SimpleAuthenticationProvider } from "caprover-api";
 import type { z } from "zod";
 import { CaproverConfigError } from "@/Errors/CaproverConfigError.ts";
@@ -42,9 +43,7 @@ const STATUS_TO_MESSAGE = new Map<number, string>([
   [STATUS_OTP_REQUIRED, "This CapRover asks for a two-factor code. This server does not support two-factor login, so it cannot log in."],
 ]);
 
-type ApiClass = typeof CapRoverApi;
-
-const isApiClass = (candidate: unknown): candidate is ApiClass => typeof candidate === "function";
+const isApiClass = (candidate: unknown): candidate is CaproverApiClass => typeof candidate === "function";
 
 export class CaproverClientAdapter implements CaproverClientPort {
   private apiPromise: Promise<CapRoverApi> | undefined;
@@ -168,7 +167,7 @@ export class CaproverClientAdapter implements CaproverClientPort {
     return api;
   }
 
-  private static loadApiClass(): ApiClass {
+  private static loadApiClass(): CaproverApiClass {
     // Why: the SDK is CommonJS. Node and the bundle give the module object as the default import, with the class in its
     // own "default" member, while the test runner gives the class itself.
     const loaded: unknown = CapRoverApi;

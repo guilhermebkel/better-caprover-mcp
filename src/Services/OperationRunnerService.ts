@@ -4,13 +4,11 @@ import { MissingPreviewError } from "@/Errors/MissingPreviewError.ts";
 import { OperationDeniedError } from "@/Errors/OperationDeniedError.ts";
 import { ToolFailureError } from "@/Errors/ToolFailureError.ts";
 import type { RiskTier } from "@/Protocols/AccessProtocol.ts";
+import type { AuditResult } from "@/Protocols/AuditLogProtocol.ts";
+import type { OperationRunnerDeps } from "@/Protocols/OperationRunnerProtocol.ts";
 import type { ControlFields } from "@/Protocols/ControlProtocol.ts";
 import type { OperationPort, OperationResult, ToolDefinition, ToolOutcome } from "@/Protocols/OperationProtocol.ts";
 import { ControlFieldsSchema } from "@/Schemas/ControlSchema.ts";
-import type { AuditLogService, AuditResult } from "@/Services/AuditLogService.ts";
-import type { ConfirmationService } from "@/Services/ConfirmationService.ts";
-import type { ConcurrencyLimiterService } from "@/Services/ConcurrencyLimiterService.ts";
-import type { PolicyService } from "@/Services/PolicyService.ts";
 import { FingerprintUtil } from "@/Utils/FingerprintUtil.ts";
 import { InputStripUtil } from "@/Utils/InputStripUtil.ts";
 import { LogUtil } from "@/Utils/LogUtil.ts";
@@ -18,15 +16,6 @@ import { OperationBuilderUtil } from "@/Utils/OperationBuilderUtil.ts";
 import { RedactUtil } from "@/Utils/RedactUtil.ts";
 
 const TIERS_NEEDING_CONFIRMATION: ReadonlySet<RiskTier> = new Set<RiskTier>(["destructive", "critical"]);
-
-export type OperationRunnerDeps = {
-  policy: PolicyService;
-  secrets: readonly string[];
-  confirmation: ConfirmationService;
-  audit: AuditLogService;
-  limiter: ConcurrencyLimiterService;
-  getNowMs: () => number;
-};
 
 export class OperationRunnerService {
   constructor(private readonly deps: OperationRunnerDeps) {}

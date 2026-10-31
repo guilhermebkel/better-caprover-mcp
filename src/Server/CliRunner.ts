@@ -1,9 +1,8 @@
+import type { CliCommand } from "@/Protocols/CliProtocol.ts";
 import { UnknownCommandError } from "@/Errors/UnknownCommandError.ts";
 import { InitRunner } from "@/Server/InitRunner.ts";
 import { ServeRunner } from "@/Server/ServeRunner.ts";
 import { StdioRunner } from "@/Server/StdioRunner.ts";
-
-type CliCommand = "init" | "serve";
 
 const COMMAND_TO_RUNNER: Record<CliCommand, (args: readonly string[]) => Promise<void>> = {
   init: () => InitRunner.run(),

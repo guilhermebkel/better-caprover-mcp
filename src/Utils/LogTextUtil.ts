@@ -1,10 +1,5 @@
+import type { LogTail } from "@/Protocols/LogTextProtocol.ts";
 import { RedactUtil } from "@/Utils/RedactUtil.ts";
-
-export type LogTail = {
-  lines: string[];
-  totalLines: number;
-  isTruncated: boolean;
-};
 
 const FIRST_PRINTABLE_CODE = 32;
 const DELETE_CODE = 127;

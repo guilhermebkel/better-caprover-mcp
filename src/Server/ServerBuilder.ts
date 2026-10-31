@@ -1,4 +1,5 @@
-import { SharedMcpRuntimeBuilder, type CaproverClientFactory } from "@/Server/SharedMcpRuntimeBuilder.ts";
+import type { CaproverClientFactory } from "@/Protocols/SharedMcpRuntimeProtocol.ts";
+import { SharedMcpRuntimeBuilder } from "@/Server/SharedMcpRuntimeBuilder.ts";
 import { McpServerMetadataUtil } from "@/Utils/McpServerMetadataUtil.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";

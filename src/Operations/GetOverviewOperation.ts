@@ -3,7 +3,7 @@ import type { GetOverviewInput } from "@/Protocols/AppInputProtocol.ts";
 import type { CaproverClientPort } from "@/Protocols/CaproverClientProtocol.ts";
 import type { OperationPort, OperationResult } from "@/Protocols/OperationProtocol.ts";
 import { GetOverviewInputSchema } from "@/Schemas/AppInputSchema.ts";
-import type { PolicyService } from "@/Services/PolicyService.ts";
+import type { PolicyServicePort } from "@/Protocols/AccessProtocol.ts";
 
 export class GetOverviewOperation implements OperationPort<GetOverviewInput> {
   static readonly NAME = "getOverview";
@@ -18,7 +18,7 @@ export class GetOverviewOperation implements OperationPort<GetOverviewInput> {
 
   constructor(
     private readonly client: CaproverClientPort,
-    private readonly policy: PolicyService,
+    private readonly policy: PolicyServicePort,
   ) {}
 
   async execute(): Promise<OperationResult> {

@@ -1,3 +1,10 @@
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import type { ConnectableMcpServer } from "@/Protocols/HttpSessionRunnerProtocol.ts";
+import type {
+  HttpRequestContext,
+  HttpRunnerStartOptions,
+  HttpServerHandle,
+} from "@/Protocols/HttpRunnerProtocol.ts";
 import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { HttpBindForbiddenError } from "@/Errors/HttpBindForbiddenError.ts";
 import { HttpBadJsonError } from "@/Errors/HttpBadJsonError.ts";
@@ -25,25 +32,6 @@ const HTTP_TOO_MANY_REQUESTS = 429;
 const HTTP_INTERNAL_ERROR = 500;
 const PLAIN_TEXT = "text/plain";
 
-type HttpRequestContext = {
-  auth: HttpAuthService;
-  failedAuthRateLimit: HttpRateLimitService;
-  authenticatedRateLimit: HttpRateLimitService;
-  sessions: HttpSessionRunner;
-  env: Env;
-  getNowMs: () => number;
-};
-
-export type HttpRunnerStartOptions = {
-  httpMarkerPath?: string;
-  concurrencyQueueWaitMs?: number;
-};
-
-export type HttpServerHandle = {
-  url: string;
-  close: () => Promise<void>;
-};
-
 export class HttpRunner {
   static async run(): Promise<void> {
     await HttpRunner.start();
@@ -65,7 +53,14 @@ export class HttpRunner {
     const failedAuthRateLimit = new HttpRateLimitService(env.CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE);
     const authenticatedRateLimit = new HttpRateLimitService(env.CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE);
     const sessions = new HttpSessionRunner(
-      () => runtime.buildMcpServer(),
+      (): ConnectableMcpServer => {
+        const server = runtime.buildMcpServer();
+        return {
+          connect: async (transport) => {
+            await server.connect(transport as StreamableHTTPServerTransport);
+          },
+        };
+      },
       getNowMs,
       env.CAPROVER_MCP_MAX_HTTP_SESSIONS,
       env.CAPROVER_MCP_HTTP_SESSION_TTL_MS,

@@ -2,11 +2,11 @@ import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
 import { describe, expect, it } from "vitest";
 import { FakeCaproverClientAdapter } from "@/Adapters/CapRover/FakeCaproverClientAdapter.ts";
-import type { FakeCaproverOptions } from "@/Adapters/CapRover/FakeCaproverClientAdapter.ts";
+import type { FakeCaproverOptions } from "@/Protocols/FakeCaproverClientProtocol.ts";
 import type { AccessMode } from "@/Protocols/AccessProtocol.ts";
 import type { CaproverApp } from "@/Protocols/CaproverClientProtocol.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
-import type { CaproverClientFactory } from "@/Server/ServerBuilder.ts";
+import type { CaproverClientFactory } from "@/Protocols/SharedMcpRuntimeProtocol.ts";
 import { ServerBuilder } from "@/Server/ServerBuilder.ts";
 
 const FAKE_PASSWORD = "fake-password-9876";

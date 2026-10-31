@@ -3,7 +3,7 @@ import { FakeCaproverClientAdapter } from "@/Adapters/CapRover/FakeCaproverClien
 import { OperationManifest } from "@/Operations/OperationManifest.ts";
 import type { ToolDefinition } from "@/Protocols/OperationProtocol.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
-import type { CaproverClientFactory } from "@/Server/SharedMcpRuntimeBuilder.ts";
+import type { CaproverClientFactory } from "@/Protocols/SharedMcpRuntimeProtocol.ts";
 import { AuditLogService } from "@/Services/AuditLogService.ts";
 import { ConcurrencyLimiterService } from "@/Services/ConcurrencyLimiterService.ts";
 import { ConfirmationService } from "@/Services/ConfirmationService.ts";

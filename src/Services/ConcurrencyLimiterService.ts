@@ -1,15 +1,11 @@
+import type { ConcurrencyLimiterWaiter } from "@/Protocols/ConcurrencyLimiterProtocol.ts";
 import { ConcurrencyLimitError } from "@/Errors/ConcurrencyLimitError.ts";
 
 const DEFAULT_WAIT_MS = 30_000;
 
-type Waiter = {
-  resolve: () => void;
-  reject: (error: Error) => void;
-};
-
 export class ConcurrencyLimiterService {
   private active = 0;
-  private readonly waiters: Waiter[] = [];
+  private readonly waiters: ConcurrencyLimiterWaiter[] = [];
 
   constructor(
     private readonly maxConcurrent: number,
@@ -31,7 +27,7 @@ export class ConcurrencyLimiterService {
       return;
     }
     await new Promise<void>((resolve, reject) => {
-      const waiter: Waiter = {
+      const waiter: ConcurrencyLimiterWaiter = {
         resolve: () => {
           this.active += 1;
           resolve();

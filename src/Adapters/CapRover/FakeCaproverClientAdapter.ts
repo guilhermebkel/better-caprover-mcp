@@ -1,3 +1,4 @@
+import type { FakeCaproverOptions } from "@/Protocols/FakeCaproverClientProtocol.ts";
 import { CaproverRequestError } from "@/Errors/CaproverRequestError.ts";
 import type {
   CaproverApp,
@@ -10,14 +11,6 @@ import type {
   CaproverSystemInfo,
   NewAppRequest,
 } from "@/Protocols/CaproverClientProtocol.ts";
-
-export type FakeCaproverOptions = {
-  appLogs?: string;
-  buildLines?: string[];
-  failureMessage?: string;
-  delayMs?: number;
-  hangUntilReleased?: () => Promise<void>;
-};
 
 export class FakeCaproverClientAdapter implements CaproverClientPort {
   readonly calls: string[] = [];

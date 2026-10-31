@@ -1,7 +1,7 @@
-import type { PolicyService } from "@/Services/PolicyService.ts";
+import type { PolicyServicePort } from "@/Protocols/AccessProtocol.ts";
 
 export class McpInstructionsBuilder {
-  static build(policy: PolicyService): string {
+  static build(policy: PolicyServicePort): string {
     return [
       "better-caprover-mcp is an unofficial MCP server for CapRover.",
       "This MCP server talks to one CapRover server.",

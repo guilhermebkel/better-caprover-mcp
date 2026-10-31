@@ -4,7 +4,8 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { MockCaproverRouteBuilder } from "@/Adapters/CapRover/MockCaproverRouteBuilder.ts";
 import { MockCaproverServer } from "@/Adapters/CapRover/MockCaproverServer.ts";
 import { HttpBindForbiddenError } from "@/Errors/HttpBindForbiddenError.ts";
-import { HttpRunner, type HttpRunnerStartOptions } from "@/Server/HttpRunner.ts";
+import { HttpRunner } from "@/Server/HttpRunner.ts";
+import type { HttpRunnerStartOptions } from "@/Protocols/HttpRunnerProtocol.ts";
 import { EnvUtil } from "@/Utils/EnvUtil.ts";
 
 const CONCURRENCY_REFUSAL_MESSAGE = "Too many concurrent tool calls (limit 1). Wait for other calls to finish, then try again.";

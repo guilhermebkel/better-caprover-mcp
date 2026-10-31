@@ -1,11 +1,7 @@
+import type { RateWindow } from "@/Protocols/HttpRateLimitProtocol.ts";
 import { HttpRateLimitError } from "@/Errors/HttpRateLimitError.ts";
 
 const WINDOW_MS = 60_000;
-
-type RateWindow = {
-  windowStartedAtMs: number;
-  count: number;
-};
 
 export class HttpRateLimitService {
   private window: RateWindow | undefined;

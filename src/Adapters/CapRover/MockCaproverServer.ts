@@ -1,3 +1,4 @@
+import type { MockRequest } from "@/Protocols/MockCaproverProtocol.ts";
 import { createServer } from "node:http";
 import type { IncomingMessage, Server, ServerResponse } from "node:http";
 import type { AddressInfo } from "node:net";
@@ -6,14 +7,6 @@ const HTTP_OK = 200;
 const HTTP_NOT_FOUND = 404;
 const APP_DEFINITIONS_PATH = "/api/v2/user/apps/appDefinitions";
 const LOGIN_PATH = "/api/v2/login";
-
-export type MockRequest = {
-  method: string;
-  path: string;
-  query: string;
-  token: string | undefined;
-  body: unknown;
-};
 
 export class MockCaproverServer {
   static readonly TOKEN = "fake-session-token";

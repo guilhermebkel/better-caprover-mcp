@@ -1,6 +1,10 @@
 import type { IncomingMessage, ServerResponse } from "node:http";
 import { randomUUID } from "node:crypto";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import type {
+  McpServerBuilder,
+  SessionRecord,
+} from "@/Protocols/HttpSessionRunnerProtocol.ts";
 
 const PLAIN_TEXT = "text/plain";
 const HTTP_BAD_REQUEST = 400;
@@ -8,15 +12,6 @@ const HTTP_NOT_FOUND = 404;
 const HTTP_SERVICE_UNAVAILABLE = 503;
 const DEFAULT_SESSION_TTL_MS = 86_400_000;
 const DEFAULT_MAX_SESSIONS = 64;
-
-export type ConnectableMcpServer = { connect(transport: StreamableHTTPServerTransport): Promise<void> };
-
-export type McpServerBuilder = () => ConnectableMcpServer;
-
-type SessionRecord = {
-  transport: StreamableHTTPServerTransport;
-  expiresAtMs: number;
-};
 
 const isInitializeBody = (parsedBody: unknown): boolean => {
   if (parsedBody === undefined) {

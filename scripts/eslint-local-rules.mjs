@@ -772,6 +772,34 @@ const isZodInferArgument = (node) => {
 
 const PRODUCT_FILE = /(^|\/)src\/[^/].*\.tsx?$/;
 const TEST_FILE = /\.test\.tsx?$/;
+const DECLARATION_FILE = /\.d\.ts$/;
+
+const typesInProtocolFiles = {
+  meta: {
+    type: "problem",
+    messages: {
+      outside: "Declare types in src/Protocols/<Name>Protocol.ts. A <Name>Protocol.ts file holds type, interface and enum only.",
+    },
+  },
+  create(context) {
+    const { filename } = context;
+    if (!PRODUCT_FILE.test(filename) || TEST_FILE.test(filename)) {
+      return {};
+    }
+    if (PROTOCOL_FILE.test(filename) || SCHEMA_FILE.test(filename) || DECLARATION_FILE.test(filename)) {
+      return {};
+    }
+    const report = (node) => {
+      context.report({ node, messageId: "outside" });
+    };
+    return {
+      TSInterfaceDeclaration: report,
+      TSTypeAliasDeclaration: report,
+      TSEnumDeclaration: report,
+    };
+  },
+};
+
 const SATISFIES_TYPES = new Set(["TSSatisfiesExpression"]);
 const PRIMITIVE_VALUE_TYPES = new Set(["string", "number", "boolean"]);
 const KNOWN_VALUE_NAME = new RegExp(`(^|_)(${[...BARE_STRING_FIELD_NAMES].map((name) => name.toUpperCase()).join("|")})$`);
@@ -985,6 +1013,7 @@ export const localRules = {
     "no-bare-string-field": noBareStringField,
     "schema-file": schemaFile,
     "protocol-types-only": protocolTypesOnly,
+    "types-in-protocol-files": typesInProtocolFiles,
     "interface-for-contracts": interfaceForContracts,
     "no-inferred-type": noInferredType,
     "error-location": errorLocation,

@@ -1,6 +1,6 @@
-import { CaproverClientAdapter } from "@/Adapters/CapRover/CaproverClientAdapter.ts";
-import type { CaproverClientPort } from "@/Protocols/CaproverClientProtocol.ts";
+import type { CaproverClientFactory, SharedRuntimeParts } from "@/Protocols/SharedMcpRuntimeProtocol.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
+import { CaproverClientAdapter } from "@/Adapters/CapRover/CaproverClientAdapter.ts";
 import { McpInstructionsBuilder } from "@/Server/McpInstructionsBuilder.ts";
 import { McpServerMetadataUtil } from "@/Utils/McpServerMetadataUtil.ts";
 import { AuditLogService } from "@/Services/AuditLogService.ts";
@@ -12,24 +12,10 @@ import { OperationManifest } from "@/Operations/OperationManifest.ts";
 import { ToolsSurface } from "@/Surfaces/ToolsSurface.ts";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 
-export type CaproverClientFactory = (env: Env) => CaproverClientPort;
-
-type SharedRuntimeParts = {
-  client: CaproverClientPort;
-  policy: PolicyService;
-  secrets: readonly string[];
-  confirmation: ConfirmationService;
-  audit: AuditLogService;
-  limiter: ConcurrencyLimiterService;
-  getNowMs: () => number;
-};
-
 export class SharedMcpRuntimeBuilder {
-  readonly limiter: ConcurrencyLimiterService;
   private readonly parts: SharedRuntimeParts;
 
   private constructor(parts: SharedRuntimeParts) {
-    this.limiter = parts.limiter;
     this.parts = parts;
   }
 
