@@ -69,12 +69,10 @@ jobs:
       - run: pnpm check:licenses
       - run: pnpm smoke
       # Why: this is the way a user runs it: the packed tarball through npx, not the folder.
-      - run: npm pack --silent
-      - id: package-version
-        name: Read package version for npx smoke
+      - name: Run the packed tarball through npx
         run: |
-          echo "version=$(node -p require('./package.json').version)" >> "$GITHUB_OUTPUT"
-      - run: pnpm smoke -- npx --yes --package ./better-caprover-mcp-${{ steps.package-version.outputs.version }}.tgz better-caprover-mcp
+          TARBALL=$(npm pack --silent)
+          pnpm smoke -- npx --yes --package "./$TARBALL" better-caprover-mcp
 
   docker-smoke:
     runs-on: ubuntu-latest
