@@ -40,6 +40,7 @@
     "lint:oxlint": "oxlint --type-aware",
     "lint:eslint": "eslint --cache --cache-strategy content",
     "sdk:drift": "node scripts/sdk-drift.mjs",
+    "check:operation-docs": "node scripts/check-operation-docs.mjs",
     "quality": "knip && jscpd && dpdm --no-warning --no-tree --exit-code circular:1 --transform src/**/*.ts",
     "test": "vitest run",
     "test:integration": "vitest run --config vitest.integration.config.mjs",
@@ -48,7 +49,7 @@
     "ensure-deps": "node scripts/ensure-deps.mjs",
     "lint-staged": "lint-staged",
     "check:changed": "node scripts/check-changed.mjs",
-    "check": "pnpm ensure-deps && pnpm typecheck && pnpm lint && pnpm quality && pnpm sdk:drift && pnpm test && pnpm build && pnpm check:pack && pnpm check:licenses && pnpm smoke",
+    "check": "pnpm ensure-deps && pnpm typecheck && pnpm lint && pnpm quality && pnpm sdk:drift && pnpm check:operation-docs && pnpm test && pnpm build && pnpm check:pack && pnpm check:licenses && pnpm smoke",
     "check:pack": "node scripts/check-pack.mjs",
     "check:licenses": "node scripts/check-licenses.mjs"
   },

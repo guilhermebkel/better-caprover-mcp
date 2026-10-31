@@ -189,16 +189,16 @@ The mode decides which operations the client sees at all. Only the person can ch
 
 | Mode | Operations available |
 | --- | --- |
-| `readonly` (default) | The 29 read operations |
-| `operate` | Read, plus the 24 that change something and can be changed back |
-| `admin` | Read, change, plus the 6 that delete (`delete_app`, `remove_custom_domain`, `delete_projects`, `delete_one_click_repo`, `delete_registry`, `delete_theme`) |
-| `admin` with `CAPROVER_MCP_ALLOW_CRITICAL=1` | All of the above, plus the 8 critical ones |
+| `readonly` (default) | The <!-- operations:read -->31<!-- /operations:read --> read operations |
+| `operate` | Read, plus the <!-- operations:write -->26<!-- /operations:write --> that change something and can be changed back |
+| `admin` | Read, change, plus the <!-- operations:destructive -->6<!-- /operations:destructive --> that delete (`delete_app`, `remove_custom_domain`, `delete_projects`, `delete_one_click_repo`, `delete_registry`, `delete_theme`) |
+| `admin` with `CAPROVER_MCP_ALLOW_CRITICAL=1` | All of the above, plus the <!-- operations:critical -->8<!-- /operations:critical --> critical ones |
 
 `CAPROVER_MCP_TOOLSETS` then picks which groups of operations are registered. The default is `core,apps,domains,oneclick`; the other toolsets are opt-in so the tool list stays short. Ask `get_access` what is on and why a call was denied.
 
 ## Operations
 
-71 operations in ten toolsets. The tier and toolset of every one, and the SDK method behind it, are in [`docs/product/risk-tiers.md`](docs/product/risk-tiers.md). A changing call takes `dry_run`; a deleting or critical call returns a preview and a `confirmation_token` first, and asks the person through the client when the client supports it.
+<!-- operations:count -->71<!-- /operations:count --> operations in ten toolsets. The tier and toolset of every one, and the SDK method behind it, are in [`docs/product/risk-tiers.md`](docs/product/risk-tiers.md). A changing call takes `dry_run`; a deleting or critical call returns a preview and a `confirmation_token` first, and asks the person through the client when the client supports it.
 
 | Toolset | Operations |
 | --- | --- |

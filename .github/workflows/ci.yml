@@ -41,6 +41,7 @@ jobs:
       - run: pnpm install --frozen-lockfile
       - run: pnpm quality
       - run: pnpm sdk:drift
+      - run: pnpm check:operation-docs
 
   unit:
     runs-on: ubuntu-latest

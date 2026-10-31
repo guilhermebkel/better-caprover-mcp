@@ -1,5 +1,7 @@
 const SOURCE_FILES = "**/*.{ts,mjs}";
 const TYPESCRIPT_FILES = "**/*.ts";
+// Why: the operation count and names are stated by hand in these places, and `src/Operations/` is where they are true.
+const OPERATION_TEXT_FILES = "{README.md,AGENTS.md,site/**,src/Operations/**}";
 
 const quote = (files) => {
   // Why: lint-staged passes absolute paths and runs a string command without a shell, so each path is quoted by hand.
@@ -26,7 +28,13 @@ export const buildQualityCommand = () => {
   return "pnpm quality";
 };
 
+export const buildOperationDocsCommand = () => {
+  // Why: the check reads the whole repository, never a file list.
+  return "pnpm check:operation-docs";
+};
+
 export default {
   [SOURCE_FILES]: [buildLintCommand, buildRelatedTestsCommand, buildQualityCommand],
   [TYPESCRIPT_FILES]: buildTypecheckCommand,
+  [OPERATION_TEXT_FILES]: buildOperationDocsCommand,
 };
