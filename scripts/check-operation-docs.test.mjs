@@ -1,6 +1,6 @@
 import { readdirSync, readFileSync } from "node:fs";
 import { describe, expect, it } from "vitest";
-import { countTiers, findDocDrift, readOperations, buildToolName } from "./check-operation-docs.mjs";
+import { countTiers, findDocDrift, readOperations, readToolsets, buildToolName } from "./check-operation-docs.mjs";
 
 const OPERATIONS = [
   { name: "list_apps", tier: "read" },
@@ -10,7 +10,7 @@ const OPERATIONS = [
   { name: "set_password", tier: "critical" },
 ];
 
-const SWAPPED_TIERS = { get_app: "critical" };
+const TOOLSETS = ["core", "apps"];
 
 const buildMarker = (key, number) => `<!-- operations:${key} -->${number}<!-- /operations:${key} -->`;
 
@@ -25,12 +25,12 @@ const buildReadme = ({ count = 5, names = ["`list_apps`, `get_app`", "`set_env_v
   "Not an operation: `get_overview`.",
 ].join("\n");
 
-const buildSite = ({ count = 5, critical = 1, names = ["list_apps", "delete_app"] } = {}) => [
-  `<p>${buildMarker("count", count)} operations, ${buildMarker("critical", critical)} critical</p>`,
+const buildSite = ({ count = 5, toolsets = TOOLSETS } = {}) => [
+  `<p>${buildMarker("count", count)} operations</p>`,
   "<section id=\"tools\">",
-  ...names.map((name) => `<li><code class="tr__name">${name}</code></li>`),
+  ...toolsets.map((name) => `<li><code class="ts__name">${name}</code></li>`),
   "</section>",
-  "<code>get_overview</code>",
+  "<code class=\"ts__name\">other</code>",
 ].join("\n");
 
 const buildTexts = (overrides = {}) => ({
@@ -63,50 +63,46 @@ describe("readOperations() and countTiers()", () => {
   });
 });
 
+describe("readToolsets()", () => {
+  it("reads each toolset of the manifest once, in order", () => {
+    const text = [
+      "runner.buildTool(GetOverviewOperation.NAME, new GetOverviewOperation(client, policy), \"core\"),",
+      "runner.buildTool(ListAppsOperation.NAME, new ListAppsOperation(client), \"core\"),",
+      "runner.buildTool(CreateAppOperation.NAME, new CreateAppOperation(client), \"apps\"),",
+    ].join("\n");
+
+    expect(readToolsets(text)).toStrictEqual(["core", "apps"]);
+  });
+});
+
 describe("findDocDrift()", () => {
   it("passes when every text agrees with the code (AC1)", () => {
-    const problems = findDocDrift(OPERATIONS, buildTexts());
+    const problems = findDocDrift(OPERATIONS, buildTexts(), TOOLSETS);
+
     expect(problems).toStrictEqual([]);
   });
 
   it("names the file, the line, the number found and the real number for a wrong total (AC4)", () => {
     const texts = buildTexts({ "AGENTS.md": "line one\nToday the server exposes 4 operations." });
 
-    const problems = findDocDrift(OPERATIONS, texts);
+    const problems = findDocDrift(OPERATIONS, texts, TOOLSETS);
     expect(problems).toStrictEqual(["AGENTS.md:2 says 4 for all operations, the real number is 5."]);
   });
 
-  it("fails on a wrong total in a marker of the site", () => {
-    const problems = findDocDrift(OPERATIONS, buildTexts({ "site/index.html": buildSite({ count: 7 }) }));
+  it("fails on a wrong total in the marker of the README and of the site", () => {
+    const texts = buildTexts({ "README.md": buildReadme({ count: 6 }), "site/index.html": buildSite({ count: 7 }) });
 
-    expect(problems).toStrictEqual(["site/index.html:1 says 7 for all operations, the real number is 5."]);
+    const problems = findDocDrift(OPERATIONS, texts, TOOLSETS);
+    expect(problems).toStrictEqual([
+      "README.md:3 says 6 for all operations, the real number is 5.",
+      "site/index.html:1 says 7 for all operations, the real number is 5.",
+    ]);
   });
 
-  it("fails on a wrong total in the marker of the README", () => {
-    const problems = findDocDrift(OPERATIONS, buildTexts({ "README.md": buildReadme({ count: 6 }) }));
-
-    expect(problems).toStrictEqual(["README.md:3 says 6 for all operations, the real number is 5."]);
-  });
-
-  it("names the text when the count of a tier differs (AC5)", () => {
-    const problems = findDocDrift(OPERATIONS, buildTexts({ "site/index.html": buildSite({ critical: 4 }) }));
-
-    expect(problems).toStrictEqual(["site/index.html:1 says 4 for critical operations, the real number is 1."]);
-  });
-
-  it("fails when a tier is swapped in the code but the text keeps the old count", () => {
-    const swapped = OPERATIONS.map((operation) => {
-      return { ...operation, tier: SWAPPED_TIERS[operation.name] ?? operation.tier };
-    });
-
-    const problems = findDocDrift(swapped, buildTexts());
-    expect(problems).toStrictEqual(["site/index.html:1 says 1 for critical operations, the real number is 2."]);
-  });
-
-  it("fails on every text that keeps the old numbers when an operation is added without a text change (AC2)", () => {
+  it("names the operation missing from the README table and each text that keeps the old total when one is added (AC2)", () => {
     const operations = [...OPERATIONS, { name: "get_guide", tier: "read" }];
 
-    const problems = findDocDrift(operations, buildTexts());
+    const problems = findDocDrift(operations, buildTexts(), TOOLSETS);
     expect(problems).toStrictEqual([
       "README.md:3 says 5 for all operations, the real number is 6.",
       "README.md lacks the operation get_guide in the operations table.",
@@ -125,44 +121,47 @@ describe("findDocDrift()", () => {
       "site/index.html": buildSite({ count: 4 }),
     });
 
-    const problems = findDocDrift(removed, texts);
-    expect(problems).toStrictEqual([
-      "README.md:8 names delete_app in the operations table, which is not an operation.",
-      "site/index.html:4 names delete_app in the tools section, which is not an operation.",
-    ]);
+    const problems = findDocDrift(removed, texts, TOOLSETS);
+    expect(problems).toStrictEqual(["README.md:8 names delete_app in the operations table, which is not an operation."]);
   });
 
-  it("lets the site omit an operation that exists", () => {
-    const problems = findDocDrift(OPERATIONS, buildTexts({ "site/index.html": buildSite({ names: ["list_apps"] }) }));
-    expect(problems).toStrictEqual([]);
+  it("names the toolset the site lacks when one is added to the manifest", () => {
+    const problems = findDocDrift(OPERATIONS, buildTexts(), [...TOOLSETS, "domains"]);
+
+    expect(problems).toStrictEqual(["site/index.html lacks the toolset domains in the tools section."]);
+  });
+
+  it("names the file and the line of a toolset the site shows that does not exist", () => {
+    const problems = findDocDrift(OPERATIONS, buildTexts({ "site/index.html": buildSite({ toolsets: ["core", "apps", "old"] }) }), TOOLSETS);
+
+    expect(problems).toStrictEqual(["site/index.html:5 names old in the tools section, which is not a toolset."]);
   });
 
   it("fails and names the file and the marker when a text has none to read (AC6)", () => {
-    const texts = buildTexts({ "AGENTS.md": "No number here.", "site/index.html": "<section id=\"tools\"><code class=\"tr__name\">list_apps</code></section>" });
+    const texts = buildTexts({ "AGENTS.md": "No number here.", "site/index.html": "<section id=\"tools\"><code class=\"ts__name\">core</code></section>" });
 
-    const problems = findDocDrift(OPERATIONS, texts);
+    const problems = findDocDrift(OPERATIONS, texts, ["core"]);
     expect(problems).toStrictEqual([
       "AGENTS.md has no number to read for a total of operations.",
       "site/index.html has no number to read for the marker operations:count.",
-      "site/index.html has no number to read for the marker operations:critical.",
     ]);
   });
 
-  it("fails when a text is missing or has no operations table or tools section (AC6)", () => {
-    const texts = buildTexts({ "site/llms.txt": undefined, "README.md": buildMarker("count", 5), "site/index.html": `${buildMarker("count", 5)} ${buildMarker("critical", 1)}` });
+  it("fails when a text is missing or has no operations table or list of toolsets (AC6)", () => {
+    const texts = buildTexts({ "site/llms.txt": undefined, "README.md": buildMarker("count", 5), "site/index.html": buildMarker("count", 5) });
 
-    const problems = findDocDrift(OPERATIONS, texts);
+    const problems = findDocDrift(OPERATIONS, texts, TOOLSETS);
     expect(problems).toStrictEqual([
       "README.md has no operations table to read.",
       "site/llms.txt is missing; the check reads it.",
-      "site/index.html has no tools section to read.",
+      "site/index.html has no list of toolsets in the tools section to read.",
     ]);
   });
 
-  it("does not read an operation name outside the table and the tools section (AC7)", () => {
+  it("does not read a name outside the table and the tools section (AC7)", () => {
     const texts = buildTexts({ "README.md": `${buildReadme()}\n- changelog: renamed \`removed_tool\`` });
 
-    const problems = findDocDrift(OPERATIONS, texts);
+    const problems = findDocDrift(OPERATIONS, texts, TOOLSETS);
     expect(problems).toStrictEqual([]);
   });
 });
@@ -177,7 +176,9 @@ describe("the real repository", () => {
       texts[path] = readFileSync(path, "utf8");
     }
 
-    const problems = findDocDrift(readOperations(sources), texts);
+    const toolsets = readToolsets(readFileSync("src/Surfaces/OperationManifestSurface.ts", "utf8"));
+
+    const problems = findDocDrift(readOperations(sources), texts, toolsets);
     expect(problems).toStrictEqual([]);
   });
 });

@@ -373,9 +373,11 @@ section { padding-block: calc(var(--section-gap) / 2); }
 .dots i { width: 8px; height: 8px; border-radius: 50%; border: 1.5px solid var(--border-strong); }
 .dots i.on { background: var(--accent); border-color: var(--accent); }
 .tr--2 .dots i.on { background: var(--danger); border-color: var(--danger); }
-.callout { margin-top: var(--s-7); display: flex; gap: 14px; align-items: flex-start; padding: 18px 20px; border-radius: var(--r-lg); border: 1px solid var(--border-strong); background: var(--surface-1); color: var(--text-2); max-width: 760px; }
-.callout .ico { color: var(--accent); margin-top: 3px; }
-.callout b { color: var(--text); font-weight: 500; }
+.tsg { list-style: none; padding: 0; margin-top: var(--s-7); display: grid; grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); gap: 12px; }
+.ts { background: var(--surface-1); border: 1px solid var(--border-strong); border-radius: var(--r-lg); padding: 16px 18px; display: grid; gap: 6px; align-content: start; }
+.ts__name { color: var(--accent); font-size: 0.875rem; }
+.ts p { color: var(--text-2); font-size: 0.9375rem; }
+.ts__ex { font: 400 0.75rem var(--font-mono); color: var(--text-3); }
 
 /* =========================================================
    INSTALL
@@ -694,42 +696,30 @@ details .ans a { color: var(--text); }
   <div class="container">
     <div data-reveal>
       <h2 class="h2"><!-- operations:count -->71<!-- /operations:count --> operations, <span class="dim">and no “send any request”.</span></h2>
-      <p class="lede">There is no raw-request tool, on purpose. Each operation has its own schema and risk level, and the mode decides which ones exist. These are the main ones; the README lists all of them.</p>
+      <p class="lede">There is no raw-request tool, on purpose. Every CapRover action is its own operation with its own schema and risk level, grouped in ten toolsets you can switch on.</p>
     </div>
 
-    <div class="tg">
-      <div class="tg__head"><h3>Read <span class="num">7</span></h3><p>registered from readonly</p></div>
-      <ul>
-<li class="tr tr--0"><code class="tr__name">get_overview</code><p class="tr__desc">CapRover version, root domain, app count, and what this server can do.</p><span class="dots" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="sr-only">Available from readonly</span></li>
-<li class="tr tr--0"><code class="tr__name">list_apps</code><p class="tr__desc">Every app on the server.</p><span class="dots" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="sr-only">Available from readonly</span></li>
-<li class="tr tr--0"><code class="tr__name">get_app</code><p class="tr__desc">Details for one app.</p><span class="dots" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="sr-only">Available from readonly</span></li>
-<li class="tr tr--0"><code class="tr__name">get_app_runtime</code><p class="tr__desc">Live state of an app. Needs a CapRover version with that endpoint; 1.15.5 doesn't have it.</p><span class="dots" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="sr-only">Available from readonly</span></li>
-<li class="tr tr--0"><code class="tr__name">get_app_logs</code><p class="tr__desc">Last lines of the running app. Secrets come back as [REDACTED].</p><span class="dots" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="sr-only">Available from readonly</span></li>
-<li class="tr tr--0"><code class="tr__name">get_build_logs</code><p class="tr__desc">Last lines of the latest build, with the same redaction.</p><span class="dots" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="sr-only">Available from readonly</span></li>
-<li class="tr tr--0"><code class="tr__name">list_one_click_apps</code><p class="tr__desc">The one-click templates you can install.</p><span class="dots" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i></span><span class="sr-only">Available from readonly</span></li>
-      </ul>
-    </div>
-    <div class="tg">
-      <div class="tg__head"><h3>Change apps <span class="num">6</span></h3><p>registered from operate</p></div>
-      <ul>
-<li class="tr tr--1"><code class="tr__name">create_app</code><p class="tr__desc">Create an empty app.</p><span class="dots" aria-hidden="true"><i class=""></i><i class="on"></i><i class="on"></i></span><span class="sr-only">Available from operate</span></li>
-<li class="tr tr--1"><code class="tr__name">deploy_image</code><p class="tr__desc">Deploy a Docker image, in the background.</p><span class="dots" aria-hidden="true"><i class=""></i><i class="on"></i><i class="on"></i></span><span class="sr-only">Available from operate</span></li>
-<li class="tr tr--1"><code class="tr__name">set_env_vars</code><p class="tr__desc">Set and remove variables from KEY=value lines. The rest are kept.</p><span class="dots" aria-hidden="true"><i class=""></i><i class="on"></i><i class="on"></i></span><span class="sr-only">Available from operate</span></li>
-<li class="tr tr--1"><code class="tr__name">scale_app</code><p class="tr__desc">Set the instance count. 0 stops the app.</p><span class="dots" aria-hidden="true"><i class=""></i><i class="on"></i><i class="on"></i></span><span class="sr-only">Available from operate</span></li>
-<li class="tr tr--1"><code class="tr__name">add_custom_domain</code><p class="tr__desc">Attach a custom domain to an app.</p><span class="dots" aria-hidden="true"><i class=""></i><i class="on"></i><i class="on"></i></span><span class="sr-only">Available from operate</span></li>
-<li class="tr tr--1"><code class="tr__name">enable_ssl</code><p class="tr__desc">Turn on HTTPS for a domain.</p><span class="dots" aria-hidden="true"><i class=""></i><i class="on"></i><i class="on"></i></span><span class="sr-only">Available from operate</span></li>
-      </ul>
-    </div>
-    <div class="tg">
-      <div class="tg__head"><h3>Destructive <span class="num">1</span></h3><p>registered in admin only</p></div>
-      <ul>
-<li class="tr tr--2"><code class="tr__name">delete_app</code><p class="tr__desc">Remove an app, and its volumes only if you ask. Needs a confirmation token.</p><span class="dots" aria-hidden="true"><i class=""></i><i class=""></i><i class="on"></i></span><span class="sr-only">Available from admin</span></li>
-      </ul>
-    </div>
+    <ul class="tsg">
+      <li class="ts"><code class="ts__name">core</code><p>Look around: overview, apps, logs, diagnosis</p><span class="ts__ex">get_overview, list_apps, diagnose_app</span></li>
+      <li class="ts"><code class="ts__name">apps</code><p>Create, deploy, configure and scale apps</p><span class="ts__ex">deploy_image, set_env_vars, scale_app</span></li>
+      <li class="ts"><code class="ts__name">domains</code><p>Custom domains and HTTPS</p><span class="ts__ex">add_custom_domain, enable_ssl</span></li>
+      <li class="ts"><code class="ts__name">projects</code><p>Group apps into projects</p><span class="ts__ex">create_project, update_project</span></li>
+      <li class="ts"><code class="ts__name">oneclick</code><p>One-click app templates and repos</p><span class="ts__ex">deploy_one_click, list_one_click_apps</span></li>
+      <li class="ts"><code class="ts__name">registries</code><p>Docker registries, including self-hosted</p><span class="ts__ex">add_registry, set_default_push_registry</span></li>
+      <li class="ts"><code class="ts__name">cluster</code><p>Nodes and load balancer</p><span class="ts__ex">list_nodes, add_node</span></li>
+      <li class="ts"><code class="ts__name">maintenance</code><p>Disk, unused images, nginx, CapRover updates</p><span class="ts__ex">get_disk_usage, set_nginx_config</span></li>
+      <li class="ts"><code class="ts__name">monitoring</code><p>NetData and GoAccess</p><span class="ts__ex">get_net_data, set_go_access</span></li>
+      <li class="ts"><code class="ts__name">account</code><p>Password, themes and Pro features</p><span class="ts__ex">list_themes, set_password</span></li>
+    </ul>
 
-    <div class="callout">
-      <svg class="ico"><use href="#i-shield"/></svg>
-      <p><b>Critical operations</b> need one more switch: CAPROVER_MCP_ALLOW_CRITICAL=1 in admin mode. <!-- operations:critical -->8<!-- /operations:critical --> of the <!-- operations:count -->71<!-- /operations:count --> are critical (change the password, update CapRover, the root domain, nginx and more).</p>
+    <div class="tg">
+      <div class="tg__head"><h3>Four risk levels</h3><p>the mode decides which exist</p></div>
+      <ul>
+      <li class="tr"><code class="tr__name">Read</code><p class="tr__desc">Registered in every mode. Never returns a password, token or environment variable value.</p><span class="dots" aria-hidden="true"><i class="on"></i><i class="on"></i><i class="on"></i></span></li>
+      <li class="tr"><code class="tr__name">Write</code><p class="tr__desc">Registered from operate. Takes <code>dry_run</code> to preview the change first.</p><span class="dots" aria-hidden="true"><i></i><i class="on"></i><i class="on"></i></span></li>
+      <li class="tr tr--2"><code class="tr__name">Destructive</code><p class="tr__desc">Registered in admin. Returns a preview and a single-use <code>confirmation_token</code> before anything is lost.</p><span class="dots" aria-hidden="true"><i></i><i></i><i class="on"></i></span></li>
+      <li class="tr tr--2"><code class="tr__name">Critical</code><p class="tr__desc">Admin plus <code>CAPROVER_MCP_ALLOW_CRITICAL=1</code>: password, root domain, nginx, nodes, updates.</p><span class="dots" aria-hidden="true"><i></i><i></i><i class="on"></i></span></li>
+      </ul>
     </div>
   </div>
 </section>
