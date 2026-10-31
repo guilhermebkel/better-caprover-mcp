@@ -17,7 +17,7 @@ Phase 5 lets a client reach the MCP server over the network and target more than
 
 ## Threats
 
-- **Stolen bearer token:** An attacker with the valid token can run any tool the configured CapRover servers allow. Mitigation: long random token, TLS at the proxy, non-local bind refused without `CAPROVER_MCP_HTTP_TOKEN`, rate limits, audit lines without secrets.
+- **Stolen bearer token:** An attacker with the valid token can run any tool the configured CapRover servers allow. Mitigation: long random token, TLS at the proxy, non-local bind refused without `CAPROVER_MCP_HTTP_TOKEN`, rate limits, audit lines without secrets. **Cost of a single token:** revoking one client means rotating the shared secret for every client; audit lines cannot distinguish which HTTP client made a call; one legitimate client can exhaust the shared authenticated rate-limit bucket for all others.
 - **Token brute force and auth flooding:** Repeated wrong tokens or missing auth must not enumerate valid secrets or exhaust CapRover. Mitigation: constant-time comparison, plain **401** with no reason, failed-auth rate limit keyed by **remote address**, stale rate-limit windows pruned.
 - **Session fixation and reuse without auth:** A session id must not be usable without a valid bearer on each request. Mitigation: auth runs before session handling; wrong or missing bearer → **401** (session id ignored).
 - **Session exhaustion:** Opening unbounded MCP sessions could exhaust memory. Mitigation: max session count with **503** when full; TTL drops idle sessions.
@@ -29,7 +29,8 @@ Phase 5 lets a client reach the MCP server over the network and target more than
 
 ## Considered options
 
-- **Named client tokens (`CAPROVER_MCP_HTTP_TOKENS` JSON map):** rejected; one shared secret is enough for this server and keeps configuration and rate limits simple.
+- Issue **#6** acceptance criterion **S1** proposed **named client tokens** (`CAPROVER_MCP_HTTP_TOKENS`, a JSON map of client name to secret) for per-client rotation and identification. The **owner chose a single `CAPROVER_MCP_HTTP_TOKEN`** instead, for simpler configuration and operations.
+- **Named client tokens (`CAPROVER_MCP_HTTP_TOKENS` JSON map):** rejected after that choice; per-client revocation and audit separation were traded for one shared bearer secret.
 - **One shared HTTP token** (`CAPROVER_MCP_HTTP_TOKEN`): **accepted**.
 - **Passwords inline in the servers file**: rejected; env var or file reference only.
 - **SSE-only legacy transport**: rejected; Streamable HTTP is the MCP direction.
@@ -38,6 +39,7 @@ Phase 5 lets a client reach the MCP server over the network and target more than
 
 ## Consequences
 
+- **Single-token trade-offs:** no per-client revocation without rotating the secret for everyone; stderr audit lines name tool and CapRover server only, not which HTTP client connected; authenticated MCP requests share one rate-limit bucket process-wide.
 - `EnvUtil`, `CaproverServerEnvUtil`, and `CaproverServerRegistryService` centralize configuration, resolution, and secrets collection.
 - Operations keep a single `CaproverClientPort` in the manifest via `RoutingCaproverClientAdapter` and `AsyncLocalStorage` for the active server.
 - `OperationRunnerService` resolves `server_name`, applies per-server policy, audit, concurrency, and redaction with all configured secrets.

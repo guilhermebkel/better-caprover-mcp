@@ -11,7 +11,7 @@ const DEFAULT_MAX_HTTP_REQUESTS_PER_MINUTE = 120;
 const DEFAULT_MAX_HTTP_SESSIONS = 64;
 const DEFAULT_HTTP_SESSION_TTL_MS = 86_400_000;
 const DEFAULT_MAX_CONCURRENT_PER_SERVER = 5;
-const MIN_HTTP_TOKEN_LENGTH = 8;
+export const MIN_HTTP_TOKEN_LENGTH = 8;
 
 const HttpTokenSchema: z.ZodType<string> = z.string().min(MIN_HTTP_TOKEN_LENGTH);
 
@@ -35,7 +35,10 @@ const httpTokenFromEnv = z.string().optional().transform((text, context) => {
   }
   const result = HttpTokenSchema.safeParse(text);
   if (!result.success) {
-    context.addIssue({ code: "custom", message: "CAPROVER_MCP_HTTP_TOKEN must be at least 8 characters." });
+    context.addIssue({
+      code: "custom",
+      message: `CAPROVER_MCP_HTTP_TOKEN must be at least ${MIN_HTTP_TOKEN_LENGTH} characters.`,
+    });
     return z.NEVER;
   }
   return result.data;

@@ -128,7 +128,7 @@ CAPROVER_URL=https://captain.your-domain.com CAPROVER_PASSWORD=... npx -y better
 
 ### Remote HTTP (optional)
 
-Stdio stays the default. To listen for Streamable HTTP on the same machine (localhost only unless you add tokens and TLS for a wider bind):
+Stdio stays the default. To listen for Streamable HTTP on the same machine (localhost only unless you add a token and TLS for a wider bind):
 
 ```bash
 export CAPROVER_MCP_HTTP_TOKEN='<long-random-secret>'
@@ -198,7 +198,7 @@ The mode decides which operations the client sees at all. Only the person can ch
 | `CAPROVER_PASSWORD` | none | The CapRover password |
 | `CAPROVER_MCP_MODE` | `readonly` | `readonly`, `operate` or `admin` |
 | `CAPROVER_MCP_ALLOW_CRITICAL` | off | Set to `1` to unlock critical operations in `admin` mode. No operation is critical yet |
-| `CAPROVER_MCP_HTTP_TOKEN` | none | Bearer secret for `serve --http`; required for non-local HTTP bind |
+| `CAPROVER_MCP_HTTP_TOKEN` | none | Bearer secret for `serve --http` (minimum 8 characters); required for non-local HTTP bind |
 | `CAPROVER_MCP_HTTP_HOST` | `127.0.0.1` | Address for `serve --http` |
 | `CAPROVER_MCP_HTTP_PORT` | `3100` | Port for `serve --http` |
 | `CAPROVER_MCP_MAX_HTTP_BODY_BYTES` | `1048576` | Max POST body size on `/mcp` |

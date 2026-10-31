@@ -14,7 +14,7 @@ export class HttpAuthService {
     return TimingSafeCompareUtil.isSecretMatching(token, this.expectedToken);
   }
 
-  static readBearerToken(request: IncomingMessage): string | undefined {
+  private static readBearerToken(request: IncomingMessage): string | undefined {
     const header = request.headers.authorization;
     if (typeof header !== "string") {
       return undefined;

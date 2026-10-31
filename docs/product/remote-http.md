@@ -88,7 +88,7 @@ The legacy variables `CAPROVER_URL` and `CAPROVER_PASSWORD` still define a singl
 | --- | --- | --- |
 | `CAPROVER_MCP_HTTP_HOST` | `127.0.0.1` | Bind address |
 | `CAPROVER_MCP_HTTP_PORT` | `3100` | TCP port |
-| `CAPROVER_MCP_HTTP_TOKEN` | none | Bearer secret for `/mcp`; required for non-local bind |
+| `CAPROVER_MCP_HTTP_TOKEN` | none | Bearer secret for `/mcp` (minimum 8 characters); required for non-local bind |
 | `CAPROVER_MCP_MAX_HTTP_BODY_BYTES` | `1048576` | Max POST body size |
 | `CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE` | `120` | Max MCP HTTP requests per minute. Failed auth attempts are counted per client remote address; all authenticated MCP traffic shares one bucket. Behind a reverse proxy every upstream client often shares one remote address for failed auth, so that throttling is shared unless the proxy sets forwarded client metadata the process can use (this server does not read `X-Forwarded-For`). |
 | `CAPROVER_MCP_MAX_HTTP_SESSIONS` | `64` | Max concurrent Streamable HTTP MCP sessions |

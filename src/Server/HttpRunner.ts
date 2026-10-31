@@ -103,7 +103,7 @@ export class HttpRunner {
 
   static assertBindAllowed(env: Env): void {
     const isLocal = NetworkBindUtil.isLocalBindHost(env.CAPROVER_MCP_HTTP_HOST);
-    const hasToken = env.CAPROVER_MCP_HTTP_TOKEN !== undefined && env.CAPROVER_MCP_HTTP_TOKEN !== "";
+    const hasToken = env.CAPROVER_MCP_HTTP_TOKEN !== undefined;
     if (!isLocal && !hasToken) {
       throw new HttpBindForbiddenError();
     }

@@ -11,6 +11,8 @@ import { EnvUtil } from "@/Utils/EnvUtil.ts";
 const TEST_TOKEN = "test-token-12345678";
 const WRONG_TOKEN = "wrong-token-123456789";
 const CONCURRENCY_TEST_QUEUE_WAIT_MS = 50;
+const LIST_APPS_MOCK_SUCCESS_SUMMARY = "2 apps match; showing 2.";
+const HTTP_BIND_FORBIDDEN_MESSAGE = HttpBindForbiddenError.MESSAGE;
 
 const connectAuthorizedClient = async (baseUrl: string, clientName: string, token = TEST_TOKEN): Promise<Client> => {
   const transport = new StreamableHTTPClientTransport(new URL(`${baseUrl}/mcp`), {
@@ -41,6 +43,20 @@ const postMcp = async (
   method: "POST",
   headers: {
     "Authorization": `Bearer ${token}`,
+    "Content-Type": "application/json",
+    "Accept": "application/json, text/event-stream",
+    ...(sessionId === undefined ? {} : { "mcp-session-id": sessionId }),
+  },
+  body,
+});
+
+const postMcpWithoutAuth = async (
+  baseUrl: string,
+  body: string,
+  sessionId?: string,
+): Promise<Response> => fetch(`${baseUrl}/mcp`, {
+  method: "POST",
+  headers: {
     "Content-Type": "application/json",
     "Accept": "application/json, text/event-stream",
     ...(sessionId === undefined ? {} : { "mcp-session-id": sessionId }),
@@ -105,6 +121,16 @@ const readToolSummary = (content: unknown): string => {
   return newlineIndex === -1 ? text : text.slice(0, newlineIndex);
 };
 
+const readCallOutcome = (result: Awaited<ReturnType<Client["callTool"]>>) => ({
+  isError: result.isError === true,
+  summary: readToolSummary(result.content),
+});
+
+const sortCallOutcomes = (
+  left: ReturnType<typeof readCallOutcome>,
+  right: ReturnType<typeof readCallOutcome>,
+): number => Number(left.isError) - Number(right.isError);
+
 describe("HttpRunner.assertBindAllowed()", () => {
   it("refuses a public bind without CAPROVER_MCP_HTTP_TOKEN", () => {
     const env = readHttpEnv({ CAPROVER_MCP_HTTP_HOST: "0.0.0.0" });
@@ -114,10 +140,10 @@ describe("HttpRunner.assertBindAllowed()", () => {
     }).toThrow(HttpBindForbiddenError);
     expect(() => {
       HttpRunner.assertBindAllowed(env);
-    }).toThrow(/CAPROVER_MCP_HTTP_TOKEN/);
+    }).toThrow(HTTP_BIND_FORBIDDEN_MESSAGE);
   });
 
-  it("allows localhost without tokens", () => {
+  it("allows localhost without CAPROVER_MCP_HTTP_TOKEN", () => {
     const env = readHttpEnv({ CAPROVER_MCP_HTTP_HOST: "127.0.0.1" });
 
     expect(() => {
@@ -132,6 +158,34 @@ describe("HttpRunner.start()", () => {
     try {
       const response = await fetch(`${handle.url}/mcp`, { method: "POST", body: "{}" });
       expect(response.status).toBe(401);
+      expect(await response.text()).toBe("Unauthorized");
+    } finally {
+      await handle.close();
+    }
+  });
+
+  it("returns 401 when Authorization is missing and a token is configured", async () => {
+    const mock = new MockCaproverServer(MockCaproverRouteBuilder.buildDefault());
+    mockServers.push(mock);
+    const captainUrl = await mock.start();
+    const handle = await startHttpRunner({
+      CAPROVER_MCP_HTTP_TOKEN: TEST_TOKEN,
+      CAPROVER_URL: captainUrl,
+      CAPROVER_PASSWORD: FAKE_PASSWORD,
+    });
+    try {
+      const response = await postMcpWithoutAuth(
+        handle.url,
+        JSON.stringify({
+          jsonrpc: "2.0",
+          id: 1,
+          method: "tools/call",
+          params: { name: "get_overview", arguments: {} },
+        }),
+      );
+      expect(response.status).toBe(401);
+      expect(await response.text()).toBe("Unauthorized");
+      expect(mock.requests.some((request) => request.path.includes("appDefinitions"))).toBe(false);
     } finally {
       await handle.close();
     }
@@ -263,7 +317,7 @@ describe("HttpRunner.start()", () => {
     try {
       const first = await postMcp(handle.url, TEST_TOKEN, buildInitializeJson("session-cap-a"));
       await first.text();
-      expect(first.status).not.toBe(503);
+      expect(first.status).toBe(200);
       const second = await postMcp(handle.url, TEST_TOKEN, buildInitializeJson("session-cap-b", 2));
       expect(second.status).toBe(503);
       expect(await second.text()).toBe("Service Unavailable");
@@ -316,59 +370,41 @@ describe("HttpRunner.start()", () => {
     let secondClient: Client | undefined;
     let firstCall: Promise<Awaited<ReturnType<Client["callTool"]>>> | undefined;
     let secondCall: Promise<Awaited<ReturnType<Client["callTool"]>>> | undefined;
-    type ToolCallOutcome = {
-      isError: boolean;
-      summary: string;
-    };
-    let firstOutcome: ToolCallOutcome | undefined;
-    let secondOutcome: ToolCallOutcome | undefined;
-    const readCallOutcome = (result: Awaited<ReturnType<Client["callTool"]>>): ToolCallOutcome => ({
-      isError: result.isError === true,
-      summary: readToolSummary(result.content),
-    });
-    const readMatchedConcurrencyPair = (): string | undefined => {
-      if (firstOutcome === undefined || secondOutcome === undefined) {
-        return undefined;
-      }
-      const outcomes = [firstOutcome, secondOutcome];
-      const refusedOutcomes = outcomes.filter((outcome) => outcome.summary === refusalMessage);
-      const soleRefused = refusedOutcomes.length === 1 ? refusedOutcomes[0] : undefined;
-      if (soleRefused?.isError !== true) {
-        return undefined;
-      }
-      const acceptedOutcome = outcomes.find((outcome) => outcome.summary !== refusalMessage);
-      if (acceptedOutcome === undefined || acceptedOutcome.isError) {
-        return undefined;
-      }
-      return "matched";
-    };
+    let firstSummary: string | undefined;
+    let secondSummary: string | undefined;
+    let firstResult: Awaited<ReturnType<Client["callTool"]>> | undefined;
+    let secondResult: Awaited<ReturnType<Client["callTool"]>> | undefined;
     try {
       firstClient = await connectAuthorizedClient(handle.url, "concurrency-a");
       secondClient = await connectAuthorizedClient(handle.url, "concurrency-b");
       firstCall = firstClient.callTool({ name: "list_apps", arguments: {} }).then((result) => {
-        firstOutcome = readCallOutcome(result);
+        firstSummary = readToolSummary(result.content);
         return result;
       });
       secondCall = secondClient.callTool({ name: "list_apps", arguments: {} }).then((result) => {
-        secondOutcome = readCallOutcome(result);
+        secondSummary = readToolSummary(result.content);
         return result;
       });
       await expect.poll(() => {
-        const refusedOutcome = [firstOutcome, secondOutcome].find(
-          (outcome) => outcome?.summary === refusalMessage && outcome.isError,
-        );
-        return refusedOutcome === undefined ? undefined : "refused";
-      }).toBe("refused");
+        if (firstSummary === refusalMessage || secondSummary === refusalMessage) {
+          return true;
+        }
+        return undefined;
+      }).toBe(true);
     } finally {
       resolveHang();
       if (firstCall !== undefined && secondCall !== undefined) {
-        await Promise.all([firstCall, secondCall]);
+        [firstResult, secondResult] = await Promise.all([firstCall, secondCall]);
       }
-      expect(readMatchedConcurrencyPair()).toBe("matched");
       await firstClient?.close();
       await secondClient?.close();
       await handle.close();
     }
+    const outcomes = [readCallOutcome(firstResult!), readCallOutcome(secondResult!)].sort(sortCallOutcomes);
+    expect(outcomes).toStrictEqual([
+      { isError: false, summary: LIST_APPS_MOCK_SUCCESS_SUMMARY },
+      { isError: true, summary: refusalMessage },
+    ]);
   });
 
   it("drops HTTP sessions after TTL", async () => {

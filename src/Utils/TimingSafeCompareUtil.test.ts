@@ -1,20 +1,18 @@
 import { describe, expect, it } from "vitest";
 import { TimingSafeCompareUtil } from "@/Utils/TimingSafeCompareUtil.ts";
 
-describe("TimingSafeCompareUtil.isAnySecretMatching()", () => {
-  it("accepts a matching secret among several", () => {
-    const isMatching = TimingSafeCompareUtil.isAnySecretMatching("alpha-token", ["other", "alpha-token"]);
-    expect(isMatching).toBe(true);
+describe("TimingSafeCompareUtil.isSecretMatching()", () => {
+  const expectedSecret = "alpha-token-12345678";
+
+  it("accepts an equal secret", () => {
+    expect(TimingSafeCompareUtil.isSecretMatching(expectedSecret, expectedSecret)).toBe(true);
   });
 
-  it("rejects a wrong secret even when another would match", () => {
-    const isMatching = TimingSafeCompareUtil.isAnySecretMatching("wrong", ["expected-one", "expected-two"]);
-    expect(isMatching).toBe(false);
+  it("rejects a different secret", () => {
+    expect(TimingSafeCompareUtil.isSecretMatching("wrong-token-123456789", expectedSecret)).toBe(false);
   });
 
-  it("checks every configured secret without short-circuiting on length", () => {
-    const secrets = ["a".repeat(40), "b".repeat(40)];
-    const isMatching = TimingSafeCompareUtil.isAnySecretMatching("c".repeat(40), secrets);
-    expect(isMatching).toBe(false);
+  it("rejects a candidate with a different length without throwing", () => {
+    expect(TimingSafeCompareUtil.isSecretMatching("short", expectedSecret)).toBe(false);
   });
 });
