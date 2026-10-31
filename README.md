@@ -69,7 +69,20 @@ Env var values are never returned (only `isSet`). The password and the values of
 
 ## Quick start
 
-### 1. Directly on the client
+You need the address of your CapRover (`https://captain.your-domain.com`) and its password. CapRover has no user name, and servers with two-factor login turned on are not supported ([ADR 0010](docs/adr/0010-the-server-logs-in-with-the-password-only.md)).
+
+### 1. Add it to your client
+
+Claude Code:
+
+```bash
+claude mcp add caprover \
+  -e CAPROVER_URL=https://captain.your-domain.com \
+  -e CAPROVER_PASSWORD=your-password \
+  -- npx -y better-caprover-mcp
+```
+
+Claude Desktop, Cursor and other clients, with `npx`:
 
 ```json
 {
@@ -79,16 +92,52 @@ Env var values are never returned (only `isSet`). The password and the values of
       "args": ["-y", "better-caprover-mcp"],
       "env": {
         "CAPROVER_URL": "https://captain.your-domain.com",
-        "CAPROVER_PASSWORD": "your CapRover password"
+        "CAPROVER_PASSWORD": "your CapRover password",
+        "CAPROVER_MCP_MODE": "readonly"
       }
     }
   }
 }
 ```
 
-### 2. Server and client
+Or with Docker (`-i` is required: the server talks over stdin and stdout):
 
-Bind to localhost only (`127.0.0.1:3100`). Put TLS in front when clients reach the server over the network.
+```json
+{
+  "mcpServers": {
+    "caprover": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "-e", "CAPROVER_URL", "-e", "CAPROVER_PASSWORD", "-e", "CAPROVER_MCP_MODE", "ghcr.io/guilhermebkel/better-caprover-mcp:latest"],
+      "env": {
+        "CAPROVER_URL": "https://captain.your-domain.com",
+        "CAPROVER_PASSWORD": "your CapRover password",
+        "CAPROVER_MCP_MODE": "readonly"
+      }
+    }
+  }
+}
+```
+
+### 2. Check the login
+
+```bash
+CAPROVER_URL=https://captain.your-domain.com CAPROVER_PASSWORD=... npx -y better-caprover-mcp init
+```
+
+`init` tests the login and prints the client configuration above. Without the two variables it only prints the configuration.
+
+### 3. Ask
+
+```text
+Which of my apps run an image tagged latest?
+Set LOG_LEVEL=debug on the api app, but show me what changes first.
+```
+
+To let the agent change apps, set `CAPROVER_MCP_MODE=operate`; for deleting, `admin`.
+
+### Run it as a server over HTTP
+
+Use this when the client reaches the server over the network. Bind to localhost only (`127.0.0.1:3100`), and put TLS in front for anything else.
 
 ```bash
 docker run -d --name caprover-mcp -p 127.0.0.1:3100:3100 \
@@ -99,6 +148,8 @@ docker run -d --name caprover-mcp -p 127.0.0.1:3100:3100 \
   ghcr.io/guilhermebkel/better-caprover-mcp:latest \
   serve --http
 ```
+
+Then point the client at it:
 
 ```json
 {
@@ -113,16 +164,9 @@ docker run -d --name caprover-mcp -p 127.0.0.1:3100:3100 \
 }
 ```
 
-More on HTTP bind and TLS: [`docs/product/remote-http.md`](docs/product/remote-http.md). Limits and other env vars: [Configuration](#configuration).
+More on HTTP bind and TLS: [`docs/product/remote-http.md`](docs/product/remote-http.md). Limits and other variables: [Configuration](#configuration).
 
 ## Example
-
-Try asking:
-
-```text
-Which of my apps run an image tagged latest?
-Set LOG_LEVEL=debug on the api app, but show me what changes first.
-```
 
 <sub>Real output of the built server against a CapRover 1.15.5. The agent asks to delete an app; nothing is deleted yet.</sub>
 
@@ -166,47 +210,6 @@ The mode decides which operations the client sees at all. Only the person can ch
 | `delete_app` | destructive | Delete an app, and its volumes only if asked |
 
 ## Configuration
-
-You need `CAPROVER_URL` and `CAPROVER_PASSWORD`. CapRover has no user name, and servers with two-factor login turned on are not supported ([ADR 0010](docs/adr/0010-the-server-logs-in-with-the-password-only.md)).
-
-To let the agent change apps, set `CAPROVER_MCP_MODE=operate`; for deleting, `admin`.
-
-### Stdio on the client
-
-Claude Code:
-
-```bash
-claude mcp add caprover \
-  -e CAPROVER_URL=https://captain.your-domain.com \
-  -e CAPROVER_PASSWORD=your-password \
-  -- npx -y better-caprover-mcp
-```
-
-Docker stdio (`-i` is required: the server talks over stdin and stdout):
-
-```json
-{
-  "mcpServers": {
-    "caprover": {
-      "command": "docker",
-      "args": ["run", "-i", "--rm", "-e", "CAPROVER_URL", "-e", "CAPROVER_PASSWORD", "-e", "CAPROVER_MCP_MODE", "ghcr.io/guilhermebkel/better-caprover-mcp:latest"],
-      "env": {
-        "CAPROVER_URL": "https://captain.your-domain.com",
-        "CAPROVER_PASSWORD": "your CapRover password",
-        "CAPROVER_MCP_MODE": "readonly"
-      }
-    }
-  }
-}
-```
-
-Check the login and print sample stdio configs:
-
-```bash
-CAPROVER_URL=https://captain.your-domain.com CAPROVER_PASSWORD=... npx -y better-caprover-mcp init
-```
-
-Without `CAPROVER_URL` and `CAPROVER_PASSWORD`, `init` only prints the configuration.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
