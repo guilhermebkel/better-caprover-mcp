@@ -17,7 +17,7 @@ export default defineConfig({
   define: { __PACKAGE_VERSION__: JSON.stringify(packageJson.version) },
   test: {
     include: ["src/**/*.test.ts", "scripts/**/*.test.mjs", "*.test.mjs"],
-    exclude: ["**/node_modules/**", "dist/**", "lint-fixtures-*/**"],
+    exclude: ["**/node_modules/**", "dist/**", "lint-fixtures-*/**", "**/*.integration.test.*"],
     environment: "node",
     // Why: stubbed globals and env stubs are undone after every test so nothing leaks into the next file.
     unstubGlobals: true,

@@ -13,6 +13,7 @@ What goes in `docs/` and where everything else goes.
 | File | Kind |
 | --- | --- |
 | `docs/product/adding-an-operation.md` | product doc |
+| `docs/product/releasing.md` | product doc |
 
 ## What a standard never contains
 

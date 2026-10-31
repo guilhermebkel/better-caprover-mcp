@@ -40,6 +40,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm quality
+      - run: pnpm sdk:drift
 
   unit:
     runs-on: ubuntu-latest
@@ -64,6 +65,8 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm build
+      - run: pnpm check:pack
+      - run: pnpm check:licenses
       - run: pnpm smoke
       # Why: this is the way a user runs it: the packed tarball through npx, not the folder.
       - run: npm pack --silent
@@ -79,3 +82,18 @@ jobs:
       - run: docker build -t better-caprover-mcp:ci .
       # Why: `-i` is what a stdio client passes; without it the server gets no input and exits.
       - run: node scripts/package-smoke.mjs -- docker run -i --rm better-caprover-mcp:ci
+
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - name: Start CapRover
+        run: scripts/start-caprover.sh
+      - run: pnpm test:integration

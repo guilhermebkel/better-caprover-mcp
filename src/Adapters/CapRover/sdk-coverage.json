@@ -1,0 +1,244 @@
+{
+  "methods": {
+    "destroy": {
+      "status": "internal",
+      "reason": "The adapter never closes the client during the life of the server."
+    },
+    "login": {
+      "status": "internal",
+      "reason": "The adapter logs in with the password before the first call."
+    },
+    "getAllThemes": {
+      "status": "planned"
+    },
+    "getCurrentTheme": {
+      "status": "planned"
+    },
+    "setCurrentTheme": {
+      "status": "planned"
+    },
+    "saveTheme": {
+      "status": "planned"
+    },
+    "deleteTheme": {
+      "status": "planned"
+    },
+    "getProFeaturesState": {
+      "status": "planned"
+    },
+    "setProApiKey": {
+      "status": "planned"
+    },
+    "getProConfigs": {
+      "status": "planned"
+    },
+    "setProConfigs": {
+      "status": "planned"
+    },
+    "getOtpStatus": {
+      "status": "planned"
+    },
+    "setOtpStatus": {
+      "status": "excluded",
+      "reason": "It would turn on two-factor login, which this server cannot use (ADR 0010)."
+    },
+    "getCaptainInfo": {
+      "status": "operation",
+      "operation": "get_overview"
+    },
+    "updateRootDomain": {
+      "status": "planned"
+    },
+    "enableRootSsl": {
+      "status": "planned"
+    },
+    "forceSsl": {
+      "status": "planned"
+    },
+    "getAllApps": {
+      "status": "operation",
+      "operation": "list_apps, get_app and every operation that reads an app first"
+    },
+    "getAllProjects": {
+      "status": "planned"
+    },
+    "getAppsRuntime": {
+      "status": "planned"
+    },
+    "getAppRuntime": {
+      "status": "operation",
+      "operation": "get_app_runtime"
+    },
+    "fetchBuildLogs": {
+      "status": "operation",
+      "operation": "get_build_logs"
+    },
+    "fetchAppLogsInHex": {
+      "status": "planned"
+    },
+    "fetchAppLogs": {
+      "status": "operation",
+      "operation": "get_app_logs"
+    },
+    "uploadAppData": {
+      "status": "planned"
+    },
+    "registerProject": {
+      "status": "planned"
+    },
+    "updateProject": {
+      "status": "planned"
+    },
+    "uploadCaptainDefinitionContent": {
+      "status": "operation",
+      "operation": "deploy_image"
+    },
+    "updateConfigAndSave": {
+      "status": "planned"
+    },
+    "patchAppDefinition": {
+      "status": "operation",
+      "operation": "set_env_vars, scale_app"
+    },
+    "renameApp": {
+      "status": "planned"
+    },
+    "registerNewApp": {
+      "status": "operation",
+      "operation": "create_app"
+    },
+    "deleteApp": {
+      "status": "operation",
+      "operation": "delete_app"
+    },
+    "deleteProjects": {
+      "status": "planned"
+    },
+    "enableSslForBaseDomain": {
+      "status": "operation",
+      "operation": "enable_ssl"
+    },
+    "attachNewCustomDomainToApp": {
+      "status": "operation",
+      "operation": "add_custom_domain"
+    },
+    "enableSslForCustomDomain": {
+      "status": "operation",
+      "operation": "enable_ssl"
+    },
+    "removeCustomDomain": {
+      "status": "planned"
+    },
+    "getLoadBalancerInfo": {
+      "status": "planned"
+    },
+    "getNetDataInfo": {
+      "status": "planned"
+    },
+    "updateNetDataInfo": {
+      "status": "planned"
+    },
+    "getGoAccessInfo": {
+      "status": "planned"
+    },
+    "updateGoAccessInfo": {
+      "status": "planned"
+    },
+    "getGoAccessReports": {
+      "status": "planned"
+    },
+    "getGoAccessReport": {
+      "status": "planned"
+    },
+    "changePass": {
+      "status": "planned"
+    },
+    "getVersionInfo": {
+      "status": "operation",
+      "operation": "get_overview"
+    },
+    "createBackup": {
+      "status": "planned"
+    },
+    "performUpdate": {
+      "status": "planned"
+    },
+    "getNginxConfig": {
+      "status": "planned"
+    },
+    "setNginxConfig": {
+      "status": "planned"
+    },
+    "getUnusedImages": {
+      "status": "planned"
+    },
+    "deleteImages": {
+      "status": "planned"
+    },
+    "getDiskUsage": {
+      "status": "planned"
+    },
+    "getDiskCleanUpSettings": {
+      "status": "planned"
+    },
+    "setDiskCleanUpSettings": {
+      "status": "planned"
+    },
+    "getDockerRegistries": {
+      "status": "planned"
+    },
+    "enableSelfHostedDockerRegistry": {
+      "status": "planned"
+    },
+    "disableSelfHostedDockerRegistry": {
+      "status": "planned"
+    },
+    "addDockerRegistry": {
+      "status": "planned"
+    },
+    "updateDockerRegistry": {
+      "status": "planned"
+    },
+    "deleteDockerRegistry": {
+      "status": "planned"
+    },
+    "setDefaultPushDockerRegistry": {
+      "status": "planned"
+    },
+    "forceBuild": {
+      "status": "planned"
+    },
+    "getAllNodes": {
+      "status": "planned"
+    },
+    "getAllOneClickApps": {
+      "status": "operation",
+      "operation": "list_one_click_apps"
+    },
+    "getOneClickAppByName": {
+      "status": "planned"
+    },
+    "getAllOneClickAppRepos": {
+      "status": "planned"
+    },
+    "addNewCustomOneClickRepo": {
+      "status": "planned"
+    },
+    "deleteCustomOneClickRepo": {
+      "status": "planned"
+    },
+    "addDockerNode": {
+      "status": "planned"
+    },
+    "startOneClickAppDeploy": {
+      "status": "planned"
+    },
+    "getOneClickAppDeployProgress": {
+      "status": "planned"
+    },
+    "executeGenericApiCommand": {
+      "status": "excluded",
+      "reason": "It would send any request and so bypass the access mode (ADR 0003)."
+    }
+  }
+}

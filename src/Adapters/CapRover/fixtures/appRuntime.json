@@ -1,0 +1,24 @@
+{
+  "status": 100,
+  "description": "App runtime retrieved",
+  "data": {
+    "appName": "web",
+    "status": "degraded",
+    "desiredInstances": 2,
+    "runningInstances": 1,
+    "currentTasks": [
+      {
+        "taskId": "t1", "slot": 1, "nodeId": "n1", "nodeName": "captain", "image": "nginx:1.27", "state": "running",
+        "desiredState": "running", "stateChangedAt": "2026-02-01T00:00:00.000Z", "message": "started", "error": null,
+        "exitCode": null
+      },
+      {
+        "taskId": "t2", "slot": 2, "nodeId": "n1", "nodeName": "captain", "image": "nginx:1.27", "state": "preparing-soon",
+        "desiredState": "running", "stateChangedAt": null, "message": "waiting", "error": "no suitable node", "exitCode": 1
+      }
+    ],
+    "latestFailure": { "taskId": "t0", "occurredAt": null, "error": "task failed" },
+    "error": null,
+    "taskHistory": []
+  }
+}

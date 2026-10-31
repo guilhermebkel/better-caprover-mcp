@@ -4,7 +4,7 @@ The same operations are exposed in two ways, chosen with `CAPROVER_MCP_SURFACE` 
 
 ## Considered options
 
-- Only named tools: rejected as the whole answer. Covering the whole CapRover API (71 SDK methods) as tools costs context in every turn.
+- Only named tools: rejected as the whole answer. Covering the whole CapRover API (70 operations from the SDK) as tools costs context in every turn.
 - Only Code Mode: rejected. For a handful of calls, direct tools are simpler to approve and cheaper to run, and a client approves a named action more easily than a block of code.
 
 ## Consequences

@@ -9,5 +9,5 @@ Every CapRover operation is declared once, with its name, strict input schema, r
 ## Consequences
 
 - A test fails when a public method of the CapRover SDK is neither an operation nor in the list of exclusions, so an SDK update cannot add an unreviewed capability.
-- The generic call of the SDK (`executeGenericApiCommand`) is not an operation: it would bypass the mode.
+- Two methods of the SDK are not operations, and the list of exclusions says why: the generic call (`executeGenericApiCommand`) would bypass the mode, and `setOtpStatus` would turn on a two-factor login that this server cannot use (ADR 0010).
 - Planned: the manifest arrives with the first operation.
