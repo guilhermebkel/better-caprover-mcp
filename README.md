@@ -69,20 +69,7 @@ Env var values are never returned (only `isSet`). The password and the values of
 
 ## Quick start
 
-You need the address of your CapRover (`https://captain.your-domain.com`) and its password. CapRover has no user name, and servers with two-factor login turned on are not supported ([ADR 0010](docs/adr/0010-the-server-logs-in-with-the-password-only.md)).
-
-### 1. Add it to your client
-
-Claude Code:
-
-```bash
-claude mcp add caprover \
-  -e CAPROVER_URL=https://captain.your-domain.com \
-  -e CAPROVER_PASSWORD=your-password \
-  -- npx -y better-caprover-mcp
-```
-
-Claude Desktop, Cursor and other clients, with `npx`:
+### Directly on the client
 
 ```json
 {
@@ -92,62 +79,48 @@ Claude Desktop, Cursor and other clients, with `npx`:
       "args": ["-y", "better-caprover-mcp"],
       "env": {
         "CAPROVER_URL": "https://captain.your-domain.com",
-        "CAPROVER_PASSWORD": "your CapRover password",
-        "CAPROVER_MCP_MODE": "readonly"
+        "CAPROVER_PASSWORD": "your CapRover password"
       }
     }
   }
 }
 ```
 
-Or with Docker (`-i` is required: the server talks over stdin and stdout):
+### Server and client
+
+```bash
+docker run -d --name caprover-mcp -p 3100:3100 \
+  -e CAPROVER_URL=https://captain.your-domain.com \
+  -e CAPROVER_PASSWORD='your CapRover password' \
+  -e CAPROVER_MCP_HTTP_HOST=0.0.0.0 \
+  -e CAPROVER_MCP_HTTP_TOKEN='your-long-random-secret' \
+  ghcr.io/guilhermebkel/better-caprover-mcp:latest \
+  serve --http
+```
 
 ```json
 {
   "mcpServers": {
     "caprover": {
-      "command": "docker",
-      "args": ["run", "-i", "--rm", "-e", "CAPROVER_URL", "-e", "CAPROVER_PASSWORD", "-e", "CAPROVER_MCP_MODE", "ghcr.io/guilhermebkel/better-caprover-mcp:latest"],
-      "env": {
-        "CAPROVER_URL": "https://captain.your-domain.com",
-        "CAPROVER_PASSWORD": "your CapRover password",
-        "CAPROVER_MCP_MODE": "readonly"
+      "url": "http://127.0.0.1:3100/mcp",
+      "headers": {
+        "Authorization": "Bearer your-long-random-secret"
       }
     }
   }
 }
 ```
 
-### 2. Check the login
+More on HTTP bind, TLS, multi-server config and limits: [`docs/product/remote-http.md`](docs/product/remote-http.md).
 
-```bash
-CAPROVER_URL=https://captain.your-domain.com CAPROVER_PASSWORD=... npx -y better-caprover-mcp init
-```
+## Example
 
-`init` tests the login and prints the client configuration above. Without the two variables it only prints the configuration.
-
-### Remote HTTP (optional)
-
-Stdio stays the default. To listen for Streamable HTTP on the same machine (localhost only unless you add a token and TLS for a wider bind):
-
-```bash
-export CAPROVER_MCP_HTTP_TOKEN='<long-random-secret>'
-export CAPROVER_MCP_HTTP_HOST=127.0.0.1
-better-caprover-mcp serve --http
-```
-
-Clients call `http://127.0.0.1:3100/mcp` with `Authorization: Bearer <secret>`. Put TLS in front when the listener is reachable on the network. Details: [`docs/product/remote-http.md`](docs/product/remote-http.md) and ADR 0013.
-
-### 3. Ask
+Try asking:
 
 ```text
 Which of my apps run an image tagged latest?
 Set LOG_LEVEL=debug on the api app, but show me what changes first.
 ```
-
-To let the agent change apps, set `CAPROVER_MCP_MODE=operate`; for deleting, `admin`.
-
-## Example
 
 <sub>Real output of the built server against a CapRover 1.15.5. The agent asks to delete an app; nothing is deleted yet.</sub>
 
@@ -191,6 +164,47 @@ The mode decides which operations the client sees at all. Only the person can ch
 | `delete_app` | destructive | Delete an app, and its volumes only if asked |
 
 ## Configuration
+
+You need `CAPROVER_URL` and `CAPROVER_PASSWORD`. CapRover has no user name, and servers with two-factor login turned on are not supported ([ADR 0010](docs/adr/0010-the-server-logs-in-with-the-password-only.md)).
+
+To let the agent change apps, set `CAPROVER_MCP_MODE=operate`; for deleting, `admin`.
+
+### Stdio on the client
+
+Claude Code:
+
+```bash
+claude mcp add caprover \
+  -e CAPROVER_URL=https://captain.your-domain.com \
+  -e CAPROVER_PASSWORD=your-password \
+  -- npx -y better-caprover-mcp
+```
+
+Docker stdio (`-i` is required: the server talks over stdin and stdout):
+
+```json
+{
+  "mcpServers": {
+    "caprover": {
+      "command": "docker",
+      "args": ["run", "-i", "--rm", "-e", "CAPROVER_URL", "-e", "CAPROVER_PASSWORD", "-e", "CAPROVER_MCP_MODE", "ghcr.io/guilhermebkel/better-caprover-mcp:latest"],
+      "env": {
+        "CAPROVER_URL": "https://captain.your-domain.com",
+        "CAPROVER_PASSWORD": "your CapRover password",
+        "CAPROVER_MCP_MODE": "readonly"
+      }
+    }
+  }
+}
+```
+
+Check the login and print sample stdio configs:
+
+```bash
+CAPROVER_URL=https://captain.your-domain.com CAPROVER_PASSWORD=... npx -y better-caprover-mcp init
+```
+
+Without `CAPROVER_URL` and `CAPROVER_PASSWORD`, `init` only prints the configuration.
 
 | Variable | Default | Meaning |
 | --- | --- | --- |
