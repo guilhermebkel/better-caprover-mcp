@@ -19,6 +19,54 @@ describe("EnvUtil.read()", () => {
     });
   });
 
+  describe("when the transport is set", () => {
+    it("defaults to stdio", () => {
+      vi.stubEnv("CAPROVER_MCP_TRANSPORT", undefined);
+
+      expect(EnvUtil.read().CAPROVER_MCP_TRANSPORT).toBe("stdio");
+    });
+
+    it("accepts http", () => {
+      vi.stubEnv("CAPROVER_MCP_TRANSPORT", "http");
+
+      expect(EnvUtil.read().CAPROVER_MCP_TRANSPORT).toBe("http");
+    });
+
+    it("treats an empty value as stdio", () => {
+      vi.stubEnv("CAPROVER_MCP_TRANSPORT", "");
+
+      expect(EnvUtil.read().CAPROVER_MCP_TRANSPORT).toBe("stdio");
+    });
+
+    it("refuses a transport that does not exist and names the variable", () => {
+      vi.stubEnv("CAPROVER_MCP_TRANSPORT", "sse");
+
+      expect(() => EnvUtil.read()).toThrow(InvalidEnvError);
+      expect(() => EnvUtil.read()).toThrow(/CAPROVER_MCP_TRANSPORT must be stdio or http\./);
+    });
+  });
+
+  describe("when the log level is set", () => {
+    it("defaults to info", () => {
+      vi.stubEnv("CAPROVER_MCP_LOG_LEVEL", undefined);
+
+      expect(EnvUtil.read().CAPROVER_MCP_LOG_LEVEL).toBe("info");
+    });
+
+    it("accepts debug", () => {
+      vi.stubEnv("CAPROVER_MCP_LOG_LEVEL", "debug");
+
+      expect(EnvUtil.read().CAPROVER_MCP_LOG_LEVEL).toBe("debug");
+    });
+
+    it("refuses a level that does not exist and names the variable", () => {
+      vi.stubEnv("CAPROVER_MCP_LOG_LEVEL", "trace");
+
+      expect(() => EnvUtil.read()).toThrow(InvalidEnvError);
+      expect(() => EnvUtil.read()).toThrow(/CAPROVER_MCP_LOG_LEVEL must be error, info or debug\./);
+    });
+  });
+
   describe("when the mode is set", () => {
     it("accepts operate", () => {
       vi.stubEnv("CAPROVER_MCP_MODE", "operate");

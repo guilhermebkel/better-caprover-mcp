@@ -224,6 +224,8 @@ Four SDK methods are kept for later, each with its reason in `scripts/sdk-covera
 | `CAPROVER_MCP_MODE` | `readonly` | `readonly`, `operate` or `admin` |
 | `CAPROVER_MCP_ALLOW_CRITICAL` | off | Set to `1` to unlock the critical operations in `admin` mode (change the password, update CapRover, the root domain, nginx, add a node, the self-hosted registry, delete images) |
 | `CAPROVER_MCP_TOOLSETS` | `core,apps,domains,oneclick` | Comma-separated toolsets to register: `core`, `apps`, `domains`, `projects`, `oneclick`, `registries`, `cluster`, `maintenance`, `monitoring`, `account`. An unknown name stops the server and lists the valid ones |
+| `CAPROVER_MCP_LOG_LEVEL` | `info` | `error`, `info` or `debug`. `info` logs the start (transport, mode, what is set); `debug` also logs the configuration (CapRover address, HTTP host and port, whether a token is set). Never the password or the token. Audit lines are always written |
+| `CAPROVER_MCP_TRANSPORT` | `stdio` | `stdio` or `http`. `http` makes a plain start (no arguments) serve Streamable HTTP, same as `serve --http` |
 | `CAPROVER_MCP_HTTP_TOKEN` | none | Bearer secret for `serve --http` (minimum 8 characters); required for non-local HTTP bind |
 | `CAPROVER_MCP_HTTP_HOST` | `127.0.0.1` | Address for `serve --http` |
 | `CAPROVER_MCP_HTTP_PORT` | `3100` | Port for `serve --http` |
