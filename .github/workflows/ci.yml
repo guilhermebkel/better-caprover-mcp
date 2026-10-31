@@ -98,14 +98,14 @@ jobs:
           docker run -d --name captain-install --network host -e ACCEPTED_TERMS=true
           -e MAIN_NODE_IP_ADDRESS=127.0.0.1 -v /var/run/docker.sock:/var/run/docker.sock
           -v /captain:/captain caprover/caprover
-      # Why: the install container answers for a moment, then CapRover restarts as a service, so one good login proves
-      # nothing; the wait needs the three services up and ten good logins in a row.
+      # Why: CapRover answers the login before it is ready, and only the system info says "not ready yet"; it also
+      # restarts once as a service, so the wait needs ten good answers of the system info in a row.
       - name: Wait for CapRover to stay up
         run: |
           good=0
-          for attempt in $(seq 1 180); do
-            services=$(docker service ls --format '{{.Name}} {{.Replicas}}' | grep -cE '^captain-(captain|nginx|certbot) 1/1$' || true)
-            if [ "$services" = "3" ] && curl -s -X POST localhost:3000/api/v2/login -H 'content-type: application/json' -H 'x-namespace: captain' -d '{"password":"captain42"}' | grep -q '"status":100'; then
+          for attempt in $(seq 1 240); do
+            token=$(curl -s -X POST localhost:3000/api/v2/login -H 'content-type: application/json' -H 'x-namespace: captain' -d '{"password":"captain42"}' | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+            if [ -n "$token" ] && curl -s localhost:3000/api/v2/user/system/info -H "x-captain-auth: $token" -H 'x-namespace: captain' | grep -q '"status":100'; then
               good=$((good + 1))
             else
               good=0
