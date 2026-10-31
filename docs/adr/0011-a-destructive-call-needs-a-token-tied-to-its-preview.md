@@ -12,7 +12,7 @@ A destructive operation does nothing on its first call. It returns what it would
 ## Considered options
 
 - A `user_confirmed` flag alone: rejected. A model sets a flag as easily as it sets any parameter, and the flag proves nothing about the preview.
-- A token that is signed and carries its own expiry, with no memory: rejected for now. Over **stdio**, one process per client; over **HTTP** ([ADR 0013](0013-remote-http-transport-and-multi-server.md)), one process holds tokens for all sessions, which share one bearer secret. Memory still suffices, a token is bound to its preview not a session, and a restart cancels all tokens, which is the safe side.
+- A token that is signed and carries its own expiry, with no memory: rejected for now. Over **stdio**, one process per client; over **HTTP** ([ADR 0013](0013-remote-http-transport.md)), one process holds tokens for all sessions, which share one bearer secret. Memory still suffices, a token is bound to its preview not a session, and a restart cancels all tokens, which is the safe side.
 - Asking the person through the client (elicitation): kept for later. Not every client supports it, so it adds to the token and does not replace it.
 
 ## Consequences

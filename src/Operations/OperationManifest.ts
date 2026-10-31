@@ -1,6 +1,5 @@
 import type { CaproverClientPort } from "@/Protocols/CaproverClientProtocol.ts";
 import type { ToolDefinition } from "@/Protocols/OperationProtocol.ts";
-import type { CaproverServerRegistryService } from "@/Services/CaproverServerRegistryService.ts";
 import { AddCustomDomainOperation } from "@/Operations/AddCustomDomainOperation.ts";
 import { CreateAppOperation } from "@/Operations/CreateAppOperation.ts";
 import { DeleteAppOperation } from "@/Operations/DeleteAppOperation.ts";
@@ -17,16 +16,17 @@ import { ScaleAppOperation } from "@/Operations/ScaleAppOperation.ts";
 import { SetEnvVarsOperation } from "@/Operations/SetEnvVarsOperation.ts";
 import { AppResolverService } from "@/Services/AppResolverService.ts";
 import type { OperationRunnerService } from "@/Services/OperationRunnerService.ts";
+import type { PolicyService } from "@/Services/PolicyService.ts";
 
 export class OperationManifest {
   static build(
     client: CaproverClientPort,
-    registry: CaproverServerRegistryService,
+    policy: PolicyService,
     runner: OperationRunnerService,
   ): ToolDefinition[] {
     const resolver = new AppResolverService(client);
     return [
-      runner.buildTool(GetOverviewOperation.NAME, new GetOverviewOperation(client, registry)),
+      runner.buildTool(GetOverviewOperation.NAME, new GetOverviewOperation(client, policy)),
       runner.buildTool(ListAppsOperation.NAME, new ListAppsOperation(client)),
       runner.buildTool(GetAppOperation.NAME, new GetAppOperation(resolver)),
       runner.buildTool(GetAppRuntimeOperation.NAME, new GetAppRuntimeOperation(client, resolver)),

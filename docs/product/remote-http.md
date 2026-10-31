@@ -1,6 +1,6 @@
 # Remote HTTP mode
 
-Run the MCP server so a client on another machine can connect over **Streamable HTTP**, and optionally manage **several CapRover servers** from one process.
+Run the MCP server so a client on another machine can connect over **Streamable HTTP**. Each MCP instance talks to **one** CapRover server (`CAPROVER_URL`, `CAPROVER_PASSWORD`, and `CAPROVER_MCP_MODE`). To manage several CapRover servers, run one MCP process per server.
 
 ## Start HTTP locally
 
@@ -26,11 +26,10 @@ Put **TLS** in front (CapRover, nginx, Caddy, etc.): terminate HTTPS at the prox
 ### Host on CapRover (example)
 
 1. Create an app (for example `caprover-mcp`) with **Do not expose as web app** if you only need internal access, or expose it and attach your domain.
-2. Set persistent env vars on the app: `CAPROVER_MCP_SERVERS_FILE` or legacy `CAPROVER_URL` / `CAPROVER_PASSWORD`, plus `CAPROVER_MCP_HTTP_TOKEN`.
-3. Mount server JSON and CapRover passwords as **App Secrets** / secret files; map `passwordFile` paths in the JSON to those mount paths.
-4. Use a **one-click or custom Dockerfile** command: `serve --http` with `CAPROVER_MCP_HTTP_HOST=0.0.0.0` and container port **3100**.
-5. In CapRover **HTTP settings**, enable **HTTPS** and **Force HTTPS** on the app domain; point the proxy to container port `3100` (HTTP only inside the container).
-6. Point Cursor or another MCP client at `https://caprover-mcp.yourdomain.com/mcp` with `Authorization: Bearer <token>`.
+2. Set persistent env vars on the app: `CAPROVER_URL`, `CAPROVER_PASSWORD`, `CAPROVER_MCP_MODE`, and `CAPROVER_MCP_HTTP_TOKEN`.
+3. Use a **one-click or custom Dockerfile** command: `serve --http` with `CAPROVER_MCP_HTTP_HOST=0.0.0.0` and container port **3100**.
+4. In CapRover **HTTP settings**, enable **HTTPS** and **Force HTTPS** on the app domain; point the proxy to container port `3100` (HTTP only inside the container).
+5. Point Cursor or another MCP client at `https://caprover-mcp.yourdomain.com/mcp` with `Authorization: Bearer <token>`.
 
 The MCP process does not terminate TLS itself; CapRover’s nginx edge handles certificates.
 
@@ -47,43 +46,8 @@ docker run -d --name caprover-mcp -p 3100:3100 \
 
 The image exposes port `3100` and defines a Docker `HEALTHCHECK` via `scripts/docker-healthcheck.sh`. In HTTP mode (`serve --http`) the process writes a marker file (default `/tmp/better-caprover-mcp-http.active`) and the check requires `GET /health` to return body `ok`. The healthcheck script accepts optional `CAPROVER_MCP_HTTP_MARKER_PATH` to point at that file; it is not a variable on the MCP server itself. Stdio-only runs leave no HTTP marker, so the script exits success and a plain `docker run` without `serve --http` stays healthy.
 
-## Several CapRover servers
-
-Use a JSON file (recommended for Docker secrets):
-
-```json
-{
-  "servers": [
-    {
-      "name": "prod",
-      "url": "https://captain.prod.example.com",
-      "mode": "readonly",
-      "passwordFile": "/run/secrets/caprover_prod"
-    },
-    {
-      "name": "staging",
-      "url": "https://captain.staging.example.com",
-      "mode": "operate",
-      "passwordEnv": "CAPROVER_STAGING_PASSWORD"
-    }
-  ]
-}
-```
-
-```bash
-export CAPROVER_MCP_SERVERS_FILE=/etc/better-caprover-mcp/servers.json
-export CAPROVER_MCP_HTTP_TOKEN='your-long-random-secret'
-better-caprover-mcp serve --http
-```
-
-Alternatively, set the same array in `CAPROVER_MCP_SERVERS` (one line of JSON).
-
-Every tool call must include `"server_name": "prod"` or `"server_name": "staging"`. `get_overview` lists configured servers and their modes without CapRover URLs.
-
-The legacy variables `CAPROVER_URL` and `CAPROVER_PASSWORD` still define a single server when no multi-server list is set; then `server_name` is optional.
-
 ## Limits
 
 HTTP-related environment variables, defaults, and limits are in the README [**Configuration**](../../README.md#configuration) table.
 
-Audit lines on stderr record time, tool name, server name, risk tier, and result—never argument values or secrets.
+Audit lines on stderr record time, tool name, risk tier, and result—never argument values or secrets.

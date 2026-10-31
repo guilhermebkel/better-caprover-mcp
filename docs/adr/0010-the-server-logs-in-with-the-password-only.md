@@ -10,7 +10,7 @@ CapRover has one admin password and no user name. Its optional two-factor login 
 
 ## Considered options
 
-- Support the code as an option: rejected. The code lasts 30 seconds. Over **stdio**, a client restarts the server each session; over **HTTP** ([ADR 0013](0013-remote-http-transport-and-multi-server.md)) the process is long-lived, but the server still has no way to obtain a fresh code, so a code cannot live in an environment variable. A token file or a TOTP secret next to the password would be needed, and the secret weakens the second factor.
+- Support the code as an option: rejected. The code lasts 30 seconds. Over **stdio**, a client restarts the server each session; over **HTTP** ([ADR 0013](0013-remote-http-transport.md)) the process is long-lived, but the server still has no way to obtain a fresh code, so a code cannot live in an environment variable. A token file or a TOTP secret next to the password would be needed, and the secret weakens the second factor.
 - Rely on it for safety: rejected. CapRover checks the code through `pro.caprover.com`, so the feature belongs to the Pro plan, and most people who run this server will not have it. The modes of this server are the safety (ADR 0005).
 
 ## Consequences

@@ -1,20 +1,19 @@
 import { describe, expect, it } from "vitest";
 import { FakeCaproverClientAdapter } from "@/Adapters/CapRover/FakeCaproverClientAdapter.ts";
-import { RoutingCaproverClientAdapter } from "@/Adapters/CapRover/RoutingCaproverClientAdapter.ts";
 import { OperationManifest } from "@/Operations/OperationManifest.ts";
 import type { ToolDefinition } from "@/Protocols/OperationProtocol.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
-import { DEFAULT_SERVER_NAME } from "@/Schemas/ServerConfigSchema.ts";
+import type { CaproverClientFactory } from "@/Server/SharedMcpRuntimeBuilder.ts";
 import { AuditLogService } from "@/Services/AuditLogService.ts";
-import { CaproverServerRegistryService, type CaproverClientFactory } from "@/Services/CaproverServerRegistryService.ts";
 import { ConcurrencyLimiterService } from "@/Services/ConcurrencyLimiterService.ts";
 import { ConfirmationService } from "@/Services/ConfirmationService.ts";
 import { OperationRunnerService } from "@/Services/OperationRunnerService.ts";
+import { PolicyService } from "@/Services/PolicyService.ts";
 
 const MAX_DESCRIPTION_LENGTH = 640;
 const MIN_REPEATED_SENTENCE_WORDS = 12;
 const FIELD_NAMES = [
-  "server_name", "dry_run", "user_confirmed", "confirmation_token", "name_contains", "env_vars", "remove_keys",
+  "dry_run", "user_confirmed", "confirmation_token", "name_contains", "env_vars", "remove_keys",
   "delete_volumes", "response_format",
 ];
 
@@ -30,27 +29,23 @@ const buildTestEnv = (): Env => ({
   CAPROVER_MCP_MAX_HTTP_SESSIONS: 64,
   CAPROVER_MCP_HTTP_SESSION_TTL_MS: 86_400_000,
   CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER: 5,
-  servers: [{
-    name: DEFAULT_SERVER_NAME,
-    url: "https://captain.example.com",
-    password: undefined,
-    mode: "admin",
-    isCriticalAllowed: false,
-  }],
 });
 
 const buildTools = (): ToolDefinition[] => {
   const fake = new FakeCaproverClientAdapter([]);
-  const buildTestClient = (fake: FakeCaproverClientAdapter): CaproverClientFactory => () => fake;
-  const registry = CaproverServerRegistryService.buildFromEnv(buildTestEnv(), buildTestClient(fake));
-  const runner = new OperationRunnerService(
-    registry,
-    new ConfirmationService(() => 0),
-    new AuditLogService(),
-    new ConcurrencyLimiterService(5),
-    () => 0,
-  );
-  return OperationManifest.build(new RoutingCaproverClientAdapter(), registry, runner);
+  const env = buildTestEnv();
+  const createClient: CaproverClientFactory = () => fake;
+  const client = createClient(env);
+  const policy = new PolicyService(env.CAPROVER_MCP_MODE, env.CAPROVER_MCP_ALLOW_CRITICAL);
+  const runner = new OperationRunnerService({
+    policy,
+    secrets: [],
+    confirmation: new ConfirmationService(() => 0),
+    audit: new AuditLogService(),
+    limiter: new ConcurrencyLimiterService(5),
+    getNowMs: () => 0,
+  });
+  return OperationManifest.build(client, policy, runner);
 };
 
 describe("OperationManifest.build()", () => {

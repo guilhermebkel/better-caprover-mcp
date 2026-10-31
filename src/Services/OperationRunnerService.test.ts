@@ -1,16 +1,15 @@
 import { describe, expect, it } from "vitest";
 import { FakeCaproverClientAdapter } from "@/Adapters/CapRover/FakeCaproverClientAdapter.ts";
-import { RoutingCaproverClientAdapter } from "@/Adapters/CapRover/RoutingCaproverClientAdapter.ts";
 import { OperationManifest } from "@/Operations/OperationManifest.ts";
 import type { AccessMode } from "@/Protocols/AccessProtocol.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
 import type { ToolDefinition } from "@/Protocols/OperationProtocol.ts";
-import { DEFAULT_SERVER_NAME } from "@/Schemas/ServerConfigSchema.ts";
+import type { CaproverClientFactory } from "@/Server/SharedMcpRuntimeBuilder.ts";
 import { AuditLogService } from "@/Services/AuditLogService.ts";
-import { CaproverServerRegistryService, type CaproverClientFactory } from "@/Services/CaproverServerRegistryService.ts";
 import { ConcurrencyLimiterService } from "@/Services/ConcurrencyLimiterService.ts";
 import { ConfirmationService } from "@/Services/ConfirmationService.ts";
 import { OperationRunnerService } from "@/Services/OperationRunnerService.ts";
+import { PolicyService } from "@/Services/PolicyService.ts";
 
 const FAKE_PASSWORD = "fake-password-9876";
 
@@ -26,27 +25,22 @@ const buildEnv = (mode: AccessMode): Env => ({
   CAPROVER_MCP_MAX_HTTP_SESSIONS: 64,
   CAPROVER_MCP_HTTP_SESSION_TTL_MS: 86_400_000,
   CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER: 5,
-  servers: [{
-    isCriticalAllowed: false,
-    name: DEFAULT_SERVER_NAME,
-    password: FAKE_PASSWORD,
-    url: "https://captain.example.com",
-    mode,
-  }],
 });
 
-const buildTestClient = (fake: FakeCaproverClientAdapter): CaproverClientFactory => () => fake;
-
 const buildTool = (mode: AccessMode, name: string, fake: FakeCaproverClientAdapter): ToolDefinition => {
-  const registry = CaproverServerRegistryService.buildFromEnv(buildEnv(mode), buildTestClient(fake));
-  const runner = new OperationRunnerService(
-    registry,
-    new ConfirmationService(() => 0),
-    new AuditLogService(),
-    new ConcurrencyLimiterService(5),
-    () => 0,
-  );
-  const tools = OperationManifest.build(new RoutingCaproverClientAdapter(), registry, runner);
+  const env = buildEnv(mode);
+  const createClient: CaproverClientFactory = () => fake;
+  const client = createClient(env);
+  const policy = new PolicyService(env.CAPROVER_MCP_MODE, env.CAPROVER_MCP_ALLOW_CRITICAL);
+  const runner = new OperationRunnerService({
+    policy,
+    secrets: [FAKE_PASSWORD],
+    confirmation: new ConfirmationService(() => 0),
+    audit: new AuditLogService(),
+    limiter: new ConcurrencyLimiterService(5),
+    getNowMs: () => 0,
+  });
+  const tools = OperationManifest.build(client, policy, runner);
   const tool = tools.find((candidate) => candidate.name === name);
   if (tool === undefined) {
     throw new Error(`No tool ${name}`);

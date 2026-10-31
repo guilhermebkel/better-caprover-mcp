@@ -4,10 +4,10 @@ import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/
 import { MockCaproverRouteBuilder } from "@/Adapters/CapRover/MockCaproverRouteBuilder.ts";
 import { MockCaproverServer } from "@/Adapters/CapRover/MockCaproverServer.ts";
 import { HttpBindForbiddenError } from "@/Errors/HttpBindForbiddenError.ts";
-import { DEFAULT_SERVER_NAME } from "@/Schemas/ServerConfigSchema.ts";
 import { HttpRunner, type HttpRunnerStartOptions } from "@/Server/HttpRunner.ts";
 import { EnvUtil } from "@/Utils/EnvUtil.ts";
 
+const CONCURRENCY_REFUSAL_MESSAGE = "Too many concurrent tool calls (limit 1). Wait for other calls to finish, then try again.";
 const TEST_TOKEN = "test-token-12345678";
 const WRONG_TOKEN = "wrong-token-123456789";
 const CONCURRENCY_TEST_QUEUE_WAIT_MS = 50;
@@ -348,7 +348,7 @@ describe("HttpRunner.start()", () => {
     }
   });
 
-  it("shares the per-server concurrency limit across HTTP sessions", async () => {
+  it("shares the concurrency limit across HTTP sessions", async () => {
     let resolveHang = (): void => undefined;
     const hangFirst = new Promise<void>((resolve) => {
       resolveHang = resolve;
@@ -358,7 +358,7 @@ describe("HttpRunner.start()", () => {
     });
     mockServers.push(mock);
     const captainUrl = await mock.start();
-    const refusalMessage = `Too many concurrent calls for server "${DEFAULT_SERVER_NAME}" (limit 1). Wait for other calls to finish, then try again.`;
+    const refusalMessage = CONCURRENCY_REFUSAL_MESSAGE;
     const handle = await startHttpRunner({
       CAPROVER_MCP_HTTP_TOKEN: TEST_TOKEN,
       CAPROVER_URL: captainUrl,

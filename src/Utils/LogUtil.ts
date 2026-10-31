@@ -9,7 +9,6 @@ export class LogUtil {
 
   static logAudit(record: {
     tool: string;
-    server: string;
     risk: string;
     result: string;
     atMs: number;
@@ -18,7 +17,6 @@ export class LogUtil {
       level: "audit",
       time: new Date(record.atMs).toISOString(),
       tool: record.tool,
-      server: record.server,
       risk: record.risk,
       result: record.result,
     };

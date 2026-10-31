@@ -111,7 +111,7 @@ docker run -d --name caprover-mcp -p 3100:3100 \
 }
 ```
 
-More on HTTP bind, TLS, and multi-server setup: [`docs/product/remote-http.md`](docs/product/remote-http.md). Limits and other env vars: [Configuration](#configuration).
+More on HTTP bind and TLS: [`docs/product/remote-http.md`](docs/product/remote-http.md). Limits and other env vars: [Configuration](#configuration).
 
 ## Example
 
@@ -219,8 +219,7 @@ Without `CAPROVER_URL` and `CAPROVER_PASSWORD`, `init` only prints the configura
 | `CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE` | `120` | Max MCP HTTP requests per minute. Failed auth is counted per client remote address; authenticated traffic shares one bucket. Behind a reverse proxy, failed-auth throttling is often shared (this server does not read `X-Forwarded-For`). |
 | `CAPROVER_MCP_MAX_HTTP_SESSIONS` | `64` | Max concurrent Streamable HTTP MCP sessions |
 | `CAPROVER_MCP_HTTP_SESSION_TTL_MS` | `86400000` | Max idle lifetime of an HTTP MCP session (ms) |
-| `CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER` | `5` | Max parallel tool runs per configured server name |
-| `CAPROVER_MCP_SERVERS` / `CAPROVER_MCP_SERVERS_FILE` | none | Several CapRover servers; see `docs/product/remote-http.md` |
+| `CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER` | `5` | Max parallel tool runs in this MCP instance |
 
 Without `CAPROVER_URL` and `CAPROVER_PASSWORD` the server still starts, and every call tells the model what is missing.
 
@@ -287,7 +286,7 @@ The endpoint it uses is missing in older CapRover versions (1.15.5 has none). Th
 - [ ] **The rest of the CapRover API** (about 56 more SDK methods): [#3](https://github.com/guilhermebkel/better-caprover-mcp/issues/3)
 - [ ] **Diagnostics** (`diagnose_app`, `find_issues`): [#4](https://github.com/guilhermebkel/better-caprover-mcp/issues/4)
 - [ ] **Code Mode** (`search` and `execute` in a sandbox) and a benchmark: [#5](https://github.com/guilhermebkel/better-caprover-mcp/issues/5)
-- [ ] **Remote HTTP and several CapRover servers:** [#6](https://github.com/guilhermebkel/better-caprover-mcp/issues/6)
+- [x] **Remote HTTP (one CapRover server per MCP instance):** [#6](https://github.com/guilhermebkel/better-caprover-mcp/issues/6) — multi-server in one process is out of scope; run one instance per Captain.
 
 ## Contributing
 

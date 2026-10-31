@@ -6,8 +6,7 @@ import type { FakeCaproverOptions } from "@/Adapters/CapRover/FakeCaproverClient
 import type { AccessMode } from "@/Protocols/AccessProtocol.ts";
 import type { CaproverApp } from "@/Protocols/CaproverClientProtocol.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
-import { DEFAULT_SERVER_NAME } from "@/Schemas/ServerConfigSchema.ts";
-import type { CaproverClientFactory } from "@/Services/CaproverServerRegistryService.ts";
+import type { CaproverClientFactory } from "@/Server/ServerBuilder.ts";
 import { ServerBuilder } from "@/Server/ServerBuilder.ts";
 
 const FAKE_PASSWORD = "fake-password-9876";
@@ -37,13 +36,6 @@ const buildEnv = (mode: AccessMode): Env => ({
   CAPROVER_MCP_MAX_HTTP_SESSIONS: 64,
   CAPROVER_MCP_HTTP_SESSION_TTL_MS: 86_400_000,
   CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER: 5,
-  servers: [{
-    isCriticalAllowed: false,
-    name: DEFAULT_SERVER_NAME,
-    password: FAKE_PASSWORD,
-    url: "https://captain.example.com",
-    mode,
-  }],
 });
 
 const buildTestClient = (fake: FakeCaproverClientAdapter): CaproverClientFactory => () => fake;
@@ -111,47 +103,6 @@ describe("ServerBuilder.build()", () => {
       const { client } = await connect({ mode: "operate" });
 
       expect(client.getInstructions()).toContain("Access mode: operate. Enabled risk tiers: read, write.");
-    });
-
-    it("names every configured server in instructions and get_overview when several are configured", async () => {
-      const readonlyFake = new FakeCaproverClientAdapter([]);
-      const operateFake = new FakeCaproverClientAdapter([]);
-      const env: Env = {
-        ...buildEnv("admin"),
-        servers: [
-          {
-            isCriticalAllowed: false,
-            name: "readonly",
-            password: FAKE_PASSWORD,
-            url: "https://captain-readonly.example.com",
-            mode: "readonly",
-          },
-          {
-            isCriticalAllowed: false,
-            name: "operate",
-            password: FAKE_PASSWORD,
-            url: "https://captain-operate.example.com",
-            mode: "operate",
-          },
-        ],
-      };
-      const nameToFakeClient: Record<"readonly" | "operate", FakeCaproverClientAdapter> = {
-        readonly: readonlyFake,
-        operate: operateFake,
-      };
-      const buildClientForEntry: CaproverClientFactory = (entry) => nameToFakeClient[entry.name as "readonly" | "operate"];
-      const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-      const client = new Client({ name: "multi-server-client", version: "0.0.0" });
-      await ServerBuilder.build(env, () => START_MS, buildClientForEntry).connect(serverTransport);
-      await client.connect(clientTransport);
-
-      expect(client.getInstructions()).toContain("Several CapRover servers are configured");
-      const reply = await callTool(client, "get_overview", { server_name: "readonly" });
-      expect(reply.isError).toBe(false);
-      expect(reply.data.servers).toStrictEqual([
-        { name: "operate", accessMode: "operate", enabledRiskTiers: ["read", "write"] },
-        { name: "readonly", accessMode: "readonly", enabledRiskTiers: ["read"] },
-      ]);
     });
 
     it("registers only the read tools in readonly mode", async () => {

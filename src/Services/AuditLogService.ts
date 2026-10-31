@@ -5,7 +5,6 @@ export type AuditResult = "ok" | "denied" | "error";
 
 export type AuditRecord = {
   tool: string;
-  server: string;
   risk: RiskTier;
   result: AuditResult;
   atMs: number;

@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { ConcurrencyLimiterService } from "@/Services/ConcurrencyLimiterService.ts";
 
-const SERVER_NAME = "prod";
 const FIRST_START = "first-start";
 const SECOND_START = "second-start";
 
@@ -17,17 +16,17 @@ describe("ConcurrencyLimiterService.run()", () => {
     const blockB = new Promise<void>((resolve) => {
       releaseB = resolve;
     });
-    const first = limiter.run(SERVER_NAME, async () => {
+    const first = limiter.run(async () => {
       events.push(FIRST_START);
       await blockA;
       events.push("first-end");
     });
-    const second = limiter.run(SERVER_NAME, async () => {
+    const second = limiter.run(async () => {
       events.push(SECOND_START);
       await blockB;
       events.push("second-end");
     });
-    const third = limiter.run(SERVER_NAME, () => {
+    const third = limiter.run(() => {
       events.push("third-start");
       return Promise.resolve();
     });

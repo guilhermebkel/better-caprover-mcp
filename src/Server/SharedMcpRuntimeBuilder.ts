@@ -1,21 +1,23 @@
-import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
-import { RoutingCaproverClientAdapter } from "@/Adapters/CapRover/RoutingCaproverClientAdapter.ts";
-import { OperationManifest } from "@/Operations/OperationManifest.ts";
+import { CaproverClientAdapter } from "@/Adapters/CapRover/CaproverClientAdapter.ts";
+import type { CaproverClientPort } from "@/Protocols/CaproverClientProtocol.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
 import { McpInstructionsBuilder } from "@/Server/McpInstructionsBuilder.ts";
 import { McpServerMetadataUtil } from "@/Utils/McpServerMetadataUtil.ts";
 import { AuditLogService } from "@/Services/AuditLogService.ts";
-import {
-  CaproverServerRegistryService,
-  type CaproverClientFactory,
-} from "@/Services/CaproverServerRegistryService.ts";
 import { ConcurrencyLimiterService } from "@/Services/ConcurrencyLimiterService.ts";
 import { ConfirmationService } from "@/Services/ConfirmationService.ts";
 import { OperationRunnerService } from "@/Services/OperationRunnerService.ts";
+import { PolicyService } from "@/Services/PolicyService.ts";
+import { OperationManifest } from "@/Operations/OperationManifest.ts";
 import { ToolsSurface } from "@/Surfaces/ToolsSurface.ts";
+import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+
+export type CaproverClientFactory = (env: Env) => CaproverClientPort;
 
 type SharedRuntimeParts = {
-  registry: CaproverServerRegistryService;
+  client: CaproverClientPort;
+  policy: PolicyService;
+  secrets: readonly string[];
   confirmation: ConfirmationService;
   audit: AuditLogService;
   limiter: ConcurrencyLimiterService;
@@ -23,12 +25,10 @@ type SharedRuntimeParts = {
 };
 
 export class SharedMcpRuntimeBuilder {
-  readonly registry: CaproverServerRegistryService;
   readonly limiter: ConcurrencyLimiterService;
   private readonly parts: SharedRuntimeParts;
 
   private constructor(parts: SharedRuntimeParts) {
-    this.registry = parts.registry;
     this.limiter = parts.limiter;
     this.parts = parts;
   }
@@ -39,7 +39,9 @@ export class SharedMcpRuntimeBuilder {
     createClient?: CaproverClientFactory,
     concurrencyQueueWaitMs?: number,
   ): SharedMcpRuntimeBuilder {
-    const registry = CaproverServerRegistryService.buildFromEnv(env, createClient);
+    const client = createClient?.(env) ?? CaproverClientAdapter.buildFromEnv(env);
+    const policy = new PolicyService(env.CAPROVER_MCP_MODE, env.CAPROVER_MCP_ALLOW_CRITICAL);
+    const secrets = SharedMcpRuntimeBuilder.collectSecrets(env);
     const limiter = new ConcurrencyLimiterService(
       env.CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER,
       concurrencyQueueWaitMs,
@@ -47,31 +49,44 @@ export class SharedMcpRuntimeBuilder {
     const parts: SharedRuntimeParts = {
       audit: new AuditLogService(),
       confirmation: new ConfirmationService(getNowMs),
-      getNowMs,
       limiter,
-      registry,
+      policy,
+      secrets,
+      client,
+      getNowMs,
     };
     return new SharedMcpRuntimeBuilder(parts);
   }
 
+  private static collectSecrets(env: Env): string[] {
+    const secrets: string[] = [];
+    if (env.CAPROVER_MCP_HTTP_TOKEN !== undefined) {
+      secrets.push(env.CAPROVER_MCP_HTTP_TOKEN);
+    }
+    if (env.CAPROVER_PASSWORD !== undefined) {
+      secrets.push(env.CAPROVER_PASSWORD);
+    }
+    return secrets;
+  }
+
   buildRunner(): OperationRunnerService {
-    return new OperationRunnerService(
-      this.parts.registry,
-      this.parts.confirmation,
-      this.parts.audit,
-      this.parts.limiter,
-      this.parts.getNowMs,
-    );
+    return new OperationRunnerService({
+      audit: this.parts.audit,
+      confirmation: this.parts.confirmation,
+      getNowMs: this.parts.getNowMs,
+      limiter: this.parts.limiter,
+      policy: this.parts.policy,
+      secrets: this.parts.secrets,
+    });
   }
 
   buildMcpServer(): McpServer {
     const runner = this.buildRunner();
-    const router = new RoutingCaproverClientAdapter();
-    const tools = OperationManifest.build(router, this.registry, runner)
-      .filter((tool) => this.registry.canRunOnAnyServer(tool.risk));
+    const tools = OperationManifest.build(this.parts.client, this.parts.policy, runner)
+      .filter((tool) => this.parts.policy.canRun(tool.risk));
     const server = new McpServer(
       { name: McpServerMetadataUtil.SERVER_NAME, version: __PACKAGE_VERSION__ },
-      { instructions: McpInstructionsBuilder.build(this.registry) },
+      { instructions: McpInstructionsBuilder.build(this.parts.policy) },
     );
     ToolsSurface.register(server, tools);
     return server;

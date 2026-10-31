@@ -1,9 +1,7 @@
 import type { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
-import { z } from "zod";
 import type { RiskTier } from "@/Protocols/AccessProtocol.ts";
 import type { ToolDefinition } from "@/Protocols/OperationProtocol.ts";
-import { ServerToolInputSchema } from "@/Schemas/ServerConfigSchema.ts";
 
 export class ToolsSurface {
   static readonly RISK_TO_ANNOTATIONS: Record<RiskTier, ToolAnnotations> = {
@@ -19,7 +17,7 @@ export class ToolsSurface {
         tool.name,
         {
           description: tool.description,
-          inputSchema: ToolsSurface.buildInputSchema(tool.inputSchema),
+          inputSchema: tool.inputSchema,
           annotations: ToolsSurface.RISK_TO_ANNOTATIONS[tool.risk],
         },
         async (args: unknown) => {
@@ -30,12 +28,5 @@ export class ToolsSurface {
         },
       );
     }
-  }
-
-  private static buildInputSchema(inputSchema: z.ZodType): z.ZodType {
-    if (inputSchema instanceof z.ZodObject && ServerToolInputSchema instanceof z.ZodObject) {
-      return inputSchema.extend(ServerToolInputSchema.shape);
-    }
-    return ServerToolInputSchema.and(inputSchema);
   }
 }

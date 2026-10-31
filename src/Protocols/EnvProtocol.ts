@@ -1,13 +1,5 @@
 import type { AccessMode } from "@/Protocols/AccessProtocol.ts";
 
-export type ResolvedCaproverServer = {
-  name: string;
-  url?: string;
-  password?: string;
-  mode: AccessMode;
-  isCriticalAllowed: boolean;
-};
-
 export type Env = {
   CAPROVER_MCP_MODE: AccessMode;
   CAPROVER_MCP_ALLOW_CRITICAL: boolean;
@@ -21,5 +13,4 @@ export type Env = {
   CAPROVER_MCP_MAX_HTTP_SESSIONS: number;
   CAPROVER_MCP_HTTP_SESSION_TTL_MS: number;
   CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER: number;
-  servers: ResolvedCaproverServer[];
 };
