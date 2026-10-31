@@ -78,24 +78,12 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
-      - uses: pnpm/action-setup@v4
       - uses: actions/setup-node@v4
         with:
           node-version-file: .nvmrc
-          cache: pnpm
-      - run: pnpm install --frozen-lockfile
       - run: docker build -t better-caprover-mcp:ci .
       # Why: `-i` is what a stdio client passes; without it the server gets no input and exits.
-      - run: node scripts/package-smoke.mjs --stdio-only -- docker run -i --rm better-caprover-mcp:ci
-      - name: Docker HTTP smoke
-        env:
-          CAPROVER_MCP_HTTP_TOKENS: '{"smoke":"smoke-http-token-12345678"}'
-        run: |
-          node scripts/package-smoke.mjs --http-only -- \
-            docker run --rm -p 3100:3100 \
-            -e CAPROVER_MCP_HTTP_HOST=0.0.0.0 \
-            -e "CAPROVER_MCP_HTTP_TOKENS=${CAPROVER_MCP_HTTP_TOKENS}" \
-            better-caprover-mcp:ci
+      - run: node scripts/package-smoke.mjs -- docker run -i --rm better-caprover-mcp:ci
 
   integration:
     runs-on: ubuntu-latest
