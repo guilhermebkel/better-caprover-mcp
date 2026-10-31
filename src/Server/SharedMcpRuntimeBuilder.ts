@@ -3,7 +3,7 @@ import { RoutingCaproverClientAdapter } from "@/Adapters/CapRover/RoutingCaprove
 import { OperationManifest } from "@/Operations/OperationManifest.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
 import { McpInstructionsBuilder } from "@/Server/McpInstructionsBuilder.ts";
-import { McpServerMetadata } from "@/Server/McpServerMetadata.ts";
+import { McpServerMetadataUtil } from "@/Server/McpServerMetadataUtil.ts";
 import { AuditLogService } from "@/Services/AuditLogService.ts";
 import {
   CaproverServerRegistryService,
@@ -66,7 +66,7 @@ export class SharedMcpRuntimeBuilder {
     const tools = OperationManifest.build(router, this.registry, runner)
       .filter((tool) => this.registry.canRunOnAnyServer(tool.risk));
     const server = new McpServer(
-      { name: McpServerMetadata.SERVER_NAME, version: __PACKAGE_VERSION__ },
+      { name: McpServerMetadataUtil.SERVER_NAME, version: __PACKAGE_VERSION__ },
       { instructions: McpInstructionsBuilder.build(this.registry) },
     );
     ToolsSurface.register(server, tools);

@@ -11,7 +11,7 @@ if [ ! -f "$MARKER_PATH" ]; then
 fi
 
 if command -v node >/dev/null 2>&1; then
-  BODY="$(node -e 'fetch(process.argv[1]).then((response) => response.text()).then((text) => process.stdout.write(text)).catch(() => process.exit(1));' "$URL" 2>/dev/null || true)"
+  BODY="$(node -e 'fetch(process.argv[1]).then((response) => response.text()).then((text) => { process.stdout.write(text); process.exit(0); }).catch(() => process.exit(1));' "$URL" 2>/dev/null || true)"
 elif command -v curl >/dev/null 2>&1; then
   BODY="$(curl -fsS --max-time 2 "$URL" 2>/dev/null || true)"
 elif command -v wget >/dev/null 2>&1; then

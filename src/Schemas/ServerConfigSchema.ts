@@ -48,7 +48,7 @@ export const HttpTokensSchema: z.ZodType<Record<string, string>> = z.record(
 
 export type ServerToolInput = { server_name?: string };
 
-const ServerToolInputObjectSchema = z.object({
+const ServerToolInputObjectSchema: z.ZodType<ServerToolInput> = z.object({
   server_name: ServerNameSchema.optional().describe(
     "Which configured CapRover server to use: one of the `name` values listed in `get_overview` under `servers`. "
     + "Required when several servers are configured; omit when there is only one.",
@@ -56,5 +56,3 @@ const ServerToolInputObjectSchema = z.object({
 });
 
 export const ServerToolInputSchema: z.ZodType<ServerToolInput> = ServerToolInputObjectSchema;
-
-export { ServerToolInputObjectSchema };

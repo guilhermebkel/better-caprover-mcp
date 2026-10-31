@@ -55,6 +55,7 @@ let server: MockCaproverServer | undefined;
 afterEach(async () => {
   await server?.stop();
   server = undefined;
+  vi.unstubAllEnvs();
 });
 
 const start = async (routes: Map<string, string> = buildRoutes()): Promise<{
@@ -396,6 +397,5 @@ describe("CaproverClientAdapter.buildFromEnv()", () => {
     const client = CaproverClientAdapter.buildFromEnv(EnvUtil.read());
 
     await expect(client.listApps()).rejects.toBeInstanceOf(CaproverConfigError);
-    vi.unstubAllEnvs();
   });
 });

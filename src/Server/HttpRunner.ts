@@ -6,7 +6,7 @@ import { HttpRateLimitError } from "@/Errors/HttpRateLimitError.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
 import { HttpAuthService } from "@/Services/HttpAuthService.ts";
 import { HttpRateLimitService } from "@/Services/HttpRateLimitService.ts";
-import { HttpModeMarker } from "@/Server/HttpModeMarker.ts";
+import { HttpModeMarkerUtil } from "@/Server/HttpModeMarkerUtil.ts";
 import { HttpSessionRunner } from "@/Server/HttpSessionRunner.ts";
 import { SharedMcpRuntimeBuilder } from "@/Server/SharedMcpRuntimeBuilder.ts";
 import { EnvUtil } from "@/Utils/EnvUtil.ts";
@@ -33,6 +33,8 @@ type HttpRequestContext = {
   getNowMs: () => number;
 };
 
+export type HttpRunnerStartOptions = { httpMarkerPath?: string };
+
 export type HttpServerHandle = {
   url: string;
   close: () => Promise<void>;
@@ -46,7 +48,7 @@ export class HttpRunner {
     });
   }
 
-  static async start(env: Env = EnvUtil.read()): Promise<HttpServerHandle> {
+  static async start(env: Env = EnvUtil.read(), options: HttpRunnerStartOptions = {}): Promise<HttpServerHandle> {
     HttpRunner.assertBindAllowed(env);
     const getNowMs = (): number => Date.now();
     const runtime = SharedMcpRuntimeBuilder.buildFromEnv(env, getNowMs);
@@ -68,17 +70,14 @@ export class HttpRunner {
         }
       });
     });
+    const markerPath = options.httpMarkerPath ?? HttpModeMarkerUtil.DEFAULT_MARKER_PATH;
     const port = await HttpRunner.bindHttpServer(httpServer, env.CAPROVER_MCP_HTTP_HOST, env.CAPROVER_MCP_HTTP_PORT);
-    HttpModeMarker.markHttpModeActive(
-      env.CAPROVER_MCP_HTTP_MARKER_PATH ?? HttpModeMarker.DEFAULT_MARKER_PATH,
-    );
+    HttpModeMarkerUtil.markHttpModeActive(markerPath);
     LogUtil.logInfo("http_server_started");
     return {
       url: `http://${env.CAPROVER_MCP_HTTP_HOST}:${port}`,
       close: async () => {
-        HttpModeMarker.clearHttpModeMarker(
-          env.CAPROVER_MCP_HTTP_MARKER_PATH ?? HttpModeMarker.DEFAULT_MARKER_PATH,
-        );
+        HttpModeMarkerUtil.clearHttpModeMarker(markerPath);
         await new Promise<void>((resolve, reject) => {
           httpServer.close((error) => {
             if (error === undefined) {
@@ -134,9 +133,8 @@ export class HttpRunner {
       return;
     }
     try {
-      const clientKey = HttpRunner.buildRateLimitKey(request);
-      rateLimit.assertAllowed(clientKey, context.getNowMs());
       if (!auth.verifyRequest(request)) {
+        rateLimit.assertAllowed(HttpRunner.buildRateLimitAddressKey(request), context.getNowMs());
         response.writeHead(HTTP_UNAUTHORIZED, { "Content-Type": PLAIN_TEXT });
         response.end("Unauthorized");
         return;
@@ -147,6 +145,7 @@ export class HttpRunner {
         response.end("Unauthorized");
         return;
       }
+      rateLimit.assertAllowed(tokenKey, context.getNowMs());
       const parsedBody = await HttpRunner.readParsedBody(request, env);
       await sessions.handleRequest(request, response, parsedBody, tokenKey);
     } catch (error) {
@@ -169,7 +168,7 @@ export class HttpRunner {
     }
   }
 
-  private static buildRateLimitKey(request: IncomingMessage): string {
+  private static buildRateLimitAddressKey(request: IncomingMessage): string {
     return request.socket.remoteAddress ?? "unknown";
   }
 

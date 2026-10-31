@@ -20,13 +20,13 @@ const DOCKER_HEALTH_WAIT_MS = 60_000;
 const DOCKER_HEALTH_POLL_MS = 500;
 const SIGTERM = "SIGTERM";
 
-const waitForDockerHealthy = async (imageRef) => {
+export const waitForDockerHealthy = async (imageRef, spawnSyncFn = spawnSync) => {
   const deadline = Date.now() + DOCKER_HEALTH_WAIT_MS;
   while (Date.now() < deadline) {
-    const list = spawnSync("docker", ["ps", "-q", "--filter", `ancestor=${imageRef}`], { encoding: "utf8" });
+    const list = spawnSyncFn("docker", ["ps", "-q", "--filter", `ancestor=${imageRef}`], { encoding: "utf8" });
     const containerId = list.stdout.trim().split("\n").find((line) => line.trim() !== "");
     if (containerId !== undefined && containerId !== "") {
-      const inspect = spawnSync("docker", ["inspect", "-f", "{{.State.Health.Status}}", containerId], { encoding: "utf8" });
+      const inspect = spawnSyncFn("docker", ["inspect", "-f", "{{.State.Health.Status}}", containerId], { encoding: "utf8" });
       if (inspect.stdout.trim() === "healthy") {
         return;
       }

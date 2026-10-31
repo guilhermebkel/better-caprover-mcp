@@ -4,7 +4,7 @@ import { buildRequestLines, checkReplies, parseCommand, parseLines } from "./pac
 const GOOD_REPLY = {
   jsonrpc: "2.0",
   id: 1,
-  result: { serverInfo: { name: "better-caprover-mcp" }, instructions: "Access mode: readonly. Enabled risk tiers: read." },
+  result: { serverInfo: { name: "better-caprover-mcp" }, instructions: "Access mode: readonly." },
 };
 
 describe("buildRequestLines()", () => {

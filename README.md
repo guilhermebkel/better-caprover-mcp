@@ -201,6 +201,11 @@ The mode decides which operations the client sees at all. Only the person can ch
 | `CAPROVER_MCP_HTTP_TOKENS` | none | JSON map of client names to bearer secrets; required for non-local HTTP bind |
 | `CAPROVER_MCP_HTTP_HOST` | `127.0.0.1` | Address for `serve --http` |
 | `CAPROVER_MCP_HTTP_PORT` | `3100` | Port for `serve --http` |
+| `CAPROVER_MCP_MAX_HTTP_BODY_BYTES` | `1048576` | Max POST body size on `/mcp` |
+| `CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE` | `120` | HTTP rate limit; see `docs/product/remote-http.md` |
+| `CAPROVER_MCP_MAX_HTTP_SESSIONS` | `64` | Max concurrent Streamable HTTP MCP sessions |
+| `CAPROVER_MCP_HTTP_SESSION_TTL_MS` | `86400000` | Max idle lifetime of an HTTP MCP session (ms) |
+| `CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER` | `5` | Max parallel tool runs per configured server name |
 | `CAPROVER_MCP_SERVERS` / `CAPROVER_MCP_SERVERS_FILE` | none | Several CapRover servers; see `docs/product/remote-http.md` |
 
 Without `CAPROVER_URL` and `CAPROVER_PASSWORD` the server still starts, and every call tells the model what is missing.

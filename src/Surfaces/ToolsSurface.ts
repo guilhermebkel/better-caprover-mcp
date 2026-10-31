@@ -3,7 +3,7 @@ import type { ToolAnnotations } from "@modelcontextprotocol/sdk/types.js";
 import { z } from "zod";
 import type { RiskTier } from "@/Protocols/AccessProtocol.ts";
 import type { ToolDefinition } from "@/Protocols/OperationProtocol.ts";
-import { ServerToolInputObjectSchema, ServerToolInputSchema } from "@/Schemas/ServerConfigSchema.ts";
+import { ServerToolInputSchema } from "@/Schemas/ServerConfigSchema.ts";
 
 export class ToolsSurface {
   static readonly RISK_TO_ANNOTATIONS: Record<RiskTier, ToolAnnotations> = {
@@ -33,8 +33,8 @@ export class ToolsSurface {
   }
 
   private static buildInputSchema(inputSchema: z.ZodType): z.ZodType {
-    if (inputSchema instanceof z.ZodObject) {
-      return inputSchema.extend(ServerToolInputObjectSchema.shape);
+    if (inputSchema instanceof z.ZodObject && ServerToolInputSchema instanceof z.ZodObject) {
+      return inputSchema.extend(ServerToolInputSchema.shape);
     }
     return ServerToolInputSchema.and(inputSchema);
   }

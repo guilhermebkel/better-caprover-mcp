@@ -45,7 +45,7 @@ docker run -d --name caprover-mcp -p 3100:3100 \
   serve --http
 ```
 
-The image exposes port `3100` and defines a Docker `HEALTHCHECK` via `scripts/docker-healthcheck.sh`. In HTTP mode (`serve --http`) the check requires `GET /health` to return body `ok`. Stdio-only runs leave no HTTP marker, so the script exits success and a plain `docker run` without `serve --http` stays healthy.
+The image exposes port `3100` and defines a Docker `HEALTHCHECK` via `scripts/docker-healthcheck.sh`. In HTTP mode (`serve --http`) the process writes a marker file (default `/tmp/better-caprover-mcp-http.active`) and the check requires `GET /health` to return body `ok`. The healthcheck script accepts optional `CAPROVER_MCP_HTTP_MARKER_PATH` to point at that file; it is not a variable on the MCP server itself. Stdio-only runs leave no HTTP marker, so the script exits success and a plain `docker run` without `serve --http` stays healthy.
 
 ## Several CapRover servers
 
@@ -89,7 +89,7 @@ The legacy variables `CAPROVER_URL` and `CAPROVER_PASSWORD` still define a singl
 | `CAPROVER_MCP_HTTP_HOST` | `127.0.0.1` | Bind address |
 | `CAPROVER_MCP_HTTP_PORT` | `3100` | TCP port |
 | `CAPROVER_MCP_MAX_HTTP_BODY_BYTES` | `1048576` | Max POST body size |
-| `CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE` | `120` | Max MCP HTTP requests per minute per client remote address |
+| `CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE` | `120` | Max MCP HTTP requests per minute. Failed auth attempts are counted per client remote address; authenticated MCP traffic is counted per bearer token. Behind a reverse proxy every upstream client often shares one remote address, so failed-auth throttling is shared unless the proxy sets forwarded client metadata the process can use (this server does not read `X-Forwarded-For`). |
 | `CAPROVER_MCP_MAX_HTTP_SESSIONS` | `64` | Max concurrent Streamable HTTP MCP sessions |
 | `CAPROVER_MCP_HTTP_SESSION_TTL_MS` | `86400000` | Max idle lifetime of an HTTP MCP session (milliseconds) |
 | `CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER` | `5` | Max parallel tool runs per server name |
