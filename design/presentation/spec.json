@@ -6,7 +6,7 @@
   "criteria": "Recognisable at 16 px, works in one colour, and distinct from the CapRover mark and from the Docker and Kubernetes marks.",
   "industry": "developer-tool",
   "nav": ["Docs", "Operations", "GitHub"],
-  "brand_color": "#0D9488",
+  "brand_color": "#4D7C0F",
   "greyscale": false,
   "designer": "Claude",
   "round": 1,
