@@ -18,12 +18,13 @@ fi
 docker run -d --name "$NAME" --network host -e ACCEPTED_TERMS=true -e MAIN_NODE_IP_ADDRESS=127.0.0.1 \
   -v /var/run/docker.sock:/var/run/docker.sock -v /captain:/captain caprover/caprover > /dev/null
 
+# Why: curl fails while CapRover is not listening yet, and that must not stop the loop under `set -e`.
 # CapRover answers the login before it is ready, and only the system info says "not ready yet".
 # It also restarts once as a service, so the wait needs ten good answers of the system info in a row.
 good=0
 for _ in $(seq 1 "$MAX_ATTEMPTS"); do
   token=$(curl -s -X POST "$URL/api/v2/login" -H 'content-type: application/json' -H 'x-namespace: captain' \
-    -d "{\"password\":\"$PASSWORD\"}" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p')
+    -d "{\"password\":\"$PASSWORD\"}" | sed -n 's/.*"token":"\([^"]*\)".*/\1/p' || true)
   if [ -n "$token" ] && curl -s "$URL/api/v2/user/system/info" -H "x-captain-auth: $token" -H 'x-namespace: captain' | grep -q '"status":100'; then
     good=$((good + 1))
   else
