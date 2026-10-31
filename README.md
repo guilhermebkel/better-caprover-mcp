@@ -111,7 +111,7 @@ docker run -d --name caprover-mcp -p 3100:3100 \
 }
 ```
 
-More on HTTP bind, TLS, multi-server config and limits: [`docs/product/remote-http.md`](docs/product/remote-http.md).
+More on HTTP bind, TLS, and multi-server setup: [`docs/product/remote-http.md`](docs/product/remote-http.md). Limits and other env vars: [Configuration](#configuration).
 
 ## Example
 
@@ -216,7 +216,7 @@ Without `CAPROVER_URL` and `CAPROVER_PASSWORD`, `init` only prints the configura
 | `CAPROVER_MCP_HTTP_HOST` | `127.0.0.1` | Address for `serve --http` |
 | `CAPROVER_MCP_HTTP_PORT` | `3100` | Port for `serve --http` |
 | `CAPROVER_MCP_MAX_HTTP_BODY_BYTES` | `1048576` | Max POST body size on `/mcp` |
-| `CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE` | `120` | HTTP rate limit; see `docs/product/remote-http.md` |
+| `CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE` | `120` | Max MCP HTTP requests per minute. Failed auth is counted per client remote address; authenticated traffic shares one bucket. Behind a reverse proxy, failed-auth throttling is often shared (this server does not read `X-Forwarded-For`). |
 | `CAPROVER_MCP_MAX_HTTP_SESSIONS` | `64` | Max concurrent Streamable HTTP MCP sessions |
 | `CAPROVER_MCP_HTTP_SESSION_TTL_MS` | `86400000` | Max idle lifetime of an HTTP MCP session (ms) |
 | `CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER` | `5` | Max parallel tool runs per configured server name |

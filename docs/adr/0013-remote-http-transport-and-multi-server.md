@@ -5,13 +5,13 @@ Phase 5 lets a client reach the MCP server over the network and target more than
 ## Decision
 
 - Use the MCP **Streamable HTTP** transport (`StreamableHTTPServerTransport` from the official SDK) on path `/mcp`. Start it with `better-caprover-mcp serve --http`; running with no arguments keeps **stdio** unchanged.
-- Bind to `127.0.0.1` by default (`CAPROVER_MCP_HTTP_HOST`). Port defaults to `3100` (`CAPROVER_MCP_HTTP_PORT`). A separate **GET `/health`** returns `200` with body `ok` for Docker and reverse proxies (no MCP traffic).
+- Bind address and port from `CAPROVER_MCP_HTTP_HOST` and `CAPROVER_MCP_HTTP_PORT` (defaults in the README **Configuration** table). A separate **GET `/health`** returns `200` with body `ok` for Docker and reverse proxies (no MCP traffic).
 - Each HTTP request must send `Authorization: Bearer <token>`. The secret is **`CAPROVER_MCP_HTTP_TOKEN`** (one value). `HttpAuthService` compares the bearer value to that secret using **SHA-256 digests and `timingSafeEqual`**. Failed auth returns **401** with body `Unauthorized`. **Non-local bind** refuses to start unless `CAPROVER_MCP_HTTP_TOKEN` is set and non-empty.
 - **Multi-server configuration:** `CAPROVER_MCP_SERVERS` (JSON) or `CAPROVER_MCP_SERVERS_FILE`. Legacy single-server setup (`CAPROVER_URL` / `CAPROVER_PASSWORD` only) keeps one implicit server named `default`; `server_name` stays optional. With **two or more** servers, every tool call requires `server_name`. Each entry has `name`, `url`, `mode`, optional `isCriticalAllowed` (default false), and **either** `passwordEnv` **or** `passwordFile` (no inline passwords).
 - Per-server mode is enforced by a dedicated `PolicyService` per server. Tools on the MCP surface are the **union** of tiers any server allows; each call is checked against that server's mode.
 - Optional `server_name` on every tool input (shared control fields). `get_overview` includes a `servers` array with `name`, `accessMode`, and `enabledRiskTiers` only—no URLs.
 - One JSON audit line per tool call on stderr: `level: "audit"`, ISO time, `tool`, `server`, `risk`, `result` (`ok` | `denied` | `error`). No argument values or secrets.
-- HTTP limits: max body 1 MiB (`CAPROVER_MCP_MAX_HTTP_BODY_BYTES`); invalid JSON → **400**; rate limit `CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE` — failed auth keyed by **client remote address**, authenticated MCP traffic in **one shared bucket** (not per connection identity) → **429**; max concurrent in-flight tool executions per CapRover server name (`CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER`, default 5) with a 30s FIFO wait → clear error with the **real server name**.
+- HTTP limits: body size via `CAPROVER_MCP_MAX_HTTP_BODY_BYTES`; invalid JSON → **400**; rate limit via `CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE` — failed auth keyed by **client remote address**, authenticated MCP traffic in **one shared bucket** (not per connection identity) → **429**; max concurrent in-flight tool executions per CapRover server name via `CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER` with a 30s FIFO wait → clear error with the **real server name**. Numeric defaults and caps are in the README **Configuration** table.
 - Streamable HTTP runs in **stateful session mode**: one shared `SharedMcpRuntimeBuilder` (registry, concurrency limiter, CapRover clients) serves all sessions. Each `initialize` creates a transport and `McpServer` instance keyed by `Mcp-Session-Id`; sessions require a valid bearer on every request, expire after TTL, and are capped in count. Unknown session ids return **404** with body `Not Found`. Session cap exhaustion returns **503** with body `Service Unavailable`.
 - Docker image: `HEALTHCHECK` runs `scripts/docker-healthcheck.sh`. When HTTP mode is active the process writes a marker file; the script then requires `GET /health` to return body `ok` or the check fails. With no marker (stdio-only), the script exits success so default `docker run` without `serve --http` stays healthy.
 
@@ -41,7 +41,7 @@ Phase 5 lets a client reach the MCP server over the network and target more than
 - `EnvUtil`, `CaproverServerEnvUtil`, and `CaproverServerRegistryService` centralize configuration, resolution, and secrets collection.
 - Operations keep a single `CaproverClientPort` in the manifest via `RoutingCaproverClientAdapter` and `AsyncLocalStorage` for the active server.
 - `OperationRunnerService` resolves `server_name`, applies per-server policy, audit, concurrency, and redaction with all configured secrets.
-- Docker exposes `3100`. Terminate TLS at a reverse proxy for network exposure.
+- Docker image `HEALTHCHECK` uses the configured HTTP port (see README **Configuration**). Terminate TLS at a reverse proxy for network exposure.
 - Phase 2 (#3) stable manifest is not complete on `main`; this work uses the existing 14-operation manifest and proceeded on the owner's request.
 
 ## Related
