@@ -5,7 +5,8 @@ import { HttpBodyTooLargeError } from "@/Errors/HttpBodyTooLargeError.ts";
 import { HttpRateLimitError } from "@/Errors/HttpRateLimitError.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
 import { HttpAuthService } from "@/Services/HttpAuthService.ts";
-import { HttpMcpSessionService } from "@/Server/HttpMcpSessionService.ts";
+import { HttpMcpSessionService } from "@/Services/HttpMcpSessionService.ts";
+import { McpApplicationService } from "@/Server/McpApplicationService.ts";
 import { HttpRateLimitService } from "@/Services/HttpRateLimitService.ts";
 import { EnvUtil } from "@/Utils/EnvUtil.ts";
 import { HttpBodyUtil } from "@/Utils/HttpBodyUtil.ts";
@@ -28,6 +29,7 @@ type HttpRequestContext = {
   rateLimit: HttpRateLimitService;
   sessions: HttpMcpSessionService;
   env: Env;
+  getNowMs: () => number;
 };
 
 export type HttpServerHandle = {
@@ -45,10 +47,12 @@ export class HttpRunner {
 
   static async start(env: Env = EnvUtil.read()): Promise<HttpServerHandle> {
     HttpRunner.assertBindAllowed(env);
+    const getNowMs = (): number => Date.now();
+    const application = McpApplicationService.buildFromEnv(env, getNowMs);
     const auth = new HttpAuthService(HttpAuthService.extractTokenSecrets(env.CAPROVER_MCP_HTTP_TOKENS));
     const rateLimit = new HttpRateLimitService(env.CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE);
-    const sessions = new HttpMcpSessionService(env, () => Date.now());
-    const context: HttpRequestContext = { auth, rateLimit, sessions, env };
+    const sessions = new HttpMcpSessionService(() => application.buildMcpServer(), getNowMs);
+    const context: HttpRequestContext = { auth, rateLimit, sessions, env, getNowMs };
     const httpServer = createServer((request, response) => {
       void HttpRunner.handleHttpRequest(request, response, context).catch((error: unknown) => {
         LogUtil.logError("http_request_failed", error instanceof Error ? error.name : "unknown");
@@ -117,16 +121,22 @@ export class HttpRunner {
       response.end("Not Found");
       return;
     }
-    if (!auth.verifyRequest(request)) {
-      response.writeHead(HTTP_UNAUTHORIZED, { "Content-Type": PLAIN_TEXT });
-      response.end("Unauthorized");
-      return;
-    }
     try {
       const clientKey = HttpRunner.buildRateLimitKey(request);
-      rateLimit.assertAllowed(clientKey, Date.now());
+      rateLimit.assertAllowed(clientKey, context.getNowMs());
+      if (!auth.verifyRequest(request)) {
+        response.writeHead(HTTP_UNAUTHORIZED, { "Content-Type": PLAIN_TEXT });
+        response.end("Unauthorized");
+        return;
+      }
+      const tokenKey = auth.resolveTokenKey(request);
+      if (tokenKey === undefined) {
+        response.writeHead(HTTP_UNAUTHORIZED, { "Content-Type": PLAIN_TEXT });
+        response.end("Unauthorized");
+        return;
+      }
       const parsedBody = await HttpRunner.readParsedBody(request, env);
-      await sessions.handleRequest(request, response, parsedBody);
+      await sessions.handleRequest(request, response, parsedBody, tokenKey);
     } catch (error) {
       if (error instanceof HttpBodyTooLargeError) {
         response.writeHead(HTTP_PAYLOAD_TOO_LARGE, { "Content-Type": PLAIN_TEXT });

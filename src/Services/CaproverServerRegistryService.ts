@@ -2,8 +2,8 @@ import { AsyncLocalStorage } from "node:async_hooks";
 import { CaproverClientAdapter } from "@/Adapters/CapRover/CaproverClientAdapter.ts";
 import { UnknownServerError } from "@/Errors/UnknownServerError.ts";
 import type { RiskTier } from "@/Protocols/AccessProtocol.ts";
-import type { Env } from "@/Protocols/EnvProtocol.ts";
 import type { CaproverClientPort } from "@/Protocols/CaproverClientProtocol.ts";
+import type { Env, ResolvedCaproverServer } from "@/Protocols/EnvProtocol.ts";
 import type { ServerSummary } from "@/Protocols/ServerRoutingProtocol.ts";
 import { DEFAULT_SERVER_NAME } from "@/Schemas/ServerConfigSchema.ts";
 import { PolicyService } from "@/Services/PolicyService.ts";
@@ -17,6 +17,8 @@ export type ActiveServerTarget = {
 
 type ServerRecord = ActiveServerTarget;
 
+export type CaproverClientFactory = (entry: ResolvedCaproverServer) => CaproverClientPort;
+
 export class CaproverServerRegistryService {
   static readonly activeStorage = new AsyncLocalStorage<ActiveServerTarget>();
 
@@ -26,16 +28,14 @@ export class CaproverServerRegistryService {
     private readonly httpSecrets: readonly string[],
   ) {}
 
-  static buildFromEnv(env: Env): CaproverServerRegistryService {
+  static buildFromEnv(
+    env: Env,
+    createClient: CaproverClientFactory = (entry) => CaproverServerRegistryService.createDefaultClient(entry),
+  ): CaproverServerRegistryService {
+    const isMultiServer = env.servers.length > 1;
     const nameToServer = new Map<string, ServerRecord>();
-    const isMultiServer = nameToServer.size > 1;
     for (const entry of env.servers) {
-      let client: CaproverClientAdapter;
-      if (entry.url !== undefined && entry.password !== undefined) {
-        client = new CaproverClientAdapter({ url: entry.url, password: entry.password });
-      } else {
-        client = new CaproverClientAdapter(undefined);
-      }
+      const client = createClient(entry);
       const policy = new PolicyService(entry.mode, entry.isCriticalAllowed, isMultiServer);
       const secrets = entry.password === undefined ? [] : [entry.password];
       nameToServer.set(entry.name, { name: entry.name, client, policy, secrets });
@@ -46,16 +46,11 @@ export class CaproverServerRegistryService {
     return new CaproverServerRegistryService(nameToServer, isMultiServer, httpSecrets);
   }
 
-  static buildForTest(
-    servers: readonly ActiveServerTarget[],
-    isMultiServer = false,
-    httpSecrets: readonly string[] = [],
-  ): CaproverServerRegistryService {
-    return new CaproverServerRegistryService(
-      new Map(servers.map((server) => [server.name, server])),
-      isMultiServer,
-      httpSecrets,
-    );
+  private static createDefaultClient(entry: ResolvedCaproverServer): CaproverClientPort {
+    if (entry.url !== undefined && entry.password !== undefined) {
+      return new CaproverClientAdapter({ url: entry.url, password: entry.password });
+    }
+    return new CaproverClientAdapter(undefined);
   }
 
   getIsMultiServer(): boolean {

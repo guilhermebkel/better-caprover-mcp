@@ -7,19 +7,26 @@ export class HttpAuthService {
   constructor(private readonly tokenSecrets: readonly string[]) {}
 
   verifyRequest(request: IncomingMessage): boolean {
+    return this.resolveTokenKey(request) !== undefined;
+  }
+
+  resolveTokenKey(request: IncomingMessage): string | undefined {
     const header = request.headers.authorization;
     if (typeof header !== "string") {
-      return false;
+      return undefined;
     }
     const match = BEARER_PREFIX.exec(header);
     if (match === null) {
-      return false;
+      return undefined;
     }
     const token = header.slice(match[0].length).trim();
     if (token === "") {
-      return false;
+      return undefined;
     }
-    return TimingSafeCompareUtil.isAnySecretMatching(token, this.tokenSecrets);
+    if (!TimingSafeCompareUtil.isAnySecretMatching(token, this.tokenSecrets)) {
+      return undefined;
+    }
+    return header;
   }
 
   static extractTokenSecrets(tokens: Record<string, string> | undefined): string[] {

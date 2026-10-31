@@ -2,7 +2,7 @@ import { z } from "zod";
 import type { CaproverServerEntryConfig } from "@/Protocols/ServerRoutingProtocol.ts";
 import { AccessModeSchema } from "@/Schemas/AccessSchema.ts";
 
-export const DEFAULT_SERVER_NAME = "default";
+export const DEFAULT_SERVER_NAME = "default" as const;
 
 const MAX_SERVER_NAME_LENGTH = 64;
 const MAX_PASSWORD_ENV_LENGTH = 128;
@@ -33,18 +33,21 @@ export const CaproverServerEntrySchema: z.ZodType<CaproverServerEntryConfig> = z
   }
 });
 
-export const CaproverServersFileSchema = z.union([
+export const CaproverServersFileSchema: z.ZodType<CaproverServerEntryConfig[]> = z.union([
   z.array(CaproverServerEntrySchema),
   z.object({ servers: z.array(CaproverServerEntrySchema).min(1) }).transform((value) => value.servers),
 ]);
 
-export const HttpTokensSchema = z.record(z.string().min(1), z.string().min(MIN_HTTP_TOKEN_LENGTH)).refine(
+export const HttpTokensSchema: z.ZodType<Record<string, string>> = z.record(
+  z.string().min(1),
+  z.string().min(MIN_HTTP_TOKEN_LENGTH),
+).refine(
   (tokens) => Object.keys(tokens).length > 0,
   "CAPROVER_MCP_HTTP_TOKENS must name at least one client token.",
 );
 
 export const ServerToolInputSchema = z.object({
-  server: z.string().min(1).max(MAX_SERVER_NAME_LENGTH).optional().describe(
+  server_name: z.string().min(1).max(MAX_SERVER_NAME_LENGTH).optional().describe(
     "Which configured CapRover server to use. Required when several servers are configured; omit when there is only one.",
   ),
 });

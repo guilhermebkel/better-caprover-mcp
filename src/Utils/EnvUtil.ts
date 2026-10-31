@@ -1,9 +1,8 @@
 import { InvalidEnvError } from "@/Errors/InvalidEnvError.ts";
 import type { Env, ResolvedCaproverServer } from "@/Protocols/EnvProtocol.ts";
 import type { CaproverServerEntryConfig } from "@/Protocols/ServerRoutingProtocol.ts";
+import { CaproverServerEnvUtil } from "@/Utils/CaproverServerEnvUtil.ts";
 import {
-  buildLegacyServers,
-  buildMultiServers,
   RawEnvSchema,
   type RawEnvValues,
 } from "@/Schemas/EnvSchema.ts";
@@ -44,7 +43,7 @@ export class EnvUtil {
     if (raw.CAPROVER_MCP_SERVERS_FILE !== undefined) {
       return EnvUtil.parseMultiServers(FileReadUtil.readTrimmedText(raw.CAPROVER_MCP_SERVERS_FILE));
     }
-    return buildLegacyServers(
+    return CaproverServerEnvUtil.buildLegacyServers(
       raw.CAPROVER_MCP_MODE,
       raw.CAPROVER_MCP_ALLOW_CRITICAL,
       raw.CAPROVER_URL,
@@ -54,7 +53,7 @@ export class EnvUtil {
 
   private static parseMultiServers(rawJson: string): ResolvedCaproverServer[] {
     const entries = CaproverServersFileSchema.parse(JSON.parse(rawJson) as unknown);
-    return buildMultiServers(entries, (entry) => EnvUtil.readPassword(entry));
+    return CaproverServerEnvUtil.buildMultiServers(entries, (entry) => EnvUtil.readPassword(entry));
   }
 
   private static readPassword(entry: CaproverServerEntryConfig): string {

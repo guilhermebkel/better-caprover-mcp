@@ -5,7 +5,7 @@ export class InputStripUtil {
     if (typeof rawInput !== "object" || rawInput === null || Array.isArray(rawInput)) {
       return rawInput;
     }
-    const entries = Object.entries(rawInput).filter(([key]) => !CONTROL_KEYS.includes(key as never) && key !== "server");
+    const entries = Object.entries(rawInput).filter(([key]) => !CONTROL_KEYS.includes(key as never));
     return Object.fromEntries(entries);
   }
 }

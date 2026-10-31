@@ -128,11 +128,11 @@ CAPROVER_URL=https://captain.your-domain.com CAPROVER_PASSWORD=... npx -y better
 
 ### Remote HTTP (optional)
 
-Stdio stays the default. To listen for Streamable HTTP on the same machine:
+Stdio stays the default. To listen for Streamable HTTP on the same machine (localhost only unless you add tokens and TLS for a wider bind):
 
 ```bash
 export CAPROVER_MCP_HTTP_TOKENS='{"cursor":"<long-random-secret>"}'
-export CAPROVER_MCP_HTTP_HOST=0.0.0.0
+export CAPROVER_MCP_HTTP_HOST=127.0.0.1
 better-caprover-mcp serve --http
 ```
 

@@ -3,24 +3,40 @@ import { FakeCaproverClientAdapter } from "@/Adapters/CapRover/FakeCaproverClien
 import { RoutingCaproverClientAdapter } from "@/Adapters/CapRover/RoutingCaproverClientAdapter.ts";
 import { OperationManifest } from "@/Operations/OperationManifest.ts";
 import type { AccessMode } from "@/Protocols/AccessProtocol.ts";
+import type { Env } from "@/Protocols/EnvProtocol.ts";
 import type { ToolDefinition } from "@/Protocols/OperationProtocol.ts";
 import { DEFAULT_SERVER_NAME } from "@/Schemas/ServerConfigSchema.ts";
 import { AuditLogService } from "@/Services/AuditLogService.ts";
-import { CaproverServerRegistryService } from "@/Services/CaproverServerRegistryService.ts";
+import { CaproverServerRegistryService, type CaproverClientFactory } from "@/Services/CaproverServerRegistryService.ts";
 import { ConcurrencyLimiterService } from "@/Services/ConcurrencyLimiterService.ts";
 import { ConfirmationService } from "@/Services/ConfirmationService.ts";
 import { OperationRunnerService } from "@/Services/OperationRunnerService.ts";
-import { PolicyService } from "@/Services/PolicyService.ts";
 
 const FAKE_PASSWORD = "fake-password-9876";
 
-const buildTool = (mode: AccessMode, name: string, fake: FakeCaproverClientAdapter): ToolDefinition => {
-  const registry = CaproverServerRegistryService.buildForTest([{
+const buildEnv = (mode: AccessMode): Env => ({
+  CAPROVER_MCP_MODE: mode,
+  CAPROVER_MCP_ALLOW_CRITICAL: false,
+  CAPROVER_URL: "https://captain.example.com",
+  CAPROVER_PASSWORD: FAKE_PASSWORD,
+  CAPROVER_MCP_HTTP_HOST: "127.0.0.1",
+  CAPROVER_MCP_HTTP_PORT: 3100,
+  CAPROVER_MCP_MAX_HTTP_BODY_BYTES: 1_048_576,
+  CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE: 120,
+  CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER: 5,
+  servers: [{
+    isCriticalAllowed: false,
     name: DEFAULT_SERVER_NAME,
-    client: fake,
-    policy: new PolicyService(mode, false),
-    secrets: [FAKE_PASSWORD],
-  }]);
+    password: FAKE_PASSWORD,
+    url: "https://captain.example.com",
+    mode,
+  }],
+});
+
+const buildTestClient = (fake: FakeCaproverClientAdapter): CaproverClientFactory => () => fake;
+
+const buildTool = (mode: AccessMode, name: string, fake: FakeCaproverClientAdapter): ToolDefinition => {
+  const registry = CaproverServerRegistryService.buildFromEnv(buildEnv(mode), buildTestClient(fake));
   const runner = new OperationRunnerService(
     registry,
     new ConfirmationService(() => 0),

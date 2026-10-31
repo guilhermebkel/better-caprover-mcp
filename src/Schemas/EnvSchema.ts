@@ -1,8 +1,7 @@
 import { z } from "zod";
-import type { Env, ResolvedCaproverServer } from "@/Protocols/EnvProtocol.ts";
-import type { CaproverServerEntryConfig } from "@/Protocols/ServerRoutingProtocol.ts";
+import type { Env } from "@/Protocols/EnvProtocol.ts";
 import { AccessModeSchema } from "@/Schemas/AccessSchema.ts";
-import { DEFAULT_SERVER_NAME, HttpTokensSchema } from "@/Schemas/ServerConfigSchema.ts";
+import { HttpTokensSchema } from "@/Schemas/ServerConfigSchema.ts";
 
 const OptionalTextSchema = z.string().optional().transform((text) => (text === undefined || text === "" ? undefined : text));
 
@@ -12,16 +11,19 @@ const DEFAULT_MAX_HTTP_BODY_BYTES = 1_048_576;
 const DEFAULT_MAX_HTTP_REQUESTS_PER_MINUTE = 120;
 const DEFAULT_MAX_CONCURRENT_PER_SERVER = 5;
 
-const parsePositiveIntFromEnv = (defaultValue: number): z.ZodType<number> => z.string().optional().transform((text) => {
-  if (text === undefined || text === "") {
-    return defaultValue;
-  }
-  const parsed = Number.parseInt(text, 10);
-  if (Number.isNaN(parsed) || parsed < 1) {
-    return defaultValue;
-  }
-  return parsed;
-});
+const parsePositiveIntFromEnv = (name: string, defaultValue: number): z.ZodType<number> => (
+  z.string().optional().transform((text, context) => {
+    if (text === undefined || text === "") {
+      return defaultValue;
+    }
+    const parsed = Number.parseInt(text, 10);
+    if (Number.isNaN(parsed) || parsed < 1) {
+      context.addIssue({ code: "custom", message: `${name} must be a positive integer.` });
+      return z.NEVER;
+    }
+    return parsed;
+  })
+);
 
 const httpTokensFromEnv = z.string().optional().transform((text, context) => {
   if (text === undefined || text === "") {
@@ -60,37 +62,11 @@ export const RawEnvSchema: z.ZodType<RawEnvValues> = z.object({
   ),
   CAPROVER_PASSWORD: OptionalTextSchema,
   CAPROVER_MCP_HTTP_HOST: z.string().optional().transform((text) => (text === undefined || text === "" ? DEFAULT_HTTP_HOST : text)),
-  CAPROVER_MCP_HTTP_PORT: parsePositiveIntFromEnv(DEFAULT_HTTP_PORT),
+  CAPROVER_MCP_HTTP_PORT: parsePositiveIntFromEnv("CAPROVER_MCP_HTTP_PORT", DEFAULT_HTTP_PORT),
   CAPROVER_MCP_HTTP_TOKENS: httpTokensFromEnv,
-  CAPROVER_MCP_MAX_HTTP_BODY_BYTES: parsePositiveIntFromEnv(DEFAULT_MAX_HTTP_BODY_BYTES),
-  CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE: parsePositiveIntFromEnv(DEFAULT_MAX_HTTP_REQUESTS_PER_MINUTE),
-  CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER: parsePositiveIntFromEnv(DEFAULT_MAX_CONCURRENT_PER_SERVER),
+  CAPROVER_MCP_MAX_HTTP_BODY_BYTES: parsePositiveIntFromEnv("CAPROVER_MCP_MAX_HTTP_BODY_BYTES", DEFAULT_MAX_HTTP_BODY_BYTES),
+  CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE: parsePositiveIntFromEnv("CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE", DEFAULT_MAX_HTTP_REQUESTS_PER_MINUTE),
+  CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER: parsePositiveIntFromEnv("CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER", DEFAULT_MAX_CONCURRENT_PER_SERVER),
   CAPROVER_MCP_SERVERS: OptionalTextSchema,
   CAPROVER_MCP_SERVERS_FILE: OptionalTextSchema,
 });
-
-export const buildLegacyServers = (
-  mode: Env["CAPROVER_MCP_MODE"],
-  isCriticalAllowed: boolean,
-  url?: string,
-  password?: string,
-): ResolvedCaproverServer[] => [{
-  name: DEFAULT_SERVER_NAME,
-  url,
-  password,
-  mode,
-  isCriticalAllowed,
-}];
-
-export const buildMultiServers = (
-  entries: CaproverServerEntryConfig[],
-  passwordReader: (entry: CaproverServerEntryConfig) => string,
-): ResolvedCaproverServer[] => (
-  entries.map((entry) => ({
-    name: entry.name,
-    url: entry.url,
-    password: passwordReader(entry),
-    mode: entry.mode,
-    isCriticalAllowed: entry.isCriticalAllowed ?? false,
-  }))
-);

@@ -7,9 +7,7 @@ import type { AccessMode } from "@/Protocols/AccessProtocol.ts";
 import type { CaproverApp } from "@/Protocols/CaproverClientProtocol.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
 import { DEFAULT_SERVER_NAME } from "@/Schemas/ServerConfigSchema.ts";
-import { CaproverServerRegistryService } from "@/Services/CaproverServerRegistryService.ts";
-import { PolicyService } from "@/Services/PolicyService.ts";
-import { EnvTestUtil } from "@/Utils/EnvTestUtil.ts";
+import type { CaproverClientFactory } from "@/Services/CaproverServerRegistryService.ts";
 import { ServerBuilder } from "@/Server/ServerBuilder.ts";
 
 const FAKE_PASSWORD = "fake-password-9876";
@@ -27,21 +25,33 @@ type SetupOptions = FakeCaproverOptions & {
   getNowMs?: () => number;
 };
 
-const buildEnv = (mode: AccessMode): Env => EnvTestUtil.build({ mode, password: FAKE_PASSWORD, url: "https://captain.example.com" });
+const buildEnv = (mode: AccessMode): Env => ({
+  CAPROVER_MCP_MODE: mode,
+  CAPROVER_MCP_ALLOW_CRITICAL: false,
+  CAPROVER_URL: "https://captain.example.com",
+  CAPROVER_PASSWORD: FAKE_PASSWORD,
+  CAPROVER_MCP_HTTP_HOST: "127.0.0.1",
+  CAPROVER_MCP_HTTP_PORT: 3100,
+  CAPROVER_MCP_MAX_HTTP_BODY_BYTES: 1_048_576,
+  CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE: 120,
+  CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER: 5,
+  servers: [{
+    isCriticalAllowed: false,
+    name: DEFAULT_SERVER_NAME,
+    password: FAKE_PASSWORD,
+    url: "https://captain.example.com",
+    mode,
+  }],
+});
+
+const buildTestClient = (fake: FakeCaproverClientAdapter): CaproverClientFactory => () => fake;
 
 const connect = async (options: SetupOptions = {}): Promise<Setup> => {
   const { mode = "admin", apps = [FakeCaproverClientAdapter.buildApp()], getNowMs = () => START_MS, ...fakeOptions } = options;
   const fake = new FakeCaproverClientAdapter(apps, fakeOptions);
-  const env = buildEnv(mode);
-  const registry = CaproverServerRegistryService.buildForTest([{
-    name: DEFAULT_SERVER_NAME,
-    client: fake,
-    policy: new PolicyService(mode, false),
-    secrets: [FAKE_PASSWORD],
-  }]);
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: "test-client", version: "0.0.0" });
-  await ServerBuilder.build(env, getNowMs, registry).connect(serverTransport);
+  await ServerBuilder.build(buildEnv(mode), getNowMs, buildTestClient(fake)).connect(serverTransport);
   await client.connect(clientTransport);
   return { client, fake };
 };

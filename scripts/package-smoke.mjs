@@ -1,5 +1,4 @@
 import { spawn, spawnSync } from "node:child_process";
-import { readFileSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
@@ -218,5 +217,3 @@ if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const parsed = parseCommand(process.argv.slice(FIRST_USER_ARG));
   process.exit(await runAllSmoke(parsed));
 }
-
-export const readPackageVersion = () => JSON.parse(readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;

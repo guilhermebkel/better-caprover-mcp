@@ -41,7 +41,7 @@ export class OperationRunnerService {
       const control = ControlFieldsSchema.parse(rawInput);
       let target;
       try {
-        target = this.registry.resolve(control.server);
+        target = this.registry.resolve(control.server_name);
       } catch (error) {
         const outcome = OperationRunnerService.buildFailure(toolName, error);
         this.writeAudit(toolName, "unknown", operation.risk, outcome.isError ? "error" : "ok");
@@ -65,7 +65,8 @@ export class OperationRunnerService {
       ));
     } catch (error) {
       const outcome = this.redactOutcome(OperationRunnerService.buildFailure(toolName, error));
-      this.writeAudit(toolName, "unknown", operation.risk, "error");
+      const server = error instanceof ConcurrencyLimitError ? error.serverName : "unknown";
+      this.writeAudit(toolName, server, operation.risk, "error");
       return outcome;
     }
   }

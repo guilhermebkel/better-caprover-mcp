@@ -1,5 +1,5 @@
 export type ControlFields = {
-  server?: string;
+  server_name?: string;
   dry_run?: boolean;
   user_confirmed?: boolean;
   confirmation_token?: string;

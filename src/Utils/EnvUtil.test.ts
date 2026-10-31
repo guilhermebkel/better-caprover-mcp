@@ -81,6 +81,14 @@ describe("EnvUtil.read()", () => {
     });
   });
 
+  describe("when HTTP limits are set", () => {
+    it("refuses a non-positive CAPROVER_MCP_HTTP_PORT", () => {
+      vi.stubEnv("CAPROVER_MCP_HTTP_PORT", "0");
+
+      expect(() => EnvUtil.read()).toThrow(/CAPROVER_MCP_HTTP_PORT must be a positive integer/);
+    });
+  });
+
   describe("when several servers are configured", () => {
     it("rejects inline passwords in the JSON list", () => {
       vi.stubEnv("CAPROVER_MCP_SERVERS", JSON.stringify([{

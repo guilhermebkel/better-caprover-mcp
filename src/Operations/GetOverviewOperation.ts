@@ -10,7 +10,7 @@ export class GetOverviewOperation implements OperationPort<GetOverviewInput> {
 
   readonly description = "Read-only. Reads a summary of the CapRover server: root domain, version, SSL state, app count, "
     + "and the access mode of this MCP server with the risk tiers it allows. Use it to learn what this server may do. "
-    + "When several CapRover servers are configured, pass `server` and the reply lists every server name and mode without URLs. "
+    + "When several CapRover servers are configured, every tool call must name the server; `get_overview` lists every configured server name and mode without URLs. "
     + "To see the apps, use `list_apps`. It always returns one summary object.";
 
   readonly inputSchema = GetOverviewInputSchema;

@@ -3,29 +3,44 @@ import { FakeCaproverClientAdapter } from "@/Adapters/CapRover/FakeCaproverClien
 import { RoutingCaproverClientAdapter } from "@/Adapters/CapRover/RoutingCaproverClientAdapter.ts";
 import { OperationManifest } from "@/Operations/OperationManifest.ts";
 import type { ToolDefinition } from "@/Protocols/OperationProtocol.ts";
+import type { Env } from "@/Protocols/EnvProtocol.ts";
 import { DEFAULT_SERVER_NAME } from "@/Schemas/ServerConfigSchema.ts";
 import { AuditLogService } from "@/Services/AuditLogService.ts";
-import { CaproverServerRegistryService } from "@/Services/CaproverServerRegistryService.ts";
+import { CaproverServerRegistryService, type CaproverClientFactory } from "@/Services/CaproverServerRegistryService.ts";
 import { ConcurrencyLimiterService } from "@/Services/ConcurrencyLimiterService.ts";
 import { ConfirmationService } from "@/Services/ConfirmationService.ts";
 import { OperationRunnerService } from "@/Services/OperationRunnerService.ts";
-import { PolicyService } from "@/Services/PolicyService.ts";
 
 const MAX_DESCRIPTION_LENGTH = 640;
 const MIN_REPEATED_SENTENCE_WORDS = 12;
 const FIELD_NAMES = [
-  "server", "dry_run", "user_confirmed", "confirmation_token", "name_contains", "env_vars", "remove_keys",
+  "server_name", "dry_run", "user_confirmed", "confirmation_token", "name_contains", "env_vars", "remove_keys",
   "delete_volumes", "response_format",
 ];
 
+const buildTestEnv = (): Env => ({
+  CAPROVER_MCP_MODE: "admin",
+  CAPROVER_MCP_ALLOW_CRITICAL: false,
+  CAPROVER_URL: "https://captain.example.com",
+  CAPROVER_PASSWORD: undefined,
+  CAPROVER_MCP_HTTP_HOST: "127.0.0.1",
+  CAPROVER_MCP_HTTP_PORT: 3100,
+  CAPROVER_MCP_MAX_HTTP_BODY_BYTES: 1_048_576,
+  CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE: 120,
+  CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER: 5,
+  servers: [{
+    name: DEFAULT_SERVER_NAME,
+    url: "https://captain.example.com",
+    password: undefined,
+    mode: "admin",
+    isCriticalAllowed: false,
+  }],
+});
+
 const buildTools = (): ToolDefinition[] => {
   const fake = new FakeCaproverClientAdapter([]);
-  const registry = CaproverServerRegistryService.buildForTest([{
-    name: DEFAULT_SERVER_NAME,
-    client: fake,
-    policy: new PolicyService("admin", false),
-    secrets: [],
-  }]);
+  const buildTestClient = (fake: FakeCaproverClientAdapter): CaproverClientFactory => () => fake;
+  const registry = CaproverServerRegistryService.buildFromEnv(buildTestEnv(), buildTestClient(fake));
   const runner = new OperationRunnerService(
     registry,
     new ConfirmationService(() => 0),

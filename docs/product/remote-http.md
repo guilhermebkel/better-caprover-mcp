@@ -78,7 +78,7 @@ better-caprover-mcp serve --http
 
 Alternatively, set the same array in `CAPROVER_MCP_SERVERS` (one line of JSON).
 
-Every tool call must include `"server": "prod"` or `"server": "staging"`. `get_overview` lists configured servers and their modes without CapRover URLs.
+Every tool call must include `"server_name": "prod"` or `"server_name": "staging"`. `get_overview` lists configured servers and their modes without CapRover URLs.
 
 The legacy variables `CAPROVER_URL` and `CAPROVER_PASSWORD` still define a single server when no multi-server list is set; then `server` is optional.
 
