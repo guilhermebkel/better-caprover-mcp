@@ -1,4 +1,4 @@
-import type { RiskTier, Toolset } from "@/Protocols/AccessProtocol.ts";
+import type { RiskTier, SurfaceName, Toolset } from "@/Protocols/AccessProtocol.ts";
 import type { GetAccessInput } from "@/Protocols/AppInputProtocol.ts";
 import type { CaproverClientPort } from "@/Protocols/CaproverClientProtocol.ts";
 import type { OperationPort, OperationResult } from "@/Protocols/OperationProtocol.ts";
@@ -8,8 +8,6 @@ import type { PolicyServicePort } from "@/Protocols/AccessProtocol.ts";
 
 export class GetAccessOperation implements OperationPort<GetAccessInput> {
   static readonly NAME = "getAccess";
-
-  static readonly SURFACE = "tools";
 
   readonly description = "Read-only. Reports what this MCP server may do: the access mode, the risk tiers it allows, whether "
     + "critical operations are unlocked, the surface, the enabled toolsets, whether the client can ask the person directly, "
@@ -27,6 +25,7 @@ export class GetAccessOperation implements OperationPort<GetAccessInput> {
     private readonly policy: PolicyServicePort,
     private readonly toolsets: readonly Toolset[],
     private readonly isElicitationAvailable: () => boolean,
+    private readonly surface: SurfaceName = "tools",
   ) {}
 
   async execute(): Promise<OperationResult> {
@@ -40,7 +39,7 @@ export class GetAccessOperation implements OperationPort<GetAccessInput> {
         accessMode,
         enabledRiskTiers: this.policy.getEnabledTiers(),
         isCriticalUnlocked: this.policy.isCriticalUnlocked(),
-        surface: GetAccessOperation.SURFACE,
+        surface: this.surface,
         toolsets: [...this.toolsets],
         isElicitationAvailable: this.isElicitationAvailable(),
         caproverVersion: info.currentVersion,

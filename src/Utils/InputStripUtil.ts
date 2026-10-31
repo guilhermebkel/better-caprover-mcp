@@ -1,4 +1,7 @@
+import type { ControlKey } from "@/Protocols/ControlProtocol.ts";
 import { CONTROL_KEYS } from "@/Schemas/ControlSchema.ts";
+
+const CONFIRMATION_KEYS: readonly ControlKey[] = ["user_confirmed", "confirmation_token"];
 
 export class InputStripUtil {
   static stripControlFields(rawInput: unknown): unknown {
@@ -7,5 +10,9 @@ export class InputStripUtil {
     }
     const entries = Object.entries(rawInput).filter(([key]) => !CONTROL_KEYS.includes(key as never));
     return Object.fromEntries(entries);
+  }
+
+  static stripConfirmationFields(input: object): Record<string, unknown> {
+    return Object.fromEntries(Object.entries(input).filter(([key]) => !CONFIRMATION_KEYS.includes(key as never)));
   }
 }

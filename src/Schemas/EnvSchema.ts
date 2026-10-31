@@ -1,6 +1,6 @@
 import { z } from "zod";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
-import { AccessModeSchema, DEFAULT_TOOLSETS, TOOLSETS, ToolsetSchema } from "@/Schemas/AccessSchema.ts";
+import { AccessModeSchema, DEFAULT_SURFACE, DEFAULT_TOOLSETS, SURFACES, TOOLSETS, ToolsetSchema } from "@/Schemas/AccessSchema.ts";
 import type { Toolset } from "@/Protocols/AccessProtocol.ts";
 
 const OptionalTextSchema = z.string().optional().transform((text) => (text === undefined || text === "" ? undefined : text));
@@ -23,6 +23,10 @@ const LogLevelSchema = OptionalTextSchema.pipe(
 const TransportSchema = OptionalTextSchema.pipe(
   z.enum(["stdio", "http"], { error: "CAPROVER_MCP_TRANSPORT must be stdio or http." }).optional(),
 ).transform((transport) => transport ?? "stdio");
+
+const surfaceFromEnv = OptionalTextSchema.pipe(
+  z.enum(SURFACES, { error: "CAPROVER_MCP_SURFACE must be tools, code or both." }).optional(),
+).transform((surface) => surface ?? DEFAULT_SURFACE);
 
 const parsePositiveIntFromEnv = (name: string, defaultValue: number): z.ZodType<number> => (
   z.string().optional().transform((text, context) => {
@@ -77,6 +81,7 @@ export type RawEnvValues = {
   CAPROVER_MCP_MODE: Env["CAPROVER_MCP_MODE"];
   CAPROVER_MCP_ALLOW_CRITICAL: boolean;
   CAPROVER_MCP_TOOLSETS: Toolset[];
+  CAPROVER_MCP_SURFACE: Env["CAPROVER_MCP_SURFACE"];
   CAPROVER_MCP_TRANSPORT: Env["CAPROVER_MCP_TRANSPORT"];
   CAPROVER_MCP_LOG_LEVEL: Env["CAPROVER_MCP_LOG_LEVEL"];
   CAPROVER_URL?: string;
@@ -95,6 +100,7 @@ export const RawEnvSchema: z.ZodType<RawEnvValues> = z.object({
   CAPROVER_MCP_MODE: AccessModeSchema.default("readonly"),
   CAPROVER_MCP_ALLOW_CRITICAL: z.string().optional().transform((text) => text === "1"),
   CAPROVER_MCP_TOOLSETS: toolsetsFromEnv,
+  CAPROVER_MCP_SURFACE: surfaceFromEnv,
   CAPROVER_MCP_TRANSPORT: TransportSchema,
   CAPROVER_MCP_LOG_LEVEL: LogLevelSchema,
   CAPROVER_URL: OptionalTextSchema.pipe(

@@ -23,15 +23,19 @@ BAD: calling a write operation in \`readonly\` mode again and again, or looking 
 
 const CODE_MODE_TEXT = `# code-mode
 
-Purpose: explains the planned \`code\` surface, where the model writes a short script instead of calling one tool per step.
+Purpose: explains the \`code\` surface, where the model writes a short script instead of calling one tool per step.
 
-Status: not available yet. This server registers only the \`tools\` surface.
+Syntax: with \`CAPROVER_MCP_SURFACE=code\` (or \`both\`) the server registers two tools. \`search\` takes a \`query\` and returns the matching operations with their \`caprover.<object>.<verb>\` signature, tier and description. \`execute\` takes a \`script\`: the body of an async function that calls \`await caprover.apps.list()\` and returns the value it needs.
 
-Restrictions: when it arrives, a script goes through the same mode, tier and confirmation rules as a named operation.
+Restrictions:
+- A script goes through the same mode, tier, \`dry_run\` and redaction rules as a named operation; a call the mode forbids throws the same message.
+- A destructive or critical call from a script is refused unless the client can ask the person directly (elicitation). \`dry_run: true\` previews it. A script cannot pass \`user_confirmed\` or a \`confirmation_token\`.
+- The sandbox has no network, files, modules or timers, and a new one starts for every \`execute\`. It limits computing time, memory, stack, the number of \`caprover.*\` calls and the size of the output; the reply names the limit that was hit.
+- \`CAPROVER_MCP_TOOLSETS\` shapes only the \`tools\` surface; \`search\` and \`execute\` cover every toolset the mode allows.
 
-Example: none yet.
+Example: \`search\` with \`query\` "env vars", then \`execute\` with \`return await caprover.envVars.set({ app_name: "web", env_vars: "A=1", dry_run: true });\`.
 
-BAD: asking for a \`search\` or \`execute\` operation; they do not exist on this surface.`;
+BAD: returning a whole list when the script needs one field, or retrying a call a limit stopped.`;
 
 const APP_DEFINITION_TEXT = `# app-definition
 

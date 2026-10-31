@@ -1,4 +1,5 @@
 import type { CaproverClientFactory, SharedRuntimeParts } from "@/Protocols/SharedMcpRuntimeProtocol.ts";
+import type { SurfaceName, SurfaceParts } from "@/Protocols/AccessProtocol.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
 import type { AskPerson, PersonAnswer } from "@/Protocols/OperationRunnerProtocol.ts";
 import { GuideSurface } from "@/Surfaces/GuideSurface.ts";
@@ -10,8 +11,16 @@ import { ConfirmationService } from "@/Services/ConfirmationService.ts";
 import { OperationRunnerService } from "@/Services/OperationRunnerService.ts";
 import { PolicyService } from "@/Services/PolicyService.ts";
 import { OperationManifestSurface } from "@/Surfaces/OperationManifestSurface.ts";
+import { CodeSurface } from "@/Surfaces/CodeSurface.ts";
+import { QuickJsSandboxAdapter } from "@/Adapters/Sandbox/QuickJsSandboxAdapter.ts";
 import { ToolsSurface } from "@/Surfaces/ToolsSurface.ts";
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
+
+const surfaceNameToParts: Record<SurfaceName, SurfaceParts> = {
+  tools: { hasTools: true, hasCode: false },
+  code: { hasTools: false, hasCode: true },
+  both: { hasTools: true, hasCode: true },
+};
 
 export class SharedMcpRuntimeSurface {
   private readonly parts: SharedRuntimeParts;
@@ -41,6 +50,7 @@ export class SharedMcpRuntimeSurface {
       secrets,
       confirmation: new ConfirmationService(getNowMs),
       toolsets: env.CAPROVER_MCP_TOOLSETS,
+      surface: env.CAPROVER_MCP_SURFACE,
     };
     return new SharedMcpRuntimeSurface(parts);
   }
@@ -95,12 +105,26 @@ export class SharedMcpRuntimeSurface {
     const isElicitationAvailable = (): boolean => server.server.getClientCapabilities()?.elicitation !== undefined;
     const runner = this.buildRunner((message) => SharedMcpRuntimeSurface.askPerson(server, message));
     const { toolsets } = this.parts;
+    const { surface } = this.parts;
     const manifest = OperationManifestSurface.build(this.parts.client, this.parts.policy, runner, {
       toolsets,
       isElicitationAvailable,
+      surface,
     });
-    const tools = manifest.filter((tool) => toolsets.includes(tool.toolset) && this.parts.policy.canRun(tool.risk));
-    ToolsSurface.register(server, tools);
+    const { hasTools, hasCode } = surfaceNameToParts[surface];
+    if (hasTools) {
+      const tools = manifest.filter((tool) => toolsets.includes(tool.toolset) && this.parts.policy.canRun(tool.risk));
+      ToolsSurface.register(server, tools);
+    }
+    if (hasCode) {
+      CodeSurface.register(server, {
+        tools: manifest,
+        policy: this.parts.policy,
+        sandbox: new QuickJsSandboxAdapter(),
+        secrets: this.parts.secrets,
+        isElicitationAvailable,
+      });
+    }
     GuideSurface.register(server);
     return server;
   }

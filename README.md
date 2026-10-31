@@ -223,6 +223,7 @@ Four SDK methods are kept for later, each with its reason in `scripts/sdk-covera
 | `CAPROVER_PASSWORD` | none | The CapRover password |
 | `CAPROVER_MCP_MODE` | `readonly` | `readonly`, `operate` or `admin` |
 | `CAPROVER_MCP_ALLOW_CRITICAL` | off | Set to `1` to unlock the critical operations in `admin` mode (change the password, update CapRover, the root domain, nginx, add a node, the self-hosted registry, delete images) |
+| `CAPROVER_MCP_SURFACE` | `tools` | How the operations are exposed: `tools` (one named tool per operation, shaped by `CAPROVER_MCP_TOOLSETS`), `code` (two tools, `search` and `execute`: the model writes a short script that runs in a sandbox and covers every operation the mode allows) or `both`. Anything else stops the server |
 | `CAPROVER_MCP_TOOLSETS` | `core,apps,domains,oneclick` | Comma-separated toolsets to register: `core`, `apps`, `domains`, `projects`, `oneclick`, `registries`, `cluster`, `maintenance`, `monitoring`, `account`. An unknown name stops the server and lists the valid ones |
 | `CAPROVER_MCP_LOG_LEVEL` | `info` | `error`, `info` or `debug`. `info` logs the start (transport, mode, what is set); `debug` also logs the configuration (CapRover address, HTTP host and port, whether a token is set). Never the password or the token. Audit lines are always written |
 | `CAPROVER_MCP_TRANSPORT` | `stdio` | `stdio` or `http`. `http` makes a plain start (no arguments) serve Streamable HTTP, same as `serve --http` |
@@ -300,7 +301,7 @@ The endpoint it uses is missing in older CapRover versions (1.15.5 has none). Th
 - [x] **Core:** the first 14 operations on the `tools` surface, access modes, `dry_run`, confirmation token, redaction, tested against a real CapRover.
 - [x] **The rest of the CapRover API:** [#3](https://github.com/guilhermebkel/better-caprover-mcp/issues/3) — 67 operations in ten toolsets; four SDK methods stay planned, with reasons.
 - [ ] **Diagnostics** (`diagnose_app`, `find_issues`): [#4](https://github.com/guilhermebkel/better-caprover-mcp/issues/4)
-- [ ] **Code Mode** (`search` and `execute` in a sandbox) and a benchmark: [#5](https://github.com/guilhermebkel/better-caprover-mcp/issues/5)
+- [ ] **Code Mode** (`search` and `execute` in a sandbox) and a benchmark: [#5](https://github.com/guilhermebkel/better-caprover-mcp/issues/5) — the `code` surface and the sandbox are built (`CAPROVER_MCP_SURFACE`); the benchmark that picks the default is still to run
 - [x] **Remote HTTP (one CapRover server per MCP instance):** [#6](https://github.com/guilhermebkel/better-caprover-mcp/issues/6) — multi-server in one process is out of scope; run one instance per Captain.
 
 ## Contributing

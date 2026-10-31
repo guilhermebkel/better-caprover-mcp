@@ -11,4 +11,4 @@ The same operations are exposed in two ways, chosen with `CAPROVER_MCP_SURFACE` 
 
 - A benchmark on three real tasks compares tokens, rounds and success for `tools` (core), `tools` (all toolsets) and `code`, and decides which one is the default.
 - A call from a script passes through the same policy as a named tool, and a parity test runs the same cases through both.
-- Planned: both surfaces arrive after the first operations.
+- Both surfaces exist. The default of `CAPROVER_MCP_SURFACE` stays `tools` until the benchmark decides it; that decision gets its own ADR.

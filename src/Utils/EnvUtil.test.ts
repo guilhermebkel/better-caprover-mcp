@@ -19,6 +19,33 @@ describe("EnvUtil.read()", () => {
     });
   });
 
+  describe("when the surface is set", () => {
+    it("defaults to tools", () => {
+      vi.stubEnv("CAPROVER_MCP_SURFACE", undefined);
+
+      expect(EnvUtil.read().CAPROVER_MCP_SURFACE).toBe("tools");
+    });
+
+    it.each(["tools", "code", "both"])("accepts %s", (surface) => {
+      vi.stubEnv("CAPROVER_MCP_SURFACE", surface);
+
+      expect(EnvUtil.read().CAPROVER_MCP_SURFACE).toBe(surface);
+    });
+
+    it("treats an empty value as tools", () => {
+      vi.stubEnv("CAPROVER_MCP_SURFACE", "");
+
+      expect(EnvUtil.read().CAPROVER_MCP_SURFACE).toBe("tools");
+    });
+
+    it("refuses a surface that does not exist and names the variable and the valid values", () => {
+      vi.stubEnv("CAPROVER_MCP_SURFACE", "script");
+
+      expect(() => EnvUtil.read()).toThrow(InvalidEnvError);
+      expect(() => EnvUtil.read()).toThrow(/CAPROVER_MCP_SURFACE must be tools, code or both\./);
+    });
+  });
+
   describe("when the transport is set", () => {
     it("defaults to stdio", () => {
       vi.stubEnv("CAPROVER_MCP_TRANSPORT", undefined);

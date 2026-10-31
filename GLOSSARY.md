@@ -19,7 +19,7 @@ The single list of operations, `src/Surfaces/OperationManifestSurface.ts`. The s
 _Avoid_: catalog, registry
 
 **Surface**:
-A way of exposing the operations over MCP. The `tools` surface exposes named tools; the `code` surface exposes two tools, `search` and `execute`. Only `tools` exists today; `code` is *planned*.
+A way of exposing the operations over MCP. The `tools` surface exposes named tools; the `code` surface exposes two tools, `search` and `execute`. `CAPROVER_MCP_SURFACE` picks `tools` (the default), `code` or `both`.
 _Avoid_: mode (that means the access mode), interface
 
 **Remote HTTP**:
@@ -63,11 +63,11 @@ The code that a destructive or critical operation returns with its preview. It i
 _Avoid_: nonce, approval code
 
 **Code Mode**:
-The pattern where the model writes a short script against a typed API and the server runs it, instead of calling one tool per step. This project offers it as the `code` surface. *Planned.*
+The pattern where the model writes a short script against a typed API and the server runs it, instead of calling one tool per step. This project offers it as the `code` surface.
 _Avoid_: scripting, eval
 
 **Sandbox**:
-The QuickJS runtime in which the `code` surface runs the model's script: no network, no files, no modules, and only `caprover.*` to call. *Planned.*
+The QuickJS runtime in which the `code` surface runs the model's script: no network, no files, no modules, and only `caprover.*` to call. A new one starts for every `execute`, with limits on computing time, memory, stack, calls and output.
 _Avoid_: VM, container
 
 **Dry run**:
