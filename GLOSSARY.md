@@ -26,6 +26,10 @@ _Avoid_: mode (that means the access mode), interface
 A group of operations the `tools` surface turns on together, such as `apps` or `domains`. *Planned.*
 _Avoid_: category, bundle
 
+**Password**:
+The one credential of a CapRover server, with at most 29 characters. There is no user name and no two-factor code (`docs/adr/0010-the-server-logs-in-with-the-password-only.md`).
+_Avoid_: login, account, user
+
 **Access mode**:
 How much the server may do: `readonly` (the default), `operate` or `admin`. The mode decides which risk tiers are registered at all.
 _Avoid_: permission level, role

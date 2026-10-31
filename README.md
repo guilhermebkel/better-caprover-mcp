@@ -44,7 +44,7 @@ The package and the image are not published yet; until then, build them from thi
 | --- | --- | --- |
 | `CAPROVER_MCP_MODE` | `readonly` | `readonly`, `operate` or `admin`: how much the server may do |
 
-The variables that connect to your CapRover (`CAPROVER_URL`, `CAPROVER_PASSWORD`) arrive with the first operation. The CapRover password gives full access, so the modes are enforced by this server, not by CapRover.
+The variables that connect to your CapRover (`CAPROVER_URL`, `CAPROVER_PASSWORD`) arrive with the first operation. The CapRover password gives full access, so the modes are enforced by this server, not by CapRover. CapRover has no user name, only this password. Servers with CapRover's two-factor login turned on are not supported (`docs/adr/0010-the-server-logs-in-with-the-password-only.md`).
 
 ## Development
 
