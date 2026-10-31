@@ -135,7 +135,7 @@
      "name": "What's coming next?",
      "acceptedAnswer": {
       "@type": "Answer",
-      "text": "The roadmap has four open issues: #3 the remaining SDK methods, #4 diagnose_app and find_issues, #5 a Code Mode with search and execute, and #6 remote HTTP (one CapRover server per MCP instance)."
+      "text": "The whole roadmap is done: #3 the rest of the CapRover API, #4 diagnose_app and find_issues, #5 a Code Mode with search and execute, and #6 remote HTTP (one CapRover server per MCP instance)."
      }
     }
    ]
@@ -571,11 +571,11 @@ details .ans a { color: var(--text); }
     </div>
 
     <div class="gate" id="gate" data-mode="readonly" style="--idx:0">
-      <div class="gate__bar"><span>CAPROVER_MCP_MODE</span><span><b class="num" id="gate-count">7</b> of 14 tools registered</span></div>
+      <div class="gate__bar"><span>CAPROVER_MCP_MODE</span><span><b class="num" id="gate-count">7</b> tools registered</span></div>
       <div class="gate__switch" role="radiogroup" aria-label="Server mode">
         <span class="gate__thumb" aria-hidden="true"></span>
         <button class="gate__opt" role="radio" aria-checked="true" data-mode="readonly" type="button"><b>readonly</b><small>default</small></button>
-        <button class="gate__opt" role="radio" aria-checked="false" tabindex="-1" data-mode="operate" type="button"><b>operate</b><small>+ 6 write</small></button>
+        <button class="gate__opt" role="radio" aria-checked="false" tabindex="-1" data-mode="operate" type="button"><b>operate</b><small>+ write</small></button>
         <button class="gate__opt" role="radio" aria-checked="false" tabindex="-1" data-mode="admin" type="button"><b>admin</b><small>+ delete_app</small></button>
       </div>
       <div class="gate__groups">
@@ -744,53 +744,38 @@ details .ans a { color: var(--text); }
 
     <div class="install">
       <div>
-        <div class="tabs" role="tablist" aria-label="Client">
-          <button class="tab" role="tab" id="i-claude" aria-selected="true" aria-controls="p-claude-wrap" type="button">Claude Code</button>
-          <button class="tab" role="tab" id="i-json" aria-selected="false" aria-controls="p-json-wrap" tabindex="-1" type="button">Desktop, Cursor</button>
-          <button class="tab" role="tab" id="i-docker" aria-selected="false" aria-controls="p-docker-wrap" tabindex="-1" type="button">Docker</button>
+        <div class="tabs" role="tablist" aria-label="Mode">
+          <button class="tab" role="tab" id="i-claude" aria-selected="true" aria-controls="p-claude-wrap" type="button">Coding Agent</button>
+          <button class="tab" role="tab" id="i-docker" aria-selected="false" aria-controls="p-docker-wrap" tabindex="-1" type="button">Your own server</button>
         </div>
         <div class="panel codebox" id="p-claude-wrap" role="tabpanel" aria-labelledby="i-claude">
-          <pre class="code" id="p-claude">claude mcp add caprover \
-  -e CAPROVER_URL=https://captain.your-domain.com \
-  -e CAPROVER_PASSWORD=your-password \
-  -- npx -y better-caprover-mcp</pre>
-          <button class="iconbtn" data-copy-from="#p-claude" type="button" aria-label="Copy command"><svg class="ico"><use href="#i-copy"/></svg></button>
-        </div>
-        <div class="panel codebox" id="p-json-wrap" role="tabpanel" aria-labelledby="i-json" hidden>
-          <pre class="code" id="p-json">{
+          <pre class="code" id="p-claude">{
   "mcpServers": {
     "caprover": {
       "command": "npx",
       "args": ["-y", "better-caprover-mcp"],
       "env": {
         "CAPROVER_URL": "https://captain.your-domain.com",
-        "CAPROVER_PASSWORD": "your-password",
+        "CAPROVER_PASSWORD": "your CapRover password",
         "CAPROVER_MCP_MODE": "readonly"
       }
     }
   }
 }</pre>
-          <button class="iconbtn" data-copy-from="#p-json" type="button" aria-label="Copy config"><svg class="ico"><use href="#i-copy"/></svg></button>
+          <button class="iconbtn" data-copy-from="#p-claude" type="button" aria-label="Copy config"><svg class="ico"><use href="#i-copy"/></svg></button>
         </div>
         <div class="panel codebox" id="p-docker-wrap" role="tabpanel" aria-labelledby="i-docker" hidden>
-          <pre class="code" id="p-docker">{
-  "mcpServers": {
-    "caprover": {
-      "command": "docker",
-      "args": ["run", "-i", "--rm",
-        "-e", "CAPROVER_URL",
-        "-e", "CAPROVER_PASSWORD",
-        "-e", "CAPROVER_MCP_MODE",
-        "ghcr.io/guilhermebkel/better-caprover-mcp:latest"],
-      "env": {
-        "CAPROVER_URL": "https://captain.your-domain.com",
-        "CAPROVER_PASSWORD": "your-password",
-        "CAPROVER_MCP_MODE": "readonly"
-      }
-    }
-  }
-}</pre>
-          <button class="iconbtn" data-copy-from="#p-docker" type="button" aria-label="Copy config"><svg class="ico"><use href="#i-copy"/></svg></button>
+          <pre class="code" id="p-docker">docker run -d --name caprover-mcp -p 127.0.0.1:3100:3100 \
+  -e CAPROVER_URL=https://captain.your-domain.com \
+  -e CAPROVER_PASSWORD='your CapRover password' \
+  -e CAPROVER_MCP_MODE=readonly \
+  -e CAPROVER_MCP_TRANSPORT=http \
+  -e CAPROVER_MCP_HTTP_HOST=0.0.0.0 \
+  -e CAPROVER_MCP_HTTP_TOKEN='your-long-random-secret' \
+  -e CAPROVER_MCP_LOG_LEVEL=info \
+  -e CAPROVER_MCP_SURFACE=tools \
+  ghcr.io/guilhermebkel/better-caprover-mcp:latest</pre>
+          <button class="iconbtn" data-copy-from="#p-docker" type="button" aria-label="Copy command"><svg class="ico"><use href="#i-copy"/></svg></button>
         </div>
       </div>
 
@@ -801,7 +786,7 @@ details .ans a { color: var(--text); }
             <li><svg class="ico"><use href="#i-dot"/></svg><span><b>Your CapRover address</b>, like captain.your-domain.com.</span></li>
             <li><svg class="ico"><use href="#i-dot"/></svg><span><b>Its password.</b> There is no username.</span></li>
             <li><svg class="ico"><use href="#i-dot"/></svg><span><b>No two-factor auth</b> on that server. It isn't supported yet.</span></li>
-            <li><svg class="ico"><use href="#i-dot"/></svg><span><b>Docker needs -i.</b> The server talks over stdin and stdout.</span></li>
+            <li><svg class="ico"><use href="#i-dot"/></svg><span><b>Your own server:</b> bind to localhost and put TLS in front for anything else.</span></li>
           </ul>
         </div>
         <div class="side">
@@ -825,6 +810,11 @@ npx -y better-caprover-mcp init</pre>
         <tr><td>CAPROVER_PASSWORD</td><td>none</td><td>The CapRover password.</td></tr>
         <tr><td>CAPROVER_MCP_MODE</td><td>readonly</td><td>readonly, operate or admin. Changes only when the server restarts.</td></tr>
         <tr><td>CAPROVER_MCP_ALLOW_CRITICAL</td><td>off</td><td>Set to 1 to unlock critical operations in admin mode.</td></tr>
+        <tr><td>CAPROVER_MCP_TRANSPORT</td><td>stdio</td><td>stdio or http. http serves Streamable HTTP, for a client that reaches the server over the network.</td></tr>
+        <tr><td>CAPROVER_MCP_HTTP_HOST</td><td>127.0.0.1</td><td>Address the HTTP server binds to. Use 0.0.0.0 inside Docker.</td></tr>
+        <tr><td>CAPROVER_MCP_HTTP_TOKEN</td><td>none</td><td>Bearer secret for HTTP, at least 8 characters. Required for a non-local bind.</td></tr>
+        <tr><td>CAPROVER_MCP_LOG_LEVEL</td><td>info</td><td>error, info or debug. Logs go to stderr.</td></tr>
+        <tr><td>CAPROVER_MCP_SURFACE</td><td>tools</td><td>tools (one tool per operation) or code (search and execute).</td></tr>
       </tbody>
     </table>
   </div>
@@ -887,7 +877,7 @@ npx -y better-caprover-mcp init</pre>
       </details>
       <details name="faq">
         <summary>What's coming next?<svg class="ico"><use href="#i-plus"/></svg></summary>
-        <p class="ans">The roadmap has four open issues: <a href="https://github.com/guilhermebkel/better-caprover-mcp/issues/3" target="_blank" rel="noopener">#3</a> the remaining SDK methods, <a href="https://github.com/guilhermebkel/better-caprover-mcp/issues/4" target="_blank" rel="noopener">#4</a> diagnose_app and find_issues, <a href="https://github.com/guilhermebkel/better-caprover-mcp/issues/5" target="_blank" rel="noopener">#5</a> a Code Mode with search and execute, and <a href="https://github.com/guilhermebkel/better-caprover-mcp/issues/6" target="_blank" rel="noopener">#6</a> remote HTTP (one CapRover server per MCP instance).</p>
+        <p class="ans">The whole roadmap is done: <a href="https://github.com/guilhermebkel/better-caprover-mcp/issues/3" target="_blank" rel="noopener">#3</a> the rest of the CapRover API, <a href="https://github.com/guilhermebkel/better-caprover-mcp/issues/4" target="_blank" rel="noopener">#4</a> diagnose_app and find_issues, <a href="https://github.com/guilhermebkel/better-caprover-mcp/issues/5" target="_blank" rel="noopener">#5</a> a Code Mode with search and execute, and <a href="https://github.com/guilhermebkel/better-caprover-mcp/issues/6" target="_blank" rel="noopener">#6</a> remote HTTP (one CapRover server per MCP instance).</p>
       </details>
     </div>
   </div>

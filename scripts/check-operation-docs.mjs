@@ -13,7 +13,7 @@ const README_ITEM = /^\s*(?:critical:\s*)?`(\w+)`/;
 
 // Why: each text is read only in the places named here (the markers, the number before "operations", the operations table, the tools section), so a name in code format elsewhere never fails the check.
 export const SPECS = [
-  { path: "README.md", markers: ["count", ...TIERS], names: { reader: "readme-table", complete: true } },
+  { path: "README.md", markers: ["count"], names: { reader: "readme-table", complete: true } },
   { path: "AGENTS.md", total: true },
   { path: "site/llms.txt", total: true },
   // Why: the landing page shows the main operations only; the README table is the complete list, so the page may omit an operation but never name one that does not exist.
