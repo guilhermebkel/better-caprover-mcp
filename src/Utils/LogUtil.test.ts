@@ -46,3 +46,40 @@ describe("LogUtil.logAudit()", () => {
     );
   });
 });
+
+describe("LogUtil.setLevel()", () => {
+  afterEach(() => {
+    LogUtil.setLevel("info");
+    vi.restoreAllMocks();
+  });
+
+  it("writes debug lines with their fields only when the level is debug", () => {
+    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+
+    LogUtil.setLevel("debug");
+    LogUtil.logDebug("config_loaded", { transport: "http", httpPort: 3100 });
+
+    expect(stderr).toHaveBeenCalledExactlyOnceWith("{\"level\":\"debug\",\"event\":\"config_loaded\",\"transport\":\"http\",\"httpPort\":3100}\n");
+  });
+
+  it("drops debug lines at the default info level", () => {
+    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+
+    LogUtil.logDebug("config_loaded", { transport: "http" });
+
+    expect(stderr).not.toHaveBeenCalled();
+  });
+
+  it("keeps errors and audit lines at the error level", () => {
+    const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+
+    LogUtil.setLevel("error");
+    LogUtil.logInfo("server_started");
+    LogUtil.logError("startup_failed", "bad mode");
+    LogUtil.logAudit({ tool: "list_apps", risk: "read", result: "ok", atMs: 0 });
+
+    expect(stderr).toHaveBeenCalledTimes(2);
+    expect(stderr.mock.calls[0]?.[0]).toBe("{\"level\":\"error\",\"event\":\"startup_failed\",\"detail\":\"bad mode\"}\n");
+    expect(stderr.mock.calls[1]?.[0]).toContain("\"level\":\"audit\"");
+  });
+});
