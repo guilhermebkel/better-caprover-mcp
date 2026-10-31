@@ -1,5 +1,7 @@
 import type { CaproverClientFactory, SharedRuntimeParts } from "@/Protocols/SharedMcpRuntimeProtocol.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
+import type { AskPerson, PersonAnswer } from "@/Protocols/OperationRunnerProtocol.ts";
+import { GuideSurface } from "@/Surfaces/GuideSurface.ts";
 import { CaproverClientAdapter } from "@/Adapters/CapRover/CaproverClientAdapter.ts";
 import { McpInstructionsSurface } from "@/Surfaces/McpInstructionsSurface.ts";
 import { McpServerMetadataUtil } from "@/Utils/McpServerMetadataUtil.ts";
@@ -32,14 +34,35 @@ export class SharedMcpRuntimeSurface {
       concurrencyQueueWaitMs,
     );
     const parts: SharedRuntimeParts = {
-      confirmation: new ConfirmationService(getNowMs),
+      client,
+      getNowMs,
       limiter,
       policy,
       secrets,
-      client,
-      getNowMs,
+      confirmation: new ConfirmationService(getNowMs),
+      toolsets: env.CAPROVER_MCP_TOOLSETS,
     };
     return new SharedMcpRuntimeSurface(parts);
+  }
+
+  private static async askPerson(server: McpServer, message: string): Promise<PersonAnswer> {
+    if (server.server.getClientCapabilities()?.elicitation === undefined) {
+      return "unavailable";
+    }
+    try {
+      const result = await server.server.elicitInput({
+        message: `${message} Allow it?`,
+        requestedSchema: {
+          type: "object",
+          properties: { confirm: { type: "boolean", title: "Allow this change" } },
+          required: ["confirm"],
+        },
+      });
+      const isAccepted = result.action === "accept" && result.content?.confirm === true;
+      return isAccepted ? "accepted" : "declined";
+    } catch {
+      return "declined";
+    }
   }
 
   private static collectSecrets(env: Env): string[] {
@@ -53,8 +76,9 @@ export class SharedMcpRuntimeSurface {
     return secrets;
   }
 
-  buildRunner(): OperationRunnerService {
+  buildRunner(askPerson?: AskPerson): OperationRunnerService {
     return new OperationRunnerService({
+      askPerson,
       confirmation: this.parts.confirmation,
       getNowMs: this.parts.getNowMs,
       limiter: this.parts.limiter,
@@ -64,14 +88,20 @@ export class SharedMcpRuntimeSurface {
   }
 
   buildMcpServer(): McpServer {
-    const runner = this.buildRunner();
-    const tools = OperationManifestSurface.build(this.parts.client, this.parts.policy, runner)
-      .filter((tool) => this.parts.policy.canRun(tool.risk));
     const server = new McpServer(
       { name: McpServerMetadataUtil.SERVER_NAME, version: __PACKAGE_VERSION__ },
-      { instructions: McpInstructionsSurface.build(this.parts.policy) },
+      { instructions: McpInstructionsSurface.build(this.parts.policy, this.parts.toolsets) },
     );
+    const isElicitationAvailable = (): boolean => server.server.getClientCapabilities()?.elicitation !== undefined;
+    const runner = this.buildRunner((message) => SharedMcpRuntimeSurface.askPerson(server, message));
+    const { toolsets } = this.parts;
+    const manifest = OperationManifestSurface.build(this.parts.client, this.parts.policy, runner, {
+      toolsets,
+      isElicitationAvailable,
+    });
+    const tools = manifest.filter((tool) => toolsets.includes(tool.toolset) && this.parts.policy.canRun(tool.risk));
     ToolsSurface.register(server, tools);
+    GuideSurface.register(server);
     return server;
   }
 }

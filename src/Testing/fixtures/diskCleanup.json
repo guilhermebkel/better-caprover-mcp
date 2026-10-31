@@ -1,0 +1,9 @@
+{
+  "status": 100,
+  "description": "Done",
+  "data": {
+    "mostRecentLimit": 3,
+    "cronSchedule": "0 0 * * *",
+    "timezone": "UTC"
+  }
+}

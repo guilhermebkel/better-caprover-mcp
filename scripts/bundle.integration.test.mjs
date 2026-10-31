@@ -6,6 +6,26 @@ const URL_ENV = process.env.CAPROVER_TEST_URL ?? "http://127.0.0.1:3000";
 const PASSWORD_ENV = process.env.CAPROVER_TEST_PASSWORD ?? "captain42";
 const APP_NAME = `mcp-bundle-${Date.now().toString(36)}`;
 const FAKE_ENV_VALUE = "fake-env-value-123456";
+const ALL_TOOLSETS = ["core", "apps", "domains", "projects", "oneclick", "registries", "cluster", "maintenance", "monitoring", "account"];
+const UNEXPECTED_FAILURE = "failed with an unexpected error";
+
+// Why: these endpoints exist in every CapRover that CI starts and need no domain or DNS.
+const STRICT_TOOLSET_CALLS = [
+  ["core", "get_access", {}],
+  ["apps", "list_apps", {}],
+  ["domains", "enable_root_ssl", { email_address: "ops@example.com", dry_run: true }],
+  ["oneclick", "list_one_click_repos", {}],
+  ["registries", "list_registries", {}],
+  ["cluster", "list_nodes", {}],
+  ["maintenance", "get_disk_cleanup", {}],
+];
+
+// Why: the endpoints of these toolsets arrived in later CapRover versions, so a clear error from an older one is accepted too.
+const LENIENT_TOOLSET_CALLS = [
+  ["projects", "list_projects", {}],
+  ["monitoring", "get_go_access", {}],
+  ["account", "get_two_factor_status", {}],
+];
 
 const readText = (result) => result.content[0].text;
 
@@ -21,6 +41,7 @@ describe("The built server, started the way a client starts it, against a real C
         CAPROVER_URL: URL_ENV,
         CAPROVER_PASSWORD: PASSWORD_ENV,
         CAPROVER_MCP_MODE: "admin",
+        CAPROVER_MCP_TOOLSETS: ALL_TOOLSETS.join(","),
       },
     });
     client = new Client({ name: "bundle-test", version: "0.0.0" });
@@ -68,5 +89,25 @@ describe("The built server, started the way a client starts it, against a real C
     const listed = await client.callTool({ name: "list_apps", arguments: { name_contains: APP_NAME } });
 
     expect(listed.structuredContent.total).toBe(0);
+  });
+
+  it.each(STRICT_TOOLSET_CALLS)("answers a call of the %s toolset (%s)", async (_toolset, name, args) => {
+    const result = await client.callTool({ name, arguments: args });
+
+    expect(result.isError).toBe(false);
+    expect(readText(result)).not.toContain(UNEXPECTED_FAILURE);
+  });
+
+  it.each(LENIENT_TOOLSET_CALLS)("answers a call of the %s toolset (%s) without an unexpected failure", async (_toolset, name, args) => {
+    const result = await client.callTool({ name, arguments: args });
+
+    expect(readText(result).length).toBeGreaterThan(0);
+    expect(readText(result)).not.toContain(UNEXPECTED_FAILURE);
+  });
+
+  it("registers the operations of every toolset", async () => {
+    const { tools } = await client.listTools();
+
+    expect(tools.length).toBeGreaterThan(60);
   });
 });

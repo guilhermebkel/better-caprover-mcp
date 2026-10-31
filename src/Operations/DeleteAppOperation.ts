@@ -4,6 +4,7 @@ import type { CaproverApp, CaproverClientPort } from "@/Protocols/CaproverClient
 import type { OperationPort, OperationResult } from "@/Protocols/OperationProtocol.ts";
 import { DeleteAppInputSchema } from "@/Schemas/AppInputSchema.ts";
 import type { AppResolverService } from "@/Services/AppResolverService.ts";
+import { DeleteAppOutputSchema } from "@/Schemas/AppOutputSchema.ts";
 
 export class DeleteAppOperation implements OperationPort<DeleteAppInput> {
   static readonly NAME = "deleteApp";
@@ -14,6 +15,8 @@ export class DeleteAppOperation implements OperationPort<DeleteAppInput> {
     + "To stop an app without losing it, use `scale_app` with 0.";
 
   readonly inputSchema = DeleteAppInputSchema;
+
+  readonly outputSchema = DeleteAppOutputSchema;
 
   readonly risk: RiskTier = "destructive";
 

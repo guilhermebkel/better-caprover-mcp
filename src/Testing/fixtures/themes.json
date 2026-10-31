@@ -1,0 +1,17 @@
+{
+  "status": 100,
+  "description": "Done",
+  "data": {
+    "themes": [
+      {
+        "name": "default",
+        "content": "/* big css */",
+        "builtIn": true
+      },
+      {
+        "name": "night",
+        "content": "/* css */"
+      }
+    ]
+  }
+}

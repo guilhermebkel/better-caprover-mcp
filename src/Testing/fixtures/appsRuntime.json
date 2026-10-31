@@ -1,0 +1,26 @@
+{
+  "status": 100,
+  "description": "Done",
+  "data": {
+    "apps": [
+      {
+        "appName": "web",
+        "status": "running",
+        "desiredInstances": 1,
+        "runningInstances": 1,
+        "currentTasks": [],
+        "latestFailure": null,
+        "error": null
+      },
+      {
+        "appName": "api",
+        "status": "somethingnew",
+        "desiredInstances": null,
+        "runningInstances": null,
+        "currentTasks": [],
+        "latestFailure": null,
+        "error": "collection failed"
+      }
+    ]
+  }
+}

@@ -1,0 +1,27 @@
+{
+  "status": 100,
+  "description": "Done",
+  "data": {
+    "coverage": "captain-node",
+    "nodes": [
+      {
+        "nodeId": "n-1",
+        "hostname": "captain-1",
+        "disks": [
+          {
+            "totalBytes": 100000,
+            "usedBytes": 40000,
+            "availableBytes": 60000,
+            "severity": "warning"
+          },
+          {
+            "totalBytes": 50000,
+            "usedBytes": 10000,
+            "availableBytes": 40000,
+            "severity": "brand-new"
+          }
+        ]
+      }
+    ]
+  }
+}

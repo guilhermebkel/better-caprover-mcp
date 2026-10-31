@@ -1,8 +1,9 @@
-import type { AccessMode } from "@/Protocols/AccessProtocol.ts";
+import type { AccessMode, Toolset } from "@/Protocols/AccessProtocol.ts";
 
 export type Env = {
   CAPROVER_MCP_MODE: AccessMode;
   CAPROVER_MCP_ALLOW_CRITICAL: boolean;
+  CAPROVER_MCP_TOOLSETS: Toolset[];
   CAPROVER_URL?: string;
   CAPROVER_PASSWORD?: string;
   CAPROVER_MCP_HTTP_HOST: string;

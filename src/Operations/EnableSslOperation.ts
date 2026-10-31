@@ -4,6 +4,7 @@ import type { CaproverClientPort } from "@/Protocols/CaproverClientProtocol.ts";
 import type { OperationPort, OperationResult } from "@/Protocols/OperationProtocol.ts";
 import { EnableSslInputSchema } from "@/Schemas/AppInputSchema.ts";
 import type { AppResolverService } from "@/Services/AppResolverService.ts";
+import { EnableSslOutputSchema } from "@/Schemas/AppOutputSchema.ts";
 
 export class EnableSslOperation implements OperationPort<EnableSslInput> {
   static readonly NAME = "enableSsl";
@@ -14,6 +15,8 @@ export class EnableSslOperation implements OperationPort<EnableSslInput> {
     + "It returns the domain. It writes to the server; with `dry_run` it changes nothing.";
 
   readonly inputSchema = EnableSslInputSchema;
+
+  readonly outputSchema = EnableSslOutputSchema;
 
   readonly risk: RiskTier = "write";
 

@@ -1,0 +1,12 @@
+{
+  "status": 100,
+  "description": "Done",
+  "data": {
+    "steps": [
+      "Creating app",
+      "Deploying"
+    ],
+    "currentStep": 1,
+    "error": "image not found"
+  }
+}

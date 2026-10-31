@@ -1,0 +1,14 @@
+{
+  "status": 100,
+  "description": "Done",
+  "data": {
+    "baseConfig": {
+      "byDefault": "base default text",
+      "customValue": ""
+    },
+    "captainConfig": {
+      "byDefault": "captain default text",
+      "customValue": "captain custom text"
+    }
+  }
+}

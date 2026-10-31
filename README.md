@@ -189,25 +189,31 @@ The mode decides which operations the client sees at all. Only the person can ch
 
 | Mode | Operations available |
 | --- | --- |
-| `readonly` (default) | The 7 read operations |
-| `operate` | Read, plus the 6 that change an app |
-| `admin` | Read, change, plus `delete_app` |
+| `readonly` (default) | The 29 read operations |
+| `operate` | Read, plus the 24 that change something and can be changed back |
+| `admin` | Read, change, plus the 6 that delete (`delete_app`, `remove_custom_domain`, `delete_projects`, `delete_one_click_repo`, `delete_registry`, `delete_theme`) |
+| `admin` with `CAPROVER_MCP_ALLOW_CRITICAL=1` | All of the above, plus the 8 critical ones |
+
+`CAPROVER_MCP_TOOLSETS` then picks which groups of operations are registered. The default is `core,apps,domains,oneclick`; the other toolsets are opt-in so the tool list stays short. Ask `get_access` what is on and why a call was denied.
 
 ## Operations
 
-| Operation | Tier | What it does |
-| --- | --- | --- |
-| `get_overview` | read | CapRover version, domain, app count, and what this server may do |
-| `list_apps`, `get_app` | read | Find apps; read one app (env var values are never returned, only `isSet`) |
-| `get_app_runtime` | read | Live state of an app. Needs a CapRover version that has the endpoint (1.15.5 has none) |
-| `get_app_logs`, `get_build_logs` | read | The last lines of the running app or of the latest build, with secrets replaced by `[REDACTED]` |
-| `list_one_click_apps` | read | The one-click templates CapRover offers |
-| `create_app` | write | Make an empty app |
-| `deploy_image` | write | Deploy a Docker image to an app; the deploy goes on in the background |
-| `set_env_vars` | write | Set and delete env vars from `KEY=value` lines; keeps the others |
-| `scale_app` | write | Set the number of instances (0 stops the app) |
-| `add_custom_domain`, `enable_ssl` | write | Attach a domain; turn on HTTPS |
-| `delete_app` | destructive | Delete an app, and its volumes only if asked |
+67 operations in ten toolsets. The tier and toolset of every one, and the SDK method behind it, are in [`docs/product/risk-tiers.md`](docs/product/risk-tiers.md). A changing call takes `dry_run`; a deleting or critical call returns a preview and a `confirmation_token` first, and asks the person through the client when the client supports it.
+
+| Toolset | Operations |
+| --- | --- |
+| `core` | `get_overview`, `get_access`, `get_guide`; `list_apps`, `get_app`, `get_app_runtime`, `get_app_logs`, `get_build_logs` (env var values are never returned, only `isSet`; logs are redacted) |
+| `apps` | `list_apps_runtime`; `create_app`, `deploy_image`, `deploy_archive`, `start_build`, `set_env_vars`, `scale_app`, `rename_app`; `delete_app` |
+| `domains` | `add_custom_domain`, `enable_ssl`, `enable_root_ssl`, `set_force_ssl`; `remove_custom_domain`; critical: `update_root_domain` |
+| `projects` | `list_projects`, `create_project`, `update_project`, `delete_projects` |
+| `oneclick` | `list_one_click_apps`, `get_one_click_app`, `list_one_click_repos`, `add_one_click_repo`, `delete_one_click_repo`, `deploy_one_click`, `get_one_click_deploy_progress` |
+| `registries` | `list_registries` (never a password), `add_registry`, `update_registry`, `delete_registry`, `set_default_push_registry`; critical: `enable_self_hosted_registry`, `disable_self_hosted_registry` |
+| `cluster` | `list_nodes`, `get_load_balancer`; critical: `add_node` |
+| `maintenance` | `get_disk_usage`, `list_unused_images`, `get_disk_cleanup`, `set_disk_cleanup`, `get_nginx_config`; critical: `delete_images`, `set_nginx_config`, `update_caprover` |
+| `monitoring` | `get_net_data` (never a token), `set_net_data`, `get_go_access`, `set_go_access`, `list_go_access_reports` |
+| `account` | `get_two_factor_status`, `get_pro_state`, `set_pro_api_key`, `list_pro_alerts`, `list_themes`, `get_current_theme`, `set_current_theme`, `save_theme`, `delete_theme`; critical: `set_password` |
+
+Four SDK methods are kept for later, each with its reason in `scripts/sdk-coverage.json`: `updateConfigAndSave` (the `code` surface), `setProConfigs`, `getGoAccessReport` and `createBackup`. `get_app_runtime` and `list_apps_runtime` need a CapRover version that has the runtime endpoint (1.15.5 has none).
 
 ## Configuration
 
@@ -216,7 +222,8 @@ The mode decides which operations the client sees at all. Only the person can ch
 | `CAPROVER_URL` | none | The address of your CapRover, with `http://` or `https://`. Only its origin is used |
 | `CAPROVER_PASSWORD` | none | The CapRover password |
 | `CAPROVER_MCP_MODE` | `readonly` | `readonly`, `operate` or `admin` |
-| `CAPROVER_MCP_ALLOW_CRITICAL` | off | Set to `1` to unlock critical operations in `admin` mode. No operation is critical yet |
+| `CAPROVER_MCP_ALLOW_CRITICAL` | off | Set to `1` to unlock the critical operations in `admin` mode (change the password, update CapRover, the root domain, nginx, add a node, the self-hosted registry, delete images) |
+| `CAPROVER_MCP_TOOLSETS` | `core,apps,domains,oneclick` | Comma-separated toolsets to register: `core`, `apps`, `domains`, `projects`, `oneclick`, `registries`, `cluster`, `maintenance`, `monitoring`, `account`. An unknown name stops the server and lists the valid ones |
 | `CAPROVER_MCP_HTTP_TOKEN` | none | Bearer secret for `serve --http` (minimum 8 characters); required for non-local HTTP bind |
 | `CAPROVER_MCP_HTTP_HOST` | `127.0.0.1` | Address for `serve --http` |
 | `CAPROVER_MCP_HTTP_PORT` | `3100` | Port for `serve --http` |
@@ -288,8 +295,8 @@ The endpoint it uses is missing in older CapRover versions (1.15.5 has none). Th
 
 ## Roadmap
 
-- [x] **Core:** 14 operations on the `tools` surface, access modes, `dry_run`, confirmation token, redaction, tested against a real CapRover.
-- [ ] **The rest of the CapRover API** (about 56 more SDK methods): [#3](https://github.com/guilhermebkel/better-caprover-mcp/issues/3)
+- [x] **Core:** the first 14 operations on the `tools` surface, access modes, `dry_run`, confirmation token, redaction, tested against a real CapRover.
+- [x] **The rest of the CapRover API:** [#3](https://github.com/guilhermebkel/better-caprover-mcp/issues/3) — 67 operations in ten toolsets; four SDK methods stay planned, with reasons.
 - [ ] **Diagnostics** (`diagnose_app`, `find_issues`): [#4](https://github.com/guilhermebkel/better-caprover-mcp/issues/4)
 - [ ] **Code Mode** (`search` and `execute` in a sandbox) and a benchmark: [#5](https://github.com/guilhermebkel/better-caprover-mcp/issues/5)
 - [x] **Remote HTTP (one CapRover server per MCP instance):** [#6](https://github.com/guilhermebkel/better-caprover-mcp/issues/6) — multi-server in one process is out of scope; run one instance per Captain.

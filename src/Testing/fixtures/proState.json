@@ -1,0 +1,10 @@
+{
+  "status": 100,
+  "description": "Done",
+  "data": {
+    "proFeaturesState": {
+      "isFeatureFlagEnabled": true,
+      "isSubscribed": false
+    }
+  }
+}

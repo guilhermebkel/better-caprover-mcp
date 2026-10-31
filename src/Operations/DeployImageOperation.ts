@@ -4,6 +4,7 @@ import type { CaproverClientPort } from "@/Protocols/CaproverClientProtocol.ts";
 import type { OperationPort, OperationResult } from "@/Protocols/OperationProtocol.ts";
 import { DeployImageInputSchema } from "@/Schemas/AppInputSchema.ts";
 import type { AppResolverService } from "@/Services/AppResolverService.ts";
+import { DeployImageOutputSchema } from "@/Schemas/AppOutputSchema.ts";
 
 export class DeployImageOperation implements OperationPort<DeployImageInput> {
   static readonly NAME = "deployImage";
@@ -14,6 +15,8 @@ export class DeployImageOperation implements OperationPort<DeployImageInput> {
     + "so read `get_app_runtime` and, if it fails, `get_build_logs`. It writes to the server; with `dry_run` it changes nothing.";
 
   readonly inputSchema = DeployImageInputSchema;
+
+  readonly outputSchema = DeployImageOutputSchema;
 
   readonly risk: RiskTier = "write";
 

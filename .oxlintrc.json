@@ -699,7 +699,10 @@
     "local/class-matches-file": "error",
     "local/file-suffix": "error",
     "local/operation-name": "error",
-    "local/operation-port": "error"
+    "local/operation-port": "error",
+    "local/strict-input-schema": "error",
+    "local/no-vague-field-name": "error",
+    "local/operation-metadata": "error"
   },
   "overrides": [
     {

@@ -3,7 +3,7 @@ import { ConcurrencyLimitError } from "@/Errors/ConcurrencyLimitError.ts";
 import { MissingPreviewError } from "@/Errors/MissingPreviewError.ts";
 import { OperationDeniedError } from "@/Errors/OperationDeniedError.ts";
 import { ToolFailureError } from "@/Errors/ToolFailureError.ts";
-import type { RiskTier } from "@/Protocols/AccessProtocol.ts";
+import type { RiskTier, Toolset } from "@/Protocols/AccessProtocol.ts";
 import type { AuditResult } from "@/Protocols/AuditProtocol.ts";
 import type { OperationRunnerDeps } from "@/Protocols/OperationRunnerProtocol.ts";
 import type { ControlFields } from "@/Protocols/ControlProtocol.ts";
@@ -20,11 +20,18 @@ const TIERS_NEEDING_CONFIRMATION: ReadonlySet<RiskTier> = new Set<RiskTier>(["de
 export class OperationRunnerService {
   constructor(private readonly deps: OperationRunnerDeps) {}
 
-  buildTool<Input>(operationName: string, operation: OperationPort<Input>): ToolDefinition {
+  buildTool<Input>(operationName: string, operation: OperationPort<Input>, toolset: Toolset): ToolDefinition {
     const toolName = OperationBuilderUtil.buildToolName(operationName);
     const call = (rawInput: unknown): Promise<ToolOutcome> => this.run(toolName, operation, rawInput);
-    const { description, risk } = operation;
-    return { name: toolName, inputSchema: operation.inputSchema, description, risk, call };
+    return {
+      call,
+      toolset,
+      name: toolName,
+      inputSchema: operation.inputSchema,
+      outputSchema: operation.outputSchema,
+      description: operation.description,
+      risk: operation.risk,
+    };
   }
 
   private async run<Input>(toolName: string, operation: OperationPort<Input>, rawInput: unknown): Promise<ToolOutcome> {
@@ -81,7 +88,8 @@ export class OperationRunnerService {
     const hasToken = control.user_confirmed === true && token !== undefined;
     const isConfirmed = hasToken && this.deps.confirmation.consumeToken(token, fingerprint);
     if (isConfirmed) {
-      return OperationRunnerService.buildDone(await operation.execute(input));
+      const refusal = await this.askPerson(toolName, operation, input);
+      return refusal ?? OperationRunnerService.buildDone(await operation.execute(input));
     }
     const preview = await OperationRunnerService.runPreview(toolName, operation, input);
     const newToken = this.deps.confirmation.createToken(fingerprint);
@@ -92,6 +100,27 @@ export class OperationRunnerService {
       summary: `${reason}Not run. ${preview.summary} Show this to the person. Only if they say yes, call ${toolName} again `
         + "with the same inputs, user_confirmed true and this confirmation_token.",
       data: { requires_confirmation: true, confirmation_token: newToken, ...preview.data },
+    };
+  }
+
+  private async askPerson<Input>(
+    toolName: string,
+    operation: OperationPort<Input>,
+    input: Input,
+  ): Promise<ToolOutcome | undefined> {
+    if (this.deps.askPerson === undefined) {
+      return undefined;
+    }
+    const preview = await OperationRunnerService.runPreview(toolName, operation, input);
+    const answer = await this.deps.askPerson(`${toolName}: ${preview.summary}`);
+    if (answer !== "declined") {
+      return undefined;
+    }
+    return {
+      isError: true,
+      summary: `The person declined ${toolName} when the client asked them directly. Nothing changed. `
+        + "Do not call it again unless the person asks for it.",
+      data: {},
     };
   }
 
@@ -107,12 +136,16 @@ export class OperationRunnerService {
   }
 
   private static buildDone(result: OperationResult): ToolOutcome {
-    return { isError: false, summary: result.summary, data: result.data };
+    return { isError: result.isError === true, summary: result.summary, data: result.data };
   }
 
   private static buildFailure(toolName: string, error: unknown): ToolOutcome {
     if (error instanceof z.ZodError) {
-      return { isError: true, summary: `Invalid input for ${toolName}:\n${z.prettifyError(error)}`, data: {} };
+      return {
+        isError: true,
+        summary: `Invalid input for ${toolName}:\n${z.prettifyError(error)}\nTopic: read \`errors\` with \`get_guide\`.`,
+        data: {},
+      };
     }
     const isToolFailure = error instanceof ToolFailureError
       || error instanceof OperationDeniedError

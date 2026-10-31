@@ -82,3 +82,10 @@ describe("PolicyService.assertCanRun()", () => {
     }).toThrow(/CAPROVER_MCP_MODE=admin and CAPROVER_MCP_ALLOW_CRITICAL=1/);
   });
 });
+
+describe("PolicyService.isCriticalUnlocked()", () => {
+  it("is true only when the switch is on", () => {
+    expect([new PolicyService("admin", true).isCriticalUnlocked(), new PolicyService("admin", false).isCriticalUnlocked()])
+      .toStrictEqual([true, false]);
+  });
+});

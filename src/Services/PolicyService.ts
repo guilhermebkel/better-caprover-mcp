@@ -26,6 +26,10 @@ export class PolicyService {
     return this.mode;
   }
 
+  isCriticalUnlocked(): boolean {
+    return this.isCriticalAllowed;
+  }
+
   getEnabledTiers(): RiskTier[] {
     return PolicyService.MODE_TO_TIERS[this.mode].filter((risk) => this.canRun(risk));
   }
@@ -45,7 +49,7 @@ export class PolicyService {
     throw new OperationDeniedError(
       `${toolName} is a ${risk} operation. This server runs in "${this.mode}" mode, which does not allow it. `
       + `Do not try another way. Tell the person that CAPROVER_MCP_MODE=${requiredMode}${extra} is needed, `
-      + "and that they must set it themselves and restart the server.",
+      + "and that they must set it themselves and restart the server. Topic: read `modes` with `get_guide`.",
     );
   }
 }

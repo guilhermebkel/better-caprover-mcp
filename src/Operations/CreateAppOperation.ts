@@ -3,6 +3,7 @@ import type { CreateAppInput } from "@/Protocols/AppInputProtocol.ts";
 import type { CaproverClientPort } from "@/Protocols/CaproverClientProtocol.ts";
 import type { OperationPort, OperationResult } from "@/Protocols/OperationProtocol.ts";
 import { CreateAppInputSchema } from "@/Schemas/AppInputSchema.ts";
+import { CreateAppOutputSchema } from "@/Schemas/AppOutputSchema.ts";
 
 export class CreateAppOperation implements OperationPort<CreateAppInput> {
   static readonly NAME = "createApp";
@@ -12,6 +13,8 @@ export class CreateAppOperation implements OperationPort<CreateAppInput> {
     + "It returns the app name; it fails if the name is taken. It writes to the server; with `dry_run` it only checks the name.";
 
   readonly inputSchema = CreateAppInputSchema;
+
+  readonly outputSchema = CreateAppOutputSchema;
 
   readonly risk: RiskTier = "write";
 

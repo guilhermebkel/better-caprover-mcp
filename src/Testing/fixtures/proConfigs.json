@@ -1,0 +1,19 @@
+{
+  "status": 100,
+  "description": "Done",
+  "data": {
+    "proConfigs": {
+      "alerts": [
+        {
+          "event": "AppBuildFailed",
+          "action": {
+            "actionType": "email",
+            "metadata": {
+              "to": "ops@example.com"
+            }
+          }
+        }
+      ]
+    }
+  }
+}

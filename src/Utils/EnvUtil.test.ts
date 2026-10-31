@@ -98,4 +98,34 @@ describe("EnvUtil.read()", () => {
       expect(() => EnvUtil.read()).toThrow(/CAPROVER_MCP_HTTP_TOKEN must be at least 8 characters\./);
     });
   });
+
+  describe("when toolsets are set", () => {
+    it("registers the core, apps, domains and one-click toolsets when the variable is not set", () => {
+      vi.stubEnv("CAPROVER_MCP_TOOLSETS", undefined);
+
+      expect(EnvUtil.read().CAPROVER_MCP_TOOLSETS).toStrictEqual(["core", "apps", "domains", "oneclick"]);
+    });
+
+    it("treats a blank value as not set", () => {
+      vi.stubEnv("CAPROVER_MCP_TOOLSETS", " ");
+
+      expect(EnvUtil.read().CAPROVER_MCP_TOOLSETS).toStrictEqual(["core", "apps", "domains", "oneclick"]);
+    });
+
+    it("reads a list, trims the names and drops repeats", () => {
+      vi.stubEnv("CAPROVER_MCP_TOOLSETS", "core, projects ,core,registries");
+
+      expect(EnvUtil.read().CAPROVER_MCP_TOOLSETS).toStrictEqual(["core", "projects", "registries"]);
+    });
+
+    it("refuses an unknown name and lists the valid ones", () => {
+      vi.stubEnv("CAPROVER_MCP_TOOLSETS", "core,pizza");
+
+      expect(() => EnvUtil.read()).toThrow(InvalidEnvError);
+      expect(() => EnvUtil.read()).toThrow(
+        "CAPROVER_MCP_TOOLSETS names unknown toolsets: pizza. Valid names: core, apps, domains, projects, oneclick, "
+        + "registries, cluster, maintenance, monitoring, account.",
+      );
+    });
+  });
 });
