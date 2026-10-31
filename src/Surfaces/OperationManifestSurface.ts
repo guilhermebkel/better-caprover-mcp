@@ -80,10 +80,10 @@ export class OperationManifestSurface {
     options: ManifestOptions = { toolsets: [], isElicitationAvailable: () => false },
   ): ToolDefinition[] {
     const resolver = new AppResolverService(client);
-    const { toolsets, isElicitationAvailable } = options;
+    const { toolsets, isElicitationAvailable, surface } = options;
     return [
       runner.buildTool(GetOverviewOperation.NAME, new GetOverviewOperation(client, policy), "core"),
-      runner.buildTool(GetAccessOperation.NAME, new GetAccessOperation(client, policy, toolsets, isElicitationAvailable), "core"),
+      runner.buildTool(GetAccessOperation.NAME, new GetAccessOperation(client, policy, toolsets, isElicitationAvailable, surface), "core"),
       runner.buildTool(GetGuideOperation.NAME, new GetGuideOperation(), "core"),
       runner.buildTool(ListAppsOperation.NAME, new ListAppsOperation(client), "core"),
       runner.buildTool(GetAppOperation.NAME, new GetAppOperation(resolver), "core"),

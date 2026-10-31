@@ -22,6 +22,7 @@ const buildTestEnv = (): Env => ({
   CAPROVER_MCP_MODE: "admin",
   CAPROVER_MCP_ALLOW_CRITICAL: true,
   CAPROVER_MCP_TOOLSETS: ["core", "apps", "domains", "oneclick"],
+  CAPROVER_MCP_SURFACE: "tools",
   CAPROVER_MCP_TRANSPORT: "stdio",
   CAPROVER_MCP_LOG_LEVEL: "info",
   CAPROVER_URL: "https://captain.example.com",

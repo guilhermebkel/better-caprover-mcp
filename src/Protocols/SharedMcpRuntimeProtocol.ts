@@ -1,4 +1,4 @@
-import type { PolicyServicePort, Toolset } from "@/Protocols/AccessProtocol.ts";
+import type { PolicyServicePort, SurfaceName, Toolset } from "@/Protocols/AccessProtocol.ts";
 import type {
   ConfirmationServicePort,
   ConcurrencyLimiterServicePort,
@@ -12,6 +12,7 @@ export type SharedRuntimeParts = {
   client: CaproverClientPort;
   policy: PolicyServicePort;
   toolsets: readonly Toolset[];
+  surface: SurfaceName;
   secrets: readonly string[];
   confirmation: ConfirmationServicePort;
   limiter: ConcurrencyLimiterServicePort;
