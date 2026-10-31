@@ -105,9 +105,9 @@ describe("The built server, started the way a client starts it, against a real C
     expect(readText(result)).not.toContain(UNEXPECTED_FAILURE);
   });
 
-  it("registers the operations of every toolset", async () => {
+  it("registers every operation of every toolset except the 8 critical ones, which stay locked", async () => {
     const { tools } = await client.listTools();
 
-    expect(tools.length).toBeGreaterThan(60);
+    expect(tools).toHaveLength(59);
   });
 });
