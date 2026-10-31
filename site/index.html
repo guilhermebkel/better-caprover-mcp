@@ -693,8 +693,8 @@ details .ans a { color: var(--text); }
 <section id="tools">
   <div class="container">
     <div data-reveal>
-      <h2 class="h2">Fourteen operations, <span class="dim">and no “send any request”.</span></h2>
-      <p class="lede">There is no raw-request tool, on purpose. Each operation has its own schema and risk level, and the mode decides which ones exist.</p>
+      <h2 class="h2"><!-- operations:count -->71<!-- /operations:count --> operations, <span class="dim">and no “send any request”.</span></h2>
+      <p class="lede">There is no raw-request tool, on purpose. Each operation has its own schema and risk level, and the mode decides which ones exist. These are the main ones; the README lists all of them.</p>
     </div>
 
     <div class="tg">
@@ -729,7 +729,7 @@ details .ans a { color: var(--text); }
 
     <div class="callout">
       <svg class="ico"><use href="#i-shield"/></svg>
-      <p><b>Critical operations</b> need one more switch: CAPROVER_MCP_ALLOW_CRITICAL=1 in admin mode. None of the 14 is classified as critical yet.</p>
+      <p><b>Critical operations</b> need one more switch: CAPROVER_MCP_ALLOW_CRITICAL=1 in admin mode. <!-- operations:critical -->8<!-- /operations:critical --> of the <!-- operations:count -->71<!-- /operations:count --> are critical (change the password, update CapRover, the root domain, nginx and more).</p>
     </div>
   </div>
 </section>

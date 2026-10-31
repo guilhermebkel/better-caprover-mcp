@@ -33,6 +33,7 @@ Folders are created when the first file needs them.
     pnpm check:pack    # the package holds only what it should and is under the size limit (needs pnpm build)
     pnpm check:licenses # every package the bundle reads has an allowed license
     pnpm sdk:drift     # fails when a CapRover SDK method is not classified in scripts/sdk-coverage.json
+    pnpm check:operation-docs # fails when README.md, AGENTS.md, site/index.html or site/llms.txt state a number or name of operations that src/Operations does not have
     pnpm test:changed  # tests related to files changed against origin/main
     pnpm typecheck
     pnpm lint          # Oxlint and a minimal ESLint, in parallel

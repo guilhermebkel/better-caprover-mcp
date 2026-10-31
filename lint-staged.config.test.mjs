@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import config, { buildQualityCommand, buildLintCommand, buildRelatedTestsCommand, buildTypecheckCommand } from "./lint-staged.config.mjs";
+import config, { buildQualityCommand, buildLintCommand, buildRelatedTestsCommand, buildTypecheckCommand, buildOperationDocsCommand } from "./lint-staged.config.mjs";
 
 const CWD = process.cwd();
 const UTIL = `${CWD}/src/Utils/EnvUtil.ts`;
@@ -24,5 +24,10 @@ describe("lint-staged config", () => {
 
   it("keeps the typecheck on typescript files only", () => {
     expect(config["**/*.ts"]).toBe(buildTypecheckCommand);
+  });
+
+  it("runs the operation texts check once when operations, the README, AGENTS.md or the site change (AC8)", () => {
+    expect(config["{README.md,AGENTS.md,site/**,src/Operations/**}"]).toBe(buildOperationDocsCommand);
+    expect(buildOperationDocsCommand()).toBe("pnpm check:operation-docs");
   });
 });

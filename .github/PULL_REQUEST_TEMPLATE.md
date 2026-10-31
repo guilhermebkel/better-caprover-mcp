@@ -15,6 +15,7 @@
 - [ ] New behavior has a test next to the file it tests
 - [ ] New output paths are redacted and tested with a fake secret
 - [ ] A new operation follows "Before merging an operation" in `docs/mcp-standards.md`: tier, annotations, `dry_run` or `user_confirmed`, description
+- [ ] The README and the site were reviewed when an operation was added or removed (`pnpm check:operation-docs` checks names and numbers; the wording is review only)
 
 ## Checklist
 
