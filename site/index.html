@@ -159,8 +159,10 @@
   --text-3:      oklch(0.67 0.012 255);
   --border:        color-mix(in oklch, var(--text) 9%, transparent);
   --border-strong: color-mix(in oklch, var(--text) 17%, transparent);
-  --accent:      oklch(0.89 0.19 128);
-  --accent-contrast: oklch(0.2 0.04 128);
+  --accent:      oklch(0.903 0.19 104);
+  --accent-contrast: oklch(0.2 0.04 104);
+  --ok:          oklch(0.89 0.19 128);
+  --ok-contrast: oklch(0.2 0.04 128);
   --danger:      oklch(0.73 0.15 25);
 
   --font-display: "Geist", ui-sans-serif, system-ui, sans-serif;
@@ -390,7 +392,9 @@ section { padding-block: calc(var(--section-gap) / 2); }
 .code .a { color: var(--accent); }
 .code .c { color: var(--text-3); }
 .codebox .iconbtn { position: absolute; top: 12px; right: 12px; background: var(--surface-2); border: 1px solid var(--border); }
-.codebox .iconbtn.ok { color: var(--accent); }
+.codebox .iconbtn.ok { color: var(--ok); }
+.btn-primary.ok { background: var(--ok); color: var(--ok-contrast); border-color: color-mix(in oklch, var(--ok) 78%, black); }
+.cta .btn-dark.ok { color: var(--ok); }
 .panel[hidden] { display: none; }
 .install .tabs { margin-bottom: 12px; width: max-content; max-width: 100%; overflow-x: auto; }
 .needs { list-style: none; padding: 0; display: grid; gap: 12px; }
@@ -447,7 +451,7 @@ details .ans a { color: var(--text); }
 /* =========================================================
    CTA + FOOTER
    ========================================================= */
-.cta { --accent: oklch(0.903 0.19 104); --accent-contrast: oklch(0.2 0.04 104); background: var(--accent); color: var(--accent-contrast); padding-block: clamp(72px, 9vw, 128px); }
+.cta { background: var(--accent); color: var(--accent-contrast); padding-block: clamp(72px, 9vw, 128px); }
 .cta__grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(32px, 5vw, 80px); align-items: end; }
 .cta h2 { font-size: clamp(2.75rem, 1rem + 7vw, 6rem); letter-spacing: -0.045em; line-height: 0.98; font-weight: 500; }
 .cta p { font-size: var(--fs-lg); color: color-mix(in oklch, var(--accent-contrast) 82%, var(--accent)); max-width: 36ch; }
