@@ -1,6 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { InvalidEnvError } from "@/Errors/InvalidEnvError.ts";
-import { MIN_HTTP_TOKEN_LENGTH } from "@/Schemas/EnvSchema.ts";
 import { EnvUtil } from "@/Utils/EnvUtil.ts";
 
 describe("EnvUtil.read()", () => {
@@ -96,9 +95,7 @@ describe("EnvUtil.read()", () => {
       vi.stubEnv("CAPROVER_MCP_HTTP_TOKEN", "short");
 
       expect(() => EnvUtil.read()).toThrow(InvalidEnvError);
-      expect(() => EnvUtil.read()).toThrow(
-        `CAPROVER_MCP_HTTP_TOKEN must be at least ${MIN_HTTP_TOKEN_LENGTH} characters.`,
-      );
+      expect(() => EnvUtil.read()).toThrow(/CAPROVER_MCP_HTTP_TOKEN must be at least 8 characters\./);
     });
   });
 });

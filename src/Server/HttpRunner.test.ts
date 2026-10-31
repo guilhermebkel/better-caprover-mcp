@@ -12,7 +12,6 @@ const TEST_TOKEN = "test-token-12345678";
 const WRONG_TOKEN = "wrong-token-123456789";
 const CONCURRENCY_TEST_QUEUE_WAIT_MS = 50;
 const LIST_APPS_MOCK_SUCCESS_SUMMARY = "2 apps match; showing 2.";
-const HTTP_BIND_FORBIDDEN_MESSAGE = HttpBindForbiddenError.MESSAGE;
 
 const connectAuthorizedClient = async (baseUrl: string, clientName: string, token = TEST_TOKEN): Promise<Client> => {
   const transport = new StreamableHTTPClientTransport(new URL(`${baseUrl}/mcp`), {
@@ -96,7 +95,7 @@ const readHttpEnv = (overrides: Record<string, string | undefined> = {}): Return
   vi.stubEnv("CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE", overrides.CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE ?? "120");
   vi.stubEnv("CAPROVER_MCP_MAX_HTTP_SESSIONS", overrides.CAPROVER_MCP_MAX_HTTP_SESSIONS ?? "64");
   vi.stubEnv("CAPROVER_MCP_HTTP_SESSION_TTL_MS", overrides.CAPROVER_MCP_HTTP_SESSION_TTL_MS ?? "86400000");
-  vi.stubEnv("CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER", overrides.CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER ?? "5");
+  vi.stubEnv("CAPROVER_MCP_MAX_CONCURRENT", overrides.CAPROVER_MCP_MAX_CONCURRENT ?? "5");
   vi.stubEnv("CAPROVER_URL", overrides.CAPROVER_URL);
   vi.stubEnv("CAPROVER_PASSWORD", overrides.CAPROVER_PASSWORD);
   return EnvUtil.read();
@@ -121,15 +120,19 @@ const readToolSummary = (content: unknown): string => {
   return newlineIndex === -1 ? text : text.slice(0, newlineIndex);
 };
 
-const readCallOutcome = (result: Awaited<ReturnType<Client["callTool"]>>) => ({
+type ToolCallOutcome = {
+  isError: boolean;
+  summary: string;
+};
+
+const readCallOutcome = (result: Awaited<ReturnType<Client["callTool"]>>): ToolCallOutcome => ({
   isError: result.isError === true,
   summary: readToolSummary(result.content),
 });
 
-const sortCallOutcomes = (
-  left: ReturnType<typeof readCallOutcome>,
-  right: ReturnType<typeof readCallOutcome>,
-): number => Number(left.isError) - Number(right.isError);
+const sortCallOutcomes = (left: ToolCallOutcome, right: ToolCallOutcome): number => (
+  Number(left.isError) - Number(right.isError)
+);
 
 describe("HttpRunner.assertBindAllowed()", () => {
   it("refuses a public bind without CAPROVER_MCP_HTTP_TOKEN", () => {
@@ -140,7 +143,7 @@ describe("HttpRunner.assertBindAllowed()", () => {
     }).toThrow(HttpBindForbiddenError);
     expect(() => {
       HttpRunner.assertBindAllowed(env);
-    }).toThrow(HTTP_BIND_FORBIDDEN_MESSAGE);
+    }).toThrow(/^Refusing to bind HTTP on a non-local address without authentication\. Set CAPROVER_MCP_HTTP_TOKEN to the bearer secret clients must send\.$/);
   });
 
   it("allows localhost without CAPROVER_MCP_HTTP_TOKEN", () => {
@@ -364,27 +367,21 @@ describe("HttpRunner.start()", () => {
       CAPROVER_URL: captainUrl,
       CAPROVER_PASSWORD: FAKE_PASSWORD,
       CAPROVER_MCP_MODE: "admin",
-      CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER: "1",
+      CAPROVER_MCP_MAX_CONCURRENT: "1",
     }, { concurrencyQueueWaitMs: CONCURRENCY_TEST_QUEUE_WAIT_MS });
-    let firstClient: Client | undefined;
-    let secondClient: Client | undefined;
-    let firstCall: Promise<Awaited<ReturnType<Client["callTool"]>>> | undefined;
-    let secondCall: Promise<Awaited<ReturnType<Client["callTool"]>>> | undefined;
+    const firstClient = await connectAuthorizedClient(handle.url, "concurrency-a");
+    const secondClient = await connectAuthorizedClient(handle.url, "concurrency-b");
     let firstSummary: string | undefined;
     let secondSummary: string | undefined;
-    let firstResult: Awaited<ReturnType<Client["callTool"]>> | undefined;
-    let secondResult: Awaited<ReturnType<Client["callTool"]>> | undefined;
+    const firstCall = firstClient.callTool({ name: "list_apps", arguments: {} }).then((result) => {
+      firstSummary = readToolSummary(result.content);
+      return result;
+    });
+    const secondCall = secondClient.callTool({ name: "list_apps", arguments: {} }).then((result) => {
+      secondSummary = readToolSummary(result.content);
+      return result;
+    });
     try {
-      firstClient = await connectAuthorizedClient(handle.url, "concurrency-a");
-      secondClient = await connectAuthorizedClient(handle.url, "concurrency-b");
-      firstCall = firstClient.callTool({ name: "list_apps", arguments: {} }).then((result) => {
-        firstSummary = readToolSummary(result.content);
-        return result;
-      });
-      secondCall = secondClient.callTool({ name: "list_apps", arguments: {} }).then((result) => {
-        secondSummary = readToolSummary(result.content);
-        return result;
-      });
       await expect.poll(() => {
         if (firstSummary === refusalMessage || secondSummary === refusalMessage) {
           return true;
@@ -393,14 +390,12 @@ describe("HttpRunner.start()", () => {
       }).toBe(true);
     } finally {
       resolveHang();
-      if (firstCall !== undefined && secondCall !== undefined) {
-        [firstResult, secondResult] = await Promise.all([firstCall, secondCall]);
-      }
-      await firstClient?.close();
-      await secondClient?.close();
-      await handle.close();
     }
-    const outcomes = [readCallOutcome(firstResult!), readCallOutcome(secondResult!)].sort(sortCallOutcomes);
+    const [firstResult, secondResult] = await Promise.all([firstCall, secondCall]);
+    await firstClient.close();
+    await secondClient.close();
+    await handle.close();
+    const outcomes = [readCallOutcome(firstResult), readCallOutcome(secondResult)].sort(sortCallOutcomes);
     expect(outcomes).toStrictEqual([
       { isError: false, summary: LIST_APPS_MOCK_SUCCESS_SUMMARY },
       { isError: true, summary: refusalMessage },
