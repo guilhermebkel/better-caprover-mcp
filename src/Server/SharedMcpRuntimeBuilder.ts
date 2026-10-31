@@ -3,7 +3,7 @@ import { RoutingCaproverClientAdapter } from "@/Adapters/CapRover/RoutingCaprove
 import { OperationManifest } from "@/Operations/OperationManifest.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
 import { McpInstructionsBuilder } from "@/Server/McpInstructionsBuilder.ts";
-import { McpServerMetadataUtil } from "@/Server/McpServerMetadataUtil.ts";
+import { McpServerMetadataUtil } from "@/Utils/McpServerMetadataUtil.ts";
 import { AuditLogService } from "@/Services/AuditLogService.ts";
 import {
   CaproverServerRegistryService,
@@ -37,9 +37,13 @@ export class SharedMcpRuntimeBuilder {
     env: Env,
     getNowMs: () => number,
     createClient?: CaproverClientFactory,
+    concurrencyQueueWaitMs?: number,
   ): SharedMcpRuntimeBuilder {
     const registry = CaproverServerRegistryService.buildFromEnv(env, createClient);
-    const limiter = new ConcurrencyLimiterService(env.CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER);
+    const limiter = new ConcurrencyLimiterService(
+      env.CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER,
+      concurrencyQueueWaitMs,
+    );
     const parts: SharedRuntimeParts = {
       audit: new AuditLogService(),
       confirmation: new ConfirmationService(getNowMs),

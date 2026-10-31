@@ -5,12 +5,13 @@ import { MockCaproverRouteBuilder } from "@/Adapters/CapRover/MockCaproverRouteB
 import { MockCaproverServer } from "@/Adapters/CapRover/MockCaproverServer.ts";
 import { HttpBindForbiddenError } from "@/Errors/HttpBindForbiddenError.ts";
 import { DEFAULT_SERVER_NAME } from "@/Schemas/ServerConfigSchema.ts";
-import { HttpRunner } from "@/Server/HttpRunner.ts";
+import { HttpRunner, type HttpRunnerStartOptions } from "@/Server/HttpRunner.ts";
 import { EnvUtil } from "@/Utils/EnvUtil.ts";
 
 const TEST_TOKEN = "test-token-12345678";
 const WRONG_TOKEN = "wrong-token-123456789";
-const FAKE_PASSWORD = "fake-password-9876";
+const TEST_TOKEN_B = "other-token-123456789";
+const CONCURRENCY_TEST_QUEUE_WAIT_MS = 50;
 
 const connectAuthorizedClient = async (baseUrl: string, clientName: string, token = TEST_TOKEN): Promise<Client> => {
   const transport = new StreamableHTTPClientTransport(new URL(`${baseUrl}/mcp`), {
@@ -60,16 +61,20 @@ afterEach(async () => {
 let nextHttpPort = 32_000 + (process.pid % 10_000);
 let nextHttpMarkerId = 0;
 
+const pickNextHttpPort = (): number => {
+  const port = nextHttpPort;
+  nextHttpPort += 1;
+  return port;
+};
+
+const FAKE_PASSWORD = "fake-password-9876";
+
 const readHttpEnv = (overrides: Record<string, string | undefined> = {}): ReturnType<typeof EnvUtil.read> => {
   vi.stubEnv("CAPROVER_MCP_MODE", overrides.CAPROVER_MCP_MODE ?? "readonly");
   vi.stubEnv("CAPROVER_MCP_HTTP_HOST", overrides.CAPROVER_MCP_HTTP_HOST ?? "127.0.0.1");
   vi.stubEnv(
     "CAPROVER_MCP_HTTP_PORT",
-    overrides.CAPROVER_MCP_HTTP_PORT ?? String((() => {
-      const port = nextHttpPort;
-      nextHttpPort += 1;
-      return port;
-    })()),
+    overrides.CAPROVER_MCP_HTTP_PORT ?? String(pickNextHttpPort()),
   );
   vi.stubEnv("CAPROVER_MCP_HTTP_TOKENS", overrides.CAPROVER_MCP_HTTP_TOKENS);
   vi.stubEnv("CAPROVER_MCP_MAX_HTTP_BODY_BYTES", overrides.CAPROVER_MCP_MAX_HTTP_BODY_BYTES ?? "1048576");
@@ -84,10 +89,11 @@ const readHttpEnv = (overrides: Record<string, string | undefined> = {}): Return
 
 const startHttpRunner = (
   overrides: Record<string, string | undefined> = {},
+  runnerOptions: Omit<HttpRunnerStartOptions, "httpMarkerPath"> = {},
 ): ReturnType<typeof HttpRunner.start> => {
   nextHttpMarkerId += 1;
   const markerPath = `/tmp/better-caprover-mcp-http.test-${process.pid}-${nextHttpMarkerId}.active`;
-  return HttpRunner.start(readHttpEnv(overrides), { httpMarkerPath: markerPath });
+  return HttpRunner.start(readHttpEnv(overrides), { httpMarkerPath: markerPath, ...runnerOptions });
 };
 
 const readToolSummary = (content: unknown): string => {
@@ -237,6 +243,23 @@ describe("HttpRunner.start()", () => {
     }
   });
 
+  it("returns 429 when the authenticated request rate limit is exceeded per bearer token", async () => {
+    const handle = await startHttpRunner({
+      CAPROVER_MCP_HTTP_TOKENS: JSON.stringify({ a: TEST_TOKEN, b: TEST_TOKEN_B }),
+      CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE: "1",
+    });
+    try {
+      const firstSameToken = await postMcp(handle.url, TEST_TOKEN, buildInitializeJson("rate-limit-a"));
+      expect(firstSameToken.status).not.toBe(429);
+      const secondSameToken = await postMcp(handle.url, TEST_TOKEN, buildInitializeJson("rate-limit-a2", 2));
+      expect(secondSameToken.status).toBe(429);
+      const otherToken = await postMcp(handle.url, TEST_TOKEN_B, buildInitializeJson("rate-limit-b"));
+      expect(otherToken.status).not.toBe(429);
+    } finally {
+      await handle.close();
+    }
+  });
+
   it("returns 503 when the HTTP session cap is reached", async () => {
     const handle = await startHttpRunner({
       CAPROVER_MCP_HTTP_TOKENS: JSON.stringify({ cursor: TEST_TOKEN }),
@@ -286,34 +309,34 @@ describe("HttpRunner.start()", () => {
     });
     mockServers.push(mock);
     const captainUrl = await mock.start();
+    const refusalMessage = `Too many concurrent calls for server "${DEFAULT_SERVER_NAME}" (limit 1). Wait for other calls to finish, then try again.`;
     const handle = await startHttpRunner({
       CAPROVER_MCP_HTTP_TOKENS: JSON.stringify({ cursor: TEST_TOKEN }),
       CAPROVER_URL: captainUrl,
       CAPROVER_PASSWORD: FAKE_PASSWORD,
       CAPROVER_MCP_MODE: "admin",
       CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER: "1",
-    });
+    }, { concurrencyQueueWaitMs: CONCURRENCY_TEST_QUEUE_WAIT_MS });
     try {
       const firstClient = await connectAuthorizedClient(handle.url, "concurrency-a");
       const secondClient = await connectAuthorizedClient(handle.url, "concurrency-b");
+      let blockedSummary: string | undefined;
       const firstCall = firstClient.callTool({ name: "list_apps", arguments: {} });
-      const secondCall = secondClient.callTool({ name: "list_apps", arguments: {} });
-      vi.useFakeTimers();
-      await vi.advanceTimersByTimeAsync(30_001);
-      vi.useRealTimers();
-      const blocked = await secondCall;
+      const secondCall = secondClient.callTool({ name: "list_apps", arguments: {} }).then((result) => {
+        blockedSummary = readToolSummary(result.content);
+        return result;
+      });
+      await expect.poll(() => blockedSummary).toBe(refusalMessage);
       resolveHang();
-      await firstCall;
+      const blocked = await secondCall;
       expect(blocked.isError).toBe(true);
-      expect(readToolSummary(blocked.content)).toBe(
-        `Too many concurrent calls for server "${DEFAULT_SERVER_NAME}" (limit 1). Wait for other calls to finish, then try again.`,
-      );
+      await firstCall;
       await firstClient.close();
       await secondClient.close();
     } finally {
       await handle.close();
     }
-  }, 90_000);
+  });
 
   it("drops HTTP sessions after TTL", async () => {
     const handle = await startHttpRunner({

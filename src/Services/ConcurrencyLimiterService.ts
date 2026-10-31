@@ -16,7 +16,10 @@ type ServerLimiter = {
 export class ConcurrencyLimiterService {
   private readonly serverNameToLimiter = new Map<string, ServerLimiter>();
 
-  constructor(private readonly maxConcurrent: number) {}
+  constructor(
+    private readonly maxConcurrent: number,
+    private readonly queueWaitMs = DEFAULT_WAIT_MS,
+  ) {}
 
   async run<T>(serverName: string, task: () => Promise<T>): Promise<T> {
     await this.acquire(serverName);
@@ -49,7 +52,7 @@ export class ConcurrencyLimiterService {
         }
         limiter.waiters.splice(index, 1);
         reject(new ConcurrencyLimitError(serverName, this.maxConcurrent));
-      }, DEFAULT_WAIT_MS);
+      }, this.queueWaitMs);
     });
   }
 

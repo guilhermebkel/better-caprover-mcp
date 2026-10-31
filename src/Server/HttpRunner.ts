@@ -6,7 +6,7 @@ import { HttpRateLimitError } from "@/Errors/HttpRateLimitError.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
 import { HttpAuthService } from "@/Services/HttpAuthService.ts";
 import { HttpRateLimitService } from "@/Services/HttpRateLimitService.ts";
-import { HttpModeMarkerUtil } from "@/Server/HttpModeMarkerUtil.ts";
+import { HttpModeMarkerUtil } from "@/Utils/HttpModeMarkerUtil.ts";
 import { HttpSessionRunner } from "@/Server/HttpSessionRunner.ts";
 import { SharedMcpRuntimeBuilder } from "@/Server/SharedMcpRuntimeBuilder.ts";
 import { EnvUtil } from "@/Utils/EnvUtil.ts";
@@ -33,7 +33,10 @@ type HttpRequestContext = {
   getNowMs: () => number;
 };
 
-export type HttpRunnerStartOptions = { httpMarkerPath?: string };
+export type HttpRunnerStartOptions = {
+  httpMarkerPath?: string;
+  concurrencyQueueWaitMs?: number;
+};
 
 export type HttpServerHandle = {
   url: string;
@@ -51,7 +54,12 @@ export class HttpRunner {
   static async start(env: Env = EnvUtil.read(), options: HttpRunnerStartOptions = {}): Promise<HttpServerHandle> {
     HttpRunner.assertBindAllowed(env);
     const getNowMs = (): number => Date.now();
-    const runtime = SharedMcpRuntimeBuilder.buildFromEnv(env, getNowMs);
+    const runtime = SharedMcpRuntimeBuilder.buildFromEnv(
+      env,
+      getNowMs,
+      undefined,
+      options.concurrencyQueueWaitMs,
+    );
     const auth = new HttpAuthService(HttpAuthService.extractTokenSecrets(env.CAPROVER_MCP_HTTP_TOKENS));
     const rateLimit = new HttpRateLimitService(env.CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE);
     const sessions = new HttpSessionRunner(

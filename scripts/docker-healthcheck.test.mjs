@@ -2,7 +2,7 @@ import { spawn, spawnSync } from "node:child_process";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MockCaproverRouteBuilder } from "@/Adapters/CapRover/MockCaproverRouteBuilder.ts";
 import { MockCaproverServer } from "@/Adapters/CapRover/MockCaproverServer.ts";
-import { HttpModeMarkerUtil } from "@/Server/HttpModeMarkerUtil.ts";
+import { HttpModeMarkerUtil } from "@/Utils/HttpModeMarkerUtil.ts";
 import { HttpRunner } from "@/Server/HttpRunner.ts";
 import { EnvUtil } from "@/Utils/EnvUtil.ts";
 import { waitForDockerHealthy } from "./package-smoke.mjs";
