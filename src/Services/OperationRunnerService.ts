@@ -4,7 +4,7 @@ import { MissingPreviewError } from "@/Errors/MissingPreviewError.ts";
 import { OperationDeniedError } from "@/Errors/OperationDeniedError.ts";
 import { ToolFailureError } from "@/Errors/ToolFailureError.ts";
 import type { RiskTier } from "@/Protocols/AccessProtocol.ts";
-import type { AuditResult } from "@/Protocols/AuditLogProtocol.ts";
+import type { AuditResult } from "@/Protocols/AuditProtocol.ts";
 import type { OperationRunnerDeps } from "@/Protocols/OperationRunnerProtocol.ts";
 import type { ControlFields } from "@/Protocols/ControlProtocol.ts";
 import type { OperationPort, OperationResult, ToolDefinition, ToolOutcome } from "@/Protocols/OperationProtocol.ts";
@@ -52,7 +52,7 @@ export class OperationRunnerService {
   }
 
   private writeAudit(tool: string, risk: RiskTier, result: AuditResult): void {
-    this.deps.audit.write({ tool, risk, result, atMs: this.deps.getNowMs() });
+    LogUtil.logAudit({ tool, risk, result, atMs: this.deps.getNowMs() });
   }
 
   private async dispatch<Input>(

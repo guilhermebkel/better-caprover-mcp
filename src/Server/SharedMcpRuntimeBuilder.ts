@@ -3,7 +3,6 @@ import type { Env } from "@/Protocols/EnvProtocol.ts";
 import { CaproverClientAdapter } from "@/Adapters/CapRover/CaproverClientAdapter.ts";
 import { McpInstructionsBuilder } from "@/Server/McpInstructionsBuilder.ts";
 import { McpServerMetadataUtil } from "@/Utils/McpServerMetadataUtil.ts";
-import { AuditLogService } from "@/Services/AuditLogService.ts";
 import { ConcurrencyLimiterService } from "@/Services/ConcurrencyLimiterService.ts";
 import { ConfirmationService } from "@/Services/ConfirmationService.ts";
 import { OperationRunnerService } from "@/Services/OperationRunnerService.ts";
@@ -33,7 +32,6 @@ export class SharedMcpRuntimeBuilder {
       concurrencyQueueWaitMs,
     );
     const parts: SharedRuntimeParts = {
-      audit: new AuditLogService(),
       confirmation: new ConfirmationService(getNowMs),
       limiter,
       policy,
@@ -57,7 +55,6 @@ export class SharedMcpRuntimeBuilder {
 
   buildRunner(): OperationRunnerService {
     return new OperationRunnerService({
-      audit: this.parts.audit,
       confirmation: this.parts.confirmation,
       getNowMs: this.parts.getNowMs,
       limiter: this.parts.limiter,
@@ -68,8 +65,7 @@ export class SharedMcpRuntimeBuilder {
 
   buildMcpServer(): McpServer {
     const runner = this.buildRunner();
-    const tools = OperationManifest.build(this.parts.client, this.parts.policy, runner)
-      .filter((tool) => this.parts.policy.canRun(tool.risk));
+    const tools = OperationManifest.build(this.parts.client, this.parts.policy, runner);
     const server = new McpServer(
       { name: McpServerMetadataUtil.SERVER_NAME, version: __PACKAGE_VERSION__ },
       { instructions: McpInstructionsBuilder.build(this.parts.policy) },

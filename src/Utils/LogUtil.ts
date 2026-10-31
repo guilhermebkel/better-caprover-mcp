@@ -1,3 +1,5 @@
+import type { AuditRecord } from "@/Protocols/AuditProtocol.ts";
+
 export class LogUtil {
   static logInfo(event: string): void {
     LogUtil.write("info", event, undefined);
@@ -7,12 +9,7 @@ export class LogUtil {
     LogUtil.write("error", event, detail);
   }
 
-  static logAudit(record: {
-    tool: string;
-    risk: string;
-    result: string;
-    atMs: number;
-  }): void {
+  static logAudit(record: AuditRecord): void {
     const payload = {
       level: "audit",
       time: new Date(record.atMs).toISOString(),

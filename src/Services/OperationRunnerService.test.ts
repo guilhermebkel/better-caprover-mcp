@@ -5,7 +5,6 @@ import type { AccessMode } from "@/Protocols/AccessProtocol.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
 import type { ToolDefinition } from "@/Protocols/OperationProtocol.ts";
 import type { CaproverClientFactory } from "@/Protocols/SharedMcpRuntimeProtocol.ts";
-import { AuditLogService } from "@/Services/AuditLogService.ts";
 import { ConcurrencyLimiterService } from "@/Services/ConcurrencyLimiterService.ts";
 import { ConfirmationService } from "@/Services/ConfirmationService.ts";
 import { OperationRunnerService } from "@/Services/OperationRunnerService.ts";
@@ -36,7 +35,6 @@ const buildTool = (mode: AccessMode, name: string, fake: FakeCaproverClientAdapt
     policy,
     secrets: [FAKE_PASSWORD],
     confirmation: new ConfirmationService(() => 0),
-    audit: new AuditLogService(),
     limiter: new ConcurrencyLimiterService(5),
     getNowMs: () => 0,
   });

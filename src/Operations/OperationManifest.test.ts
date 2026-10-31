@@ -4,7 +4,6 @@ import { OperationManifest } from "@/Operations/OperationManifest.ts";
 import type { ToolDefinition } from "@/Protocols/OperationProtocol.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
 import type { CaproverClientFactory } from "@/Protocols/SharedMcpRuntimeProtocol.ts";
-import { AuditLogService } from "@/Services/AuditLogService.ts";
 import { ConcurrencyLimiterService } from "@/Services/ConcurrencyLimiterService.ts";
 import { ConfirmationService } from "@/Services/ConfirmationService.ts";
 import { OperationRunnerService } from "@/Services/OperationRunnerService.ts";
@@ -41,7 +40,6 @@ const buildTools = (): ToolDefinition[] => {
     policy,
     secrets: [],
     confirmation: new ConfirmationService(() => 0),
-    audit: new AuditLogService(),
     limiter: new ConcurrencyLimiterService(5),
     getNowMs: () => 0,
   });
