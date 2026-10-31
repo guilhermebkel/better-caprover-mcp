@@ -7,6 +7,24 @@ export class LogUtil {
     LogUtil.write("error", event, detail);
   }
 
+  static logAudit(record: {
+    tool: string;
+    server: string;
+    risk: string;
+    result: string;
+    atMs: number;
+  }): void {
+    const payload = {
+      level: "audit",
+      time: new Date(record.atMs).toISOString(),
+      tool: record.tool,
+      server: record.server,
+      risk: record.risk,
+      result: record.result,
+    };
+    process.stderr.write(`${JSON.stringify(payload)}\n`);
+  }
+
   static showMessage(text: string): void {
     // Why: stdout belongs to the MCP protocol, so text for a person also goes to stderr.
     process.stderr.write(`${text}\n`);

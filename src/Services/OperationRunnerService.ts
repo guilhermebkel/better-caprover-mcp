@@ -1,13 +1,19 @@
 import { z } from "zod";
+import { ConcurrencyLimitError } from "@/Errors/ConcurrencyLimitError.ts";
 import { MissingPreviewError } from "@/Errors/MissingPreviewError.ts";
+import { OperationDeniedError } from "@/Errors/OperationDeniedError.ts";
 import { ToolFailureError } from "@/Errors/ToolFailureError.ts";
+import { UnknownServerError } from "@/Errors/UnknownServerError.ts";
 import type { RiskTier } from "@/Protocols/AccessProtocol.ts";
 import type { ControlFields } from "@/Protocols/ControlProtocol.ts";
 import type { OperationPort, OperationResult, ToolDefinition, ToolOutcome } from "@/Protocols/OperationProtocol.ts";
 import { ControlFieldsSchema } from "@/Schemas/ControlSchema.ts";
+import type { AuditLogService, AuditResult } from "@/Services/AuditLogService.ts";
+import { CaproverServerRegistryService } from "@/Services/CaproverServerRegistryService.ts";
 import type { ConfirmationService } from "@/Services/ConfirmationService.ts";
-import type { PolicyService } from "@/Services/PolicyService.ts";
+import type { ConcurrencyLimiterService } from "@/Services/ConcurrencyLimiterService.ts";
 import { FingerprintUtil } from "@/Utils/FingerprintUtil.ts";
+import { InputStripUtil } from "@/Utils/InputStripUtil.ts";
 import { LogUtil } from "@/Utils/LogUtil.ts";
 import { OperationBuilderUtil } from "@/Utils/OperationBuilderUtil.ts";
 import { RedactUtil } from "@/Utils/RedactUtil.ts";
@@ -16,9 +22,11 @@ const TIERS_NEEDING_CONFIRMATION: ReadonlySet<RiskTier> = new Set<RiskTier>(["de
 
 export class OperationRunnerService {
   constructor(
-    private readonly policy: PolicyService,
+    private readonly registry: CaproverServerRegistryService,
     private readonly confirmation: ConfirmationService,
-    private readonly secrets: readonly string[],
+    private readonly audit: AuditLogService,
+    private readonly limiter: ConcurrencyLimiterService,
+    private readonly getNowMs: () => number,
   ) {}
 
   buildTool<Input>(operationName: string, operation: OperationPort<Input>): ToolDefinition {
@@ -30,14 +38,40 @@ export class OperationRunnerService {
 
   private async run<Input>(toolName: string, operation: OperationPort<Input>, rawInput: unknown): Promise<ToolOutcome> {
     try {
-      this.policy.assertCanRun(toolName, operation.risk);
-      const input = operation.inputSchema.parse(rawInput);
       const control = ControlFieldsSchema.parse(rawInput);
-      const outcome = await this.dispatch(toolName, operation, input, control);
-      return this.redactOutcome(outcome);
+      let target;
+      try {
+        target = this.registry.resolve(control.server);
+      } catch (error) {
+        const outcome = OperationRunnerService.buildFailure(toolName, error);
+        this.writeAudit(toolName, "unknown", operation.risk, outcome.isError ? "error" : "ok");
+        return this.redactOutcome(outcome);
+      }
+      return await this.limiter.run(target.name, async () => (
+        CaproverServerRegistryService.activeStorage.run(target, async () => {
+          try {
+            target.policy.assertCanRun(toolName, operation.risk);
+            const input = operation.inputSchema.parse(InputStripUtil.stripControlFields(rawInput));
+            const outcome = await this.dispatch(toolName, operation, input, control);
+            this.writeAudit(toolName, target.name, operation.risk, outcome.isError ? "error" : "ok");
+            return this.redactOutcome(outcome);
+          } catch (error) {
+            const result: AuditResult = error instanceof OperationDeniedError ? "denied" : "error";
+            const outcome = this.redactOutcome(OperationRunnerService.buildFailure(toolName, error));
+            this.writeAudit(toolName, target.name, operation.risk, result);
+            return outcome;
+          }
+        })
+      ));
     } catch (error) {
-      return this.redactOutcome(OperationRunnerService.buildFailure(toolName, error));
+      const outcome = this.redactOutcome(OperationRunnerService.buildFailure(toolName, error));
+      this.writeAudit(toolName, "unknown", operation.risk, "error");
+      return outcome;
     }
+  }
+
+  private writeAudit(tool: string, server: string, risk: RiskTier, result: AuditResult): void {
+    this.audit.write({ tool, server, risk, result, atMs: this.getNowMs() });
   }
 
   private async dispatch<Input>(
@@ -104,7 +138,11 @@ export class OperationRunnerService {
     if (error instanceof z.ZodError) {
       return { isError: true, summary: `Invalid input for ${toolName}:\n${z.prettifyError(error)}`, data: {} };
     }
-    if (error instanceof ToolFailureError) {
+    const isToolFailure = error instanceof ToolFailureError
+      || error instanceof UnknownServerError
+      || error instanceof OperationDeniedError
+      || error instanceof ConcurrencyLimitError;
+    if (isToolFailure) {
       return { isError: true, summary: error.message, data: {} };
     }
     LogUtil.logError("unexpected_failure", error instanceof Error ? error.name : "unknown");
@@ -112,10 +150,11 @@ export class OperationRunnerService {
   }
 
   private redactOutcome(outcome: ToolOutcome): ToolOutcome {
-    const data = RedactUtil.redactValue(outcome.data, this.secrets);
+    const secrets = this.registry.collectAllSecrets();
+    const data = RedactUtil.redactValue(outcome.data, secrets);
     return {
       isError: outcome.isError,
-      summary: RedactUtil.redactText(outcome.summary, this.secrets),
+      summary: RedactUtil.redactText(outcome.summary, secrets),
       data: typeof data === "object" && data !== null && !Array.isArray(data) ? Object.fromEntries(Object.entries(data)) : {},
     };
   }

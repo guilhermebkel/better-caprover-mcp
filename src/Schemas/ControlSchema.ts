@@ -15,9 +15,10 @@ export const ConfirmationTokenFieldSchema = z.string().min(1).max(MAX_TOKEN_LENG
   "The `confirmation_token` from the preview of this exact call. It works once and expires after 5 minutes.",
 );
 
-export const CONTROL_KEYS: readonly ControlKey[] = ["dry_run", "user_confirmed", "confirmation_token"];
+export const CONTROL_KEYS: readonly ControlKey[] = ["server", "dry_run", "user_confirmed", "confirmation_token"];
 
 export const ControlFieldsSchema: z.ZodType<ControlFields> = z.object({
+  server: z.string().optional(),
   dry_run: z.boolean().optional(),
   user_confirmed: z.boolean().optional(),
   confirmation_token: z.string().optional(),

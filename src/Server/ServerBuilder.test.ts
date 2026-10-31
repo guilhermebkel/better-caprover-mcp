@@ -6,6 +6,10 @@ import type { FakeCaproverOptions } from "@/Adapters/CapRover/FakeCaproverClient
 import type { AccessMode } from "@/Protocols/AccessProtocol.ts";
 import type { CaproverApp } from "@/Protocols/CaproverClientProtocol.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
+import { DEFAULT_SERVER_NAME } from "@/Schemas/ServerConfigSchema.ts";
+import { CaproverServerRegistryService } from "@/Services/CaproverServerRegistryService.ts";
+import { PolicyService } from "@/Services/PolicyService.ts";
+import { EnvTestUtil } from "@/Utils/EnvTestUtil.ts";
 import { ServerBuilder } from "@/Server/ServerBuilder.ts";
 
 const FAKE_PASSWORD = "fake-password-9876";
@@ -23,19 +27,21 @@ type SetupOptions = FakeCaproverOptions & {
   getNowMs?: () => number;
 };
 
-const buildEnv = (mode: AccessMode): Env => ({
-  CAPROVER_MCP_MODE: mode,
-  CAPROVER_MCP_ALLOW_CRITICAL: false,
-  CAPROVER_URL: "https://captain.example.com",
-  CAPROVER_PASSWORD: FAKE_PASSWORD,
-});
+const buildEnv = (mode: AccessMode): Env => EnvTestUtil.build({ mode, password: FAKE_PASSWORD, url: "https://captain.example.com" });
 
 const connect = async (options: SetupOptions = {}): Promise<Setup> => {
   const { mode = "admin", apps = [FakeCaproverClientAdapter.buildApp()], getNowMs = () => START_MS, ...fakeOptions } = options;
   const fake = new FakeCaproverClientAdapter(apps, fakeOptions);
+  const env = buildEnv(mode);
+  const registry = CaproverServerRegistryService.buildForTest([{
+    name: DEFAULT_SERVER_NAME,
+    client: fake,
+    policy: new PolicyService(mode, false),
+    secrets: [FAKE_PASSWORD],
+  }]);
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: "test-client", version: "0.0.0" });
-  await ServerBuilder.build(buildEnv(mode), fake, getNowMs).connect(serverTransport);
+  await ServerBuilder.build(env, getNowMs, registry).connect(serverTransport);
   await client.connect(clientTransport);
   return { client, fake };
 };

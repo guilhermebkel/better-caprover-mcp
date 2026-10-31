@@ -4,7 +4,7 @@ import { buildRequestLines, checkReplies, parseCommand, parseLines } from "./pac
 const GOOD_REPLY = {
   jsonrpc: "2.0",
   id: 1,
-  result: { serverInfo: { name: "better-caprover-mcp" }, instructions: "Access mode: readonly." },
+  result: { serverInfo: { name: "better-caprover-mcp" }, instructions: "Access mode: readonly. Enabled risk tiers: read." },
 };
 
 describe("buildRequestLines()", () => {
@@ -53,10 +53,22 @@ describe("checkReplies()", () => {
 
 describe("parseCommand()", () => {
   it("runs the local build when no command is given", () => {
-    expect(parseCommand([])).toStrictEqual(["node", "dist/main.js"]);
+    expect(parseCommand([])).toMatchObject({ command: ["node", "dist/main.js"], stdioOnly: false, httpOnly: false });
   });
 
   it("drops the leading -- and keeps the command", () => {
-    expect(parseCommand(["--", "docker", "run", "-i"])).toStrictEqual(["docker", "run", "-i"]);
+    expect(parseCommand(["--", "docker", "run", "-i"])).toMatchObject({ command: ["docker", "run", "-i"] });
+  });
+
+  it("records smoke mode flags", () => {
+    expect(parseCommand(["--http-only", "--", "node", "dist/main.js"])).toMatchObject({ httpOnly: true, stdioOnly: false });
+  });
+
+  it("drops flags and the separator before the command", () => {
+    expect(parseCommand(["--stdio-only", "--", "docker", "run", "-i"])).toMatchObject({
+      command: ["docker", "run", "-i"],
+      stdioOnly: true,
+      httpOnly: false,
+    });
   });
 });

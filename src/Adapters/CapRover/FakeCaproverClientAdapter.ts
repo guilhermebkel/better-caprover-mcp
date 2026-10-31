@@ -15,6 +15,8 @@ export type FakeCaproverOptions = {
   appLogs?: string;
   buildLines?: string[];
   failureMessage?: string;
+  delayMs?: number;
+  hangUntilReleased?: () => Promise<void>;
 };
 
 export class FakeCaproverClientAdapter implements CaproverClientPort {
@@ -120,7 +122,15 @@ export class FakeCaproverClientAdapter implements CaproverClientPort {
     await this.record(`deleteApp:${appName}:${volumeNames.join(",")}`);
   }
 
-  private record(call: string): Promise<void> {
+  private async record(call: string): Promise<void> {
+    if (this.options.hangUntilReleased !== undefined) {
+      await this.options.hangUntilReleased();
+    }
+    if (this.options.delayMs !== undefined) {
+      await new Promise<void>((resolve) => {
+        setTimeout(resolve, this.options.delayMs);
+      });
+    }
     this.calls.push(call);
     if (this.options.failureMessage !== undefined) {
       return Promise.reject(new CaproverRequestError(this.options.failureMessage));
