@@ -26,6 +26,9 @@ importers:
       dpdm:
         specifier: ^4.3.0
         version: 4.3.0
+      esbuild:
+        specifier: 0.28.2
+        version: 0.28.2
       eslint:
         specifier: ^10.13.0
         version: 10.14.0(jiti@2.7.0)

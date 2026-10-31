@@ -26,6 +26,8 @@ Folders are created when the first file needs them.
     pnpm ensure-deps   # runs pnpm install when node_modules is missing or package.json / pnpm-lock.yaml changed since the last install (also at the start of pnpm check and pnpm check:changed)
     pnpm test
     pnpm test:integration # tests that need a real CapRover (CI starts one); run pnpm build first
+    pnpm check:pack    # the package holds only what it should and is under the size limit (needs pnpm build)
+    pnpm check:licenses # every package the bundle reads has an allowed license
     pnpm sdk:drift     # fails when a CapRover SDK method is not classified in src/Adapters/CapRover/sdk-coverage.json
     pnpm test:changed  # tests related to files changed against origin/main
     pnpm typecheck
@@ -35,7 +37,7 @@ Folders are created when the first file needs them.
     pnpm build         # bundles src/main.ts into dist/main.js
     pnpm smoke         # starts the built server and checks the initialize reply; `pnpm smoke -- <command>` checks another way to run it (npx, docker run -i)
     pnpm check:changed # only what the branch changed against origin/main (what the agent runs before a commit)
-    pnpm check         # everything: typecheck, lint, quality, test, build and smoke (CI runs it, split in parallel jobs)
+    pnpm check         # everything: typecheck, lint, quality, SDK drift, test, build, pack, licenses and smoke (CI runs it, split in parallel jobs)
 
 ## How to act on a task
 

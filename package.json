@@ -48,7 +48,9 @@
     "ensure-deps": "node scripts/ensure-deps.mjs",
     "lint-staged": "lint-staged",
     "check:changed": "node scripts/check-changed.mjs",
-    "check": "pnpm ensure-deps && pnpm typecheck && pnpm lint && pnpm quality && pnpm sdk:drift && pnpm test && pnpm build && pnpm smoke"
+    "check": "pnpm ensure-deps && pnpm typecheck && pnpm lint && pnpm quality && pnpm sdk:drift && pnpm test && pnpm build && pnpm check:pack && pnpm check:licenses && pnpm smoke",
+    "check:pack": "node scripts/check-pack.mjs",
+    "check:licenses": "node scripts/check-licenses.mjs"
   },
   "devDependencies": {
     "@modelcontextprotocol/sdk": "^1.32.2",
@@ -57,6 +59,7 @@
     "@vitest/eslint-plugin": "^1.6.28",
     "caprover-api": "0.0.27",
     "dpdm": "^4.3.0",
+    "esbuild": "0.28.2",
     "eslint": "^10.13.0",
     "eslint-plugin-sonarjs": "^4.2.2",
     "globals": "^17.13.0",
@@ -71,5 +74,9 @@
     "typescript-eslint": "^8.72.0",
     "vitest": "^5.0.5",
     "zod": "^4.6.7"
+  },
+  "publishConfig": {
+    "access": "public",
+    "provenance": true
   }
 }
