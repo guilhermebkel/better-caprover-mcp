@@ -250,11 +250,11 @@ describe("HttpRunner.start()", () => {
     });
     try {
       const firstSameToken = await postMcp(handle.url, TEST_TOKEN, buildInitializeJson("rate-limit-a"));
-      expect(firstSameToken.status).not.toBe(429);
+      expect(firstSameToken.status).toBe(200);
       const secondSameToken = await postMcp(handle.url, TEST_TOKEN, buildInitializeJson("rate-limit-a2", 2));
       expect(secondSameToken.status).toBe(429);
       const otherToken = await postMcp(handle.url, TEST_TOKEN_B, buildInitializeJson("rate-limit-b"));
-      expect(otherToken.status).not.toBe(429);
+      expect(otherToken.status).toBe(200);
     } finally {
       await handle.close();
     }
@@ -317,23 +317,61 @@ describe("HttpRunner.start()", () => {
       CAPROVER_MCP_MODE: "admin",
       CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER: "1",
     }, { concurrencyQueueWaitMs: CONCURRENCY_TEST_QUEUE_WAIT_MS });
+    let firstClient: Client | undefined;
+    let secondClient: Client | undefined;
+    let firstCall: Promise<Awaited<ReturnType<Client["callTool"]>>> | undefined;
+    let secondCall: Promise<Awaited<ReturnType<Client["callTool"]>>> | undefined;
+    type ToolCallOutcome = {
+      isError: boolean;
+      summary: string;
+    };
+    let firstOutcome: ToolCallOutcome | undefined;
+    let secondOutcome: ToolCallOutcome | undefined;
+    const readCallOutcome = (result: Awaited<ReturnType<Client["callTool"]>>): ToolCallOutcome => ({
+      isError: result.isError === true,
+      summary: readToolSummary(result.content),
+    });
+    const readMatchedConcurrencyPair = (): string | undefined => {
+      if (firstOutcome === undefined || secondOutcome === undefined) {
+        return undefined;
+      }
+      const outcomes = [firstOutcome, secondOutcome];
+      const refusedOutcomes = outcomes.filter((outcome) => outcome.summary === refusalMessage);
+      const soleRefused = refusedOutcomes.length === 1 ? refusedOutcomes[0] : undefined;
+      if (soleRefused?.isError !== true) {
+        return undefined;
+      }
+      const acceptedOutcome = outcomes.find((outcome) => outcome.summary !== refusalMessage);
+      if (acceptedOutcome === undefined || acceptedOutcome.isError) {
+        return undefined;
+      }
+      return "matched";
+    };
     try {
-      const firstClient = await connectAuthorizedClient(handle.url, "concurrency-a");
-      const secondClient = await connectAuthorizedClient(handle.url, "concurrency-b");
-      let blockedSummary: string | undefined;
-      const firstCall = firstClient.callTool({ name: "list_apps", arguments: {} });
-      const secondCall = secondClient.callTool({ name: "list_apps", arguments: {} }).then((result) => {
-        blockedSummary = readToolSummary(result.content);
+      firstClient = await connectAuthorizedClient(handle.url, "concurrency-a");
+      secondClient = await connectAuthorizedClient(handle.url, "concurrency-b");
+      firstCall = firstClient.callTool({ name: "list_apps", arguments: {} }).then((result) => {
+        firstOutcome = readCallOutcome(result);
         return result;
       });
-      await expect.poll(() => blockedSummary).toBe(refusalMessage);
-      resolveHang();
-      const blocked = await secondCall;
-      expect(blocked.isError).toBe(true);
-      await firstCall;
-      await firstClient.close();
-      await secondClient.close();
+      secondCall = secondClient.callTool({ name: "list_apps", arguments: {} }).then((result) => {
+        secondOutcome = readCallOutcome(result);
+        return result;
+      });
+      await expect.poll(() => {
+        const refusedOutcome = [firstOutcome, secondOutcome].find(
+          (outcome) => outcome?.summary === refusalMessage && outcome.isError,
+        );
+        return refusedOutcome === undefined ? undefined : "refused";
+      }).toBe("refused");
     } finally {
+      resolveHang();
+      if (firstCall !== undefined && secondCall !== undefined) {
+        await Promise.all([firstCall, secondCall]);
+      }
+      expect(readMatchedConcurrencyPair()).toBe("matched");
+      await firstClient?.close();
+      await secondClient?.close();
       await handle.close();
     }
   });
