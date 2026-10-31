@@ -40,6 +40,7 @@ jobs:
           cache: pnpm
       - run: pnpm install --frozen-lockfile
       - run: pnpm quality
+      - run: pnpm sdk:drift
 
   unit:
     runs-on: ubuntu-latest
@@ -79,3 +80,32 @@ jobs:
       - run: docker build -t better-caprover-mcp:ci .
       # Why: `-i` is what a stdio client passes; without it the server gets no input and exits.
       - run: node scripts/package-smoke.mjs -- docker run -i --rm better-caprover-mcp:ci
+
+  integration:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      # Why: this is CapRover's own install command; MAIN_NODE_IP_ADDRESS skips its search for a public address.
+      - name: Start CapRover
+        run: >
+          docker run -d --name captain-install --network host -e ACCEPTED_TERMS=true
+          -e MAIN_NODE_IP_ADDRESS=127.0.0.1 -v /var/run/docker.sock:/var/run/docker.sock
+          -v /captain:/captain caprover/caprover
+      - name: Wait for CapRover to accept the default password
+        run: |
+          for attempt in $(seq 1 90); do
+            if curl -s -X POST localhost:3000/api/v2/login -H 'content-type: application/json' -H 'x-namespace: captain' -d '{"password":"captain42"}' | grep -q '"status":100'; then
+              exit 0
+            fi
+            sleep 2
+          done
+          docker logs captain-install
+          exit 1
+      - run: pnpm test:integration

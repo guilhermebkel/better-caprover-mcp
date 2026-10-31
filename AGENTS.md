@@ -2,7 +2,7 @@
 
 An unofficial MCP server for CapRover. It lets an agent (Claude, Cursor, Codex) operate a CapRover server, with setup in one command (`npx` or Docker) and safety by default: it starts read-only. Vocabulary is in `GLOSSARY.md`; decisions are in `docs/adr/`; planned work is in GitHub issues.
 
-Today the server starts, answers `initialize` and exposes no operation. The operations, the manifest and the two surfaces are planned work; the docs below describe the rules they must follow.
+Today the server exposes 14 operations on the `tools` surface (`src/Operations/OperationManifest.ts`). The `code` surface and the rest of the CapRover API are planned work; the docs below describe the rules they follow.
 
 ## Layout
 
@@ -17,7 +17,7 @@ Folders are created when the first file needs them.
 - `src/Operations/`: one class per CapRover operation, names in English; each implements `OperationPort`.
 - `src/Surfaces/`: the `tools` and `code` surfaces that expose the operations over MCP.
 - `src/Server/`: the server builder and the transports; `src/main.ts` is the entry point.
-- `scripts/`: the harness (lint, checks, package smoke test).
+- `scripts/`: the harness (lint, checks, package smoke test, SDK drift check) and the integration tests.
 - Tests sit next to the file they test (`*.test.ts`, `*.test.mjs`).
 
 ## Commands
@@ -25,6 +25,8 @@ Folders are created when the first file needs them.
     nvm use
     pnpm ensure-deps   # runs pnpm install when node_modules is missing or package.json / pnpm-lock.yaml changed since the last install (also at the start of pnpm check and pnpm check:changed)
     pnpm test
+    pnpm test:integration # tests that need a real CapRover (CI starts one); run pnpm build first
+    pnpm sdk:drift     # fails when a CapRover SDK method is not classified in src/Adapters/CapRover/sdk-coverage.json
     pnpm test:changed  # tests related to files changed against origin/main
     pnpm typecheck
     pnpm lint          # Oxlint and a minimal ESLint, in parallel
@@ -52,7 +54,9 @@ Read the doc for the situation; run the command when there is one. The index doe
 | Full verification (CI gate) | `.github/PULL_REQUEST_TEMPLATE.md` | `pnpm check` |
 | Adding or changing an operation | `docs/mcp-standards.md`, `docs/product/adding-an-operation.md`, `docs/code-standards.md` ("Boundaries and security") | — |
 | An operation or field description, the server instructions, a guide topic or an error message | `docs/prompt-standards.md`, `docs/mcp-standards.md` | `pnpm test` |
+| Changing how the server talks to CapRover | `docs/test-standards.md` ("Which level") | `pnpm test:integration` |
 | Packaging (npx, Docker) | `Dockerfile`, `scripts/package-smoke.mjs` | `pnpm build`, `pnpm smoke` |
+| Releasing | `docs/product/releasing.md` | — |
 | Writing or moving docs under `docs/` | `docs/docs-standards.md` | — |
 | Changing the harness | `docs/harness-standards.md` | `pnpm check:changed` |
 

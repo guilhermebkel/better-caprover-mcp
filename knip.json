@@ -8,5 +8,8 @@
     "src/**/*.ts",
     "scripts/**/*.mjs"
   ],
-  "ignoreExportsUsedInFile": true
+  "ignoreExportsUsedInFile": true,
+  "ignoreDependencies": [
+    "punycode"
+  ]
 }

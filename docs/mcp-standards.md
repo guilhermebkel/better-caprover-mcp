@@ -1,6 +1,6 @@
 # MCP standards
 
-How the operations of this server are designed. `pnpm lint` enforces the rules marked **(lint)**, `pnpm test` the ones marked **(test)**; the rest are checked in review. A rule marked **(planned)** has its tool in the first operation's pull request: until then it is a review rule. Each rule is one line. An operation is read by a model that cannot ask a question, so the contract is the schema, the description, the response and the error. The reasons are in `docs/adr/0008-descriptions-may-name-neighbor-operations.md`.
+How the operations of this server are designed. `pnpm lint` enforces the rules marked **(lint)**, `pnpm test` the ones marked **(test)**; the rest are checked in review. A rule marked **(planned)** has no tool yet: until then it is a review rule. Each rule is one line. An operation is read by a model that cannot ask a question, so the contract is the schema, the description, the response and the error. The reasons are in `docs/adr/0008-descriptions-may-name-neighbor-operations.md`.
 
 ## Scope
 
@@ -25,7 +25,7 @@ How the operations of this server are designed. `pnpm lint` enforces the rules m
 ## Writes
 
 - **An edit is a small named operation, never a re-sent definition (review).** Apps change through `patchAppDefinition`; `updateConfigAndSave` re-sends the whole definition, so it is offered only in the `code` surface, with a warning in its description.
-- **Every write has `dry_run` and returns the resulting state or the operation to read it (test).** A `dry_run` call makes no write call on the client.
+- **Every write has `dry_run` and returns the resulting state or the operation to read it (test).** A `dry_run` call makes no write call on the client. A write implements `describeChange` to say what it would do.
 - **A batch stops at the first failure and returns `applied` and `notApplied` (test).** CapRover has no transactions, so a batch is never called atomic.
 - **Create and publish are different operations (review).** `createApp` does not deploy.
 - **A side effect is a parameter with a safe default (test).** `deleteVolumes` is `false` unless set.
@@ -36,7 +36,7 @@ How the operations of this server are designed. `pnpm lint` enforces the rules m
 - **MCP annotations follow the tier (lint, planned: `local/operation-metadata`).** `read`: `readOnlyHint` true, `idempotentHint` true. `write`: `readOnlyHint` false, `destructiveHint` false. `destructive` and `critical`: `destructiveHint` true. `openWorldHint` is false for all, because the server talks to one configured CapRover. Annotations are hints for the client, never the security.
 - **A destructive operation takes `user_confirmed`, default `false` (test).** Without it nothing changes; the response lists what would happen and carries a `confirmation_token` tied to that preview. With `user_confirmed: true` and the token it runs.
 - **The flag makes the model show the list; it does not stop a manipulated model (review).** The barriers are the mode and, where the client supports elicitation, the interactive confirmation. In the `code` surface a destructive call without elicitation is refused (test).
-- **A critical operation also needs `CAPROVER_MCP_ALLOW_CRITICAL=1` (test).** Two SDK methods are not operations: the generic API call (it would bypass the mode) and the one that turns two-factor login on (it would lock this server out).
+- **A critical operation also needs `CAPROVER_MCP_ALLOW_CRITICAL=1` (test).** Two SDK methods are not operations: the generic API call (it would bypass the mode) and the one that turns two-factor login on (it would lock this server out). `pnpm sdk:drift` fails when an SDK method is not classified.
 - **A destructive description says it runs only when the user asked, never to tidy up, and says what cannot be undone (review).**
 
 ## Descriptions
@@ -55,7 +55,7 @@ How the operations of this server are designed. `pnpm lint` enforces the rules m
 - **Numbers are numbers, with the unit in the field name (review).** `sizeBytes`, not "1.2 GB".
 - **A secret never leaves (test).** Environment variable reads return the key and `isSet`; every output path is tested with a fake secret.
 - **Logs are data, not instructions (test).** The last N lines, secrets redacted, `truncated` marked.
-- **A result is structured (review).** `outputSchema` and `structuredContent`; the text content is a short mirror.
+- **A result is structured (review).** `structuredContent` carries the data. The text content carries the summary and the same data as JSON, because some clients show only the text to the model. `outputSchema` is *planned*.
 
 ## Errors
 

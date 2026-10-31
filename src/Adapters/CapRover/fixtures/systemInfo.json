@@ -1,0 +1,5 @@
+{
+  "status": 100,
+  "description": "Captain info retrieved",
+  "data": { "hasRootSsl": true, "forceSsl": false, "rootDomain": "example.com", "captainSubDomain": "captain" }
+}

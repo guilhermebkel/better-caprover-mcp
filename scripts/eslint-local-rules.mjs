@@ -593,7 +593,7 @@ const ALLOWED_VERBS = new Set([
   "split", "join", "truncate", "wrap", "assert", "ensure", "mark", "reset", "clear", "scroll", "focus", "toggle",
   "submit", "upload", "download", "generate", "assign", "attach", "detect", "classify", "score", "rank", "match",
   "enrich", "decode", "encode", "hash", "sign", "verify", "authorize", "login", "logout", "retry", "wait", "sleep",
-  "stream", "consume", "publish", "subscribe", "track", "record", "mask", "strip", "trim", "pick", "omit", "group",
+  "stream", "consume", "publish", "deploy", "subscribe", "track", "record", "mask", "strip", "trim", "pick", "omit", "group",
   "index", "seed", "migrate", "connect", "disconnect", "invoke", "call", "dispatch", "enqueue", "schedule", "cancel",
   "abort", "approve", "reject", "accept", "confirm", "dismiss", "expire", "refresh", "sync", "copy", "move", "rename",
   "replace", "reduce", "flatten", "dedupe", "deduplicate", "chunk", "limit", "cap", "clamp", "round", "estimate",

@@ -7,7 +7,7 @@ How tests in this repository are written. `pnpm lint` enforces the rules marked 
 - **Next to the code.** A test lives beside the file it tests and shares its name (e.g. `EnvUtil.ts` → `EnvUtil.test.ts`; `check-changed.mjs` → `check-changed.test.mjs`). There is no `test/` folder. Every test runs in Node.
 - **The outer describe names what is tested (lint).** Every test in `src/` sits under a top-level `describe("ClassName.method()")`: the class the file tests and the public method the tests go through. Situations go in describes inside it, worded as a context (`describe("when the mode is set")`). Lint (`local/describe-target`) checks that the class is the file's and that the method exists and is public, so renaming a method without its tests fails. A private method is tested through the public one that calls it.
 - **Through the highest seam.** Test behavior through operations, surfaces and the server (a real MCP client over `InMemoryTransport`). Test a lower module directly only for logic with many cases (modes, redaction, masking).
-- **Fixtures in the real format.** Fixtures for the CapRover API are recorded responses in the real format, complete, kept in `src/Adapters/CapRover/fixtures/`.
+- **Fixtures in the real format.** Fixtures for the CapRover API are complete responses in the real format, kept in `src/Adapters/CapRover/fixtures/`. A file named `recorded*` was recorded from a real CapRover (1.15.5); the others were written from the CapRover source. Prefer recording: the first run against a real server found three differences from the source (a missing field, a binary log format and a missing endpoint).
 - **Every new behavior brings its test.** Each new operation, output path or rule gets a test, with a fake secret where output is involved.
 
 ## Which level
@@ -17,7 +17,7 @@ Many fast low-level tests, few slow ones. Pick the lowest level that can fail fo
 - **Unit and service tests** for utils, schemas, services and operations (with a double for the CapRover client).
 - **Server tests** for what a client sees: a real MCP client talks to the built server object in memory.
 - **Package smoke** (`pnpm smoke`) for the built bundle: it starts the server the way a client does, through `node`, `npx` and `docker run -i`, and checks the reply to `initialize` and that stdout carries nothing but JSON-RPC. CI runs it for `npx` and for Docker.
-- **Integration** against a real CapRover in Docker arrives with the first operation, for what a double cannot prove: login, deploy, logs.
+- **Integration** against a real CapRover in Docker (`pnpm test:integration`, files `scripts/*.integration.test.mjs`), for what a double cannot prove: login, deploy, logs, and the built bundle talking to CapRover over stdio. `pnpm test` leaves these out. They need `pnpm build` first and a CapRover with its default password, or `CAPROVER_TEST_URL` and `CAPROVER_TEST_PASSWORD`. CI starts a CapRover for them.
 
 A bug found at a high level (smoke, integration, a user report) is first reproduced in a lower-level test, then fixed.
 

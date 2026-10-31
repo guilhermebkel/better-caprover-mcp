@@ -1,0 +1,5 @@
+{
+  "status": 100,
+  "description": "Version info retrieved",
+  "data": { "currentVersion": "1.14.1", "latestVersion": "1.15.0", "canUpdate": true, "changeLogMessage": "" }
+}

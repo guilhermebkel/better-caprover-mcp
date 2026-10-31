@@ -4,7 +4,8 @@ CapRover has one admin password and no user name. Its optional two-factor login 
 
 ## Decision
 
-- If the server answers the login with `STATUS_ERROR_OTP_REQUIRED` (1114), this server stops at startup with a message that names the cause: two-factor login is on and is not supported.
+- If CapRover answers the login with `STATUS_ERROR_OTP_REQUIRED` (1114), every call that needs a session fails with a message that names the cause: two-factor login is on and is not supported. The server itself still starts, because a client shows only "connection closed" when a server exits at startup, and shows a tool error to the person.
+- The server logs in on the first call, not at startup, so a wrong address or password is reported as a tool result.
 - When the session token (valid for 480 hours) expires, the server logs in again with the password.
 
 ## Considered options

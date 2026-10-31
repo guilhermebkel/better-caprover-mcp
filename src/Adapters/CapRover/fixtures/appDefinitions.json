@@ -1,0 +1,48 @@
+{
+  "status": 100,
+  "description": "App definitions are retrieved.",
+  "data": {
+    "appDefinitions": [
+      {
+        "hasPersistentData": true,
+        "description": "",
+        "instanceCount": 2,
+        "captainDefinitionRelativeFilePath": "./captain-definition",
+        "networks": [],
+        "envVars": [{ "key": "API_TOKEN", "value": "fake-env-value-123" }, { "key": "MODE", "value": "prod" }],
+        "volumes": [{ "volumeName": "web-data", "containerPath": "/data" }],
+        "ports": [{ "hostPort": 8080, "containerPort": 80 }],
+        "versions": [
+          { "version": 1, "timeStamp": "2026-01-01T00:00:00.000Z", "deployedImageName": "img-captain--web:1" },
+          { "version": 2, "timeStamp": "2026-02-01T00:00:00.000Z", "deployedImageName": "nginx:1.27" }
+        ],
+        "deployedVersion": 2,
+        "notExposeAsWebApp": false,
+        "customDomain": [{ "publicDomain": "www.example.org", "hasSsl": true }],
+        "hasDefaultSubDomainSsl": true,
+        "forceSsl": false,
+        "websocketSupport": false,
+        "containerHttpPort": 80,
+        "appName": "web",
+        "isAppBuilding": false
+      },
+      {
+        "hasPersistentData": false,
+        "instanceCount": 0,
+        "envVars": [],
+        "volumes": [],
+        "ports": [],
+        "versions": [],
+        "deployedVersion": 0,
+        "notExposeAsWebApp": true,
+        "customDomain": [],
+        "hasDefaultSubDomainSsl": false,
+        "forceSsl": false,
+        "appName": "worker"
+      }
+    ],
+    "rootDomain": "example.com",
+    "captainSubDomain": "captain",
+    "defaultNginxConfig": ""
+  }
+}

@@ -1,0 +1,12 @@
+{
+  "status": 100,
+  "description": "One click apps retrieved",
+  "data": {
+    "oneClickApps": [
+      {
+        "name": "postgres", "displayName": "PostgreSQL", "description": "The SQL database", "isOfficial": true,
+        "logoUrl": "postgres.png", "baseUrl": "https://oneclickapps.caprover.com"
+      }
+    ]
+  }
+}
