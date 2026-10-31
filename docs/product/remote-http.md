@@ -29,7 +29,7 @@ Put **TLS** in front (CapRover, nginx, Caddy, etc.): terminate HTTPS at the prox
 2. Set persistent env vars on the app: `CAPROVER_URL`, `CAPROVER_PASSWORD`, `CAPROVER_MCP_MODE`, and `CAPROVER_MCP_HTTP_TOKEN`.
 3. Use a **one-click or custom Dockerfile** command: `serve --http` with `CAPROVER_MCP_HTTP_HOST=0.0.0.0` and container port **3100**.
 4. In CapRover **HTTP settings**, enable **HTTPS** and **Force HTTPS** on the app domain; point the proxy to container port `3100` (HTTP only inside the container).
-5. Point Cursor or another MCP client at `https://caprover-mcp.yourdomain.com/mcp` with `Authorization: Bearer <token>`.
+5. Point your MCP client (such as Cursor) at `https://caprover-mcp.yourdomain.com/mcp` with `Authorization: Bearer <token>`.
 
 The MCP process does not terminate TLS itself; CapRover’s nginx edge handles certificates.
 
