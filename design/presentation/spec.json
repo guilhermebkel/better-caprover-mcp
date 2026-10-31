@@ -1,0 +1,26 @@
+{
+  "brand": "better-caprover-mcp",
+  "tagline": "Unofficial MCP server for CapRover",
+  "brief": "An open source MCP server that lets AI agents (Claude, Cursor, Codex) operate a CapRover server. It starts read-only and asks before it deletes: trustworthy, precise and developer-friendly.",
+  "adjectives": ["trustworthy", "precise", "protective", "open"],
+  "criteria": "Recognisable at 16 px, works in one colour, and distinct from the CapRover mark and from the Docker and Kubernetes marks.",
+  "industry": "developer-tool",
+  "nav": ["Docs", "Operations", "GitHub"],
+  "brand_color": "#0D9488",
+  "greyscale": false,
+  "designer": "Claude",
+  "round": 1,
+  "concepts": [
+    {
+      "name": "Sealed container",
+      "symbol": "../svg/symbol-light.svg",
+      "lockup": "../svg/horizontal-light.svg",
+      "idea": "A container cube with one sealed face: it operates apps and starts protected.",
+      "rationale": [
+        "The solid face is the read-only default made visible",
+        "A cube is the native shape of a PaaS and of containers",
+        "Reads at 16 px and in one colour"
+      ]
+    }
+  ]
+}
