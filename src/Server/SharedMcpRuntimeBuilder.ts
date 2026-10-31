@@ -43,7 +43,7 @@ export class SharedMcpRuntimeBuilder {
     const policy = new PolicyService(env.CAPROVER_MCP_MODE, env.CAPROVER_MCP_ALLOW_CRITICAL);
     const secrets = SharedMcpRuntimeBuilder.collectSecrets(env);
     const limiter = new ConcurrencyLimiterService(
-      env.CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER,
+      env.CAPROVER_MCP_MAX_CONCURRENT,
       concurrencyQueueWaitMs,
     );
     const parts: SharedRuntimeParts = {

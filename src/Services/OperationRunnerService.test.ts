@@ -24,7 +24,7 @@ const buildEnv = (mode: AccessMode): Env => ({
   CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE: 120,
   CAPROVER_MCP_MAX_HTTP_SESSIONS: 64,
   CAPROVER_MCP_HTTP_SESSION_TTL_MS: 86_400_000,
-  CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER: 5,
+  CAPROVER_MCP_MAX_CONCURRENT: 5,
 });
 
 const buildTool = (mode: AccessMode, name: string, fake: FakeCaproverClientAdapter): ToolDefinition => {
