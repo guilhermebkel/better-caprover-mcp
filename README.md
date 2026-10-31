@@ -8,7 +8,7 @@
 <p align="center">
   <strong>Let your AI agent operate your CapRover: deploy, configure and read logs, with a read-only default and a confirmation step before anything is deleted.</strong>
   <br />
-  <em>An unofficial MCP server, one command with npx or Docker. Works with Claude, Cursor, Codex and any client that speaks MCP. Not affiliated with CapRover.</em>
+  <em>An unofficial MCP server, one command with npx or Docker. Works with any AI client that speaks MCP (such as Claude, Cursor, Codex, and others). Not affiliated with CapRover.</em>
 </p>
 
 <p align="center">
@@ -73,7 +73,7 @@ You need the address of your CapRover (`https://captain.your-domain.com`) and it
 
 ### 1. Coding Agent
 
-Add this to the MCP servers of your client (Claude Code, Claude Desktop, Cursor, Codex and others):
+Add this to the MCP servers of your client (any AI that speaks MCP, such as Claude Code, Cursor, Codex, and others):
 
 ```json
 {
