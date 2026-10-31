@@ -6,6 +6,7 @@ dist
 coverage
 docs
 scripts
+!scripts/docker-healthcheck.sh
 *.tgz
 *.md
 !README.md

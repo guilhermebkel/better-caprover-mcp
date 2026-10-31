@@ -5,7 +5,6 @@ RUN corepack enable
 COPY package.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 COPY tsconfig.json tsup.config.ts ./
-COPY scripts/docker-healthcheck.sh ./scripts/docker-healthcheck.sh
 COPY src ./src
 RUN pnpm build
 
