@@ -1,1 +1,1 @@
-export type CliCommand = "init" | "serve";
+export type CliCommand = "init" | "serve" | "health";

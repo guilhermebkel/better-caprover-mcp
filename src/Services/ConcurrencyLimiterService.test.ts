@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
 import { ConcurrencyLimiterService } from "@/Services/ConcurrencyLimiterService.ts";
 
 const FIRST_START = "first-start";
@@ -36,5 +36,18 @@ describe("ConcurrencyLimiterService.run()", () => {
     releaseB();
     await Promise.all([first, second, third]);
     expect(events).toStrictEqual([FIRST_START, SECOND_START, "first-end", "second-end", "third-start"]);
+  });
+
+  it("leaves no timer behind once a waiting task has started", async () => {
+    vi.useFakeTimers();
+    try {
+      const limiter = new ConcurrencyLimiterService(1, 1000);
+      const first = limiter.run(() => Promise.resolve("a"));
+      const second = limiter.run(() => Promise.resolve("b"));
+      await Promise.all([first, second]);
+      expect(vi.getTimerCount()).toBe(0);
+    } finally {
+      vi.useRealTimers();
+    }
   });
 });

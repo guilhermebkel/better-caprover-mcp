@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildRequestLines, checkReplies, parseCommand, parseLines } from "./package-smoke.mjs";
+import { buildRequestLines, checkReplies, parseCommand, parseLines, waitForDockerHealthy } from "./package-smoke.mjs";
 
 const GOOD_REPLY = {
   jsonrpc: "2.0",
@@ -83,5 +83,16 @@ describe("parseCommand()", () => {
       isStdioOnly: true,
       isHttpOnly: false,
     });
+  });
+});
+
+describe("waitForDockerHealthy()", () => {
+  it("returns when docker inspect reports healthy", async () => {
+    const results = {
+      "docker:ps": { stdout: "container-id\n", stderr: "", status: 0 },
+      "docker:inspect": { stdout: "healthy\n", stderr: "", status: 0 },
+    };
+    const runSpawnSync = (command, args) => results[`${command}:${args[0]}`] ?? { stdout: "", stderr: "", status: 1 };
+    await expect(waitForDockerHealthy("ghcr.io/example/image:tag", runSpawnSync)).resolves.toBeUndefined();
   });
 });

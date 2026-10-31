@@ -34,6 +34,9 @@ const buildInitializeJson = (clientName: string, id = 1): string => JSON.stringi
   id,
 });
 
+const SESSION_HEADER = "mcp-session-id";
+const PING_JSON = JSON.stringify({ jsonrpc: "2.0", method: "ping" });
+
 const postMcp = async (
   baseUrl: string,
   token: string,
@@ -45,7 +48,7 @@ const postMcp = async (
     "Authorization": `Bearer ${token}`,
     "Content-Type": "application/json",
     "Accept": "application/json, text/event-stream",
-    ...(sessionId === undefined ? {} : { "mcp-session-id": sessionId }),
+    ...(sessionId === undefined ? {} : { [SESSION_HEADER]: sessionId }),
   },
   body,
 });
@@ -59,7 +62,7 @@ const postMcpWithoutAuth = async (
   headers: {
     "Content-Type": "application/json",
     "Accept": "application/json, text/event-stream",
-    ...(sessionId === undefined ? {} : { "mcp-session-id": sessionId }),
+    ...(sessionId === undefined ? {} : { [SESSION_HEADER]: sessionId }),
   },
   body,
 });
@@ -355,7 +358,7 @@ describe("HttpRunner.start()", () => {
     try {
       const first = await postMcp(handle.url, TEST_TOKEN, buildInitializeJson("session-owner"));
       await first.text();
-      const sessionId = first.headers.get("mcp-session-id");
+      const sessionId = first.headers.get(SESSION_HEADER);
       expect(sessionId).not.toBeNull();
       const response = await postMcp(
         handle.url,
@@ -421,27 +424,82 @@ describe("HttpRunner.start()", () => {
     ]);
   });
 
-  it("drops HTTP sessions after TTL", async () => {
+  it("drops an idle HTTP session after TTL", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
     const handle = await startHttpRunner({
       CAPROVER_MCP_HTTP_TOKEN: TEST_TOKEN,
-      CAPROVER_MCP_HTTP_SESSION_TTL_MS: "200",
+      CAPROVER_MCP_HTTP_SESSION_TTL_MS: "1000",
     });
     try {
       const first = await postMcp(handle.url, TEST_TOKEN, buildInitializeJson("session-ttl"));
       await first.text();
-      const sessionId = first.headers.get("mcp-session-id");
-      expect(sessionId).not.toBeNull();
-      await expect.poll(async () => {
-        const expired = await postMcp(
-          handle.url,
-          TEST_TOKEN,
-          JSON.stringify({ jsonrpc: "2.0", method: "ping" }),
-          sessionId ?? undefined,
-        );
-        return expired.status;
-      }).toBe(404);
+      const sessionId = first.headers.get(SESSION_HEADER) ?? "";
+      vi.setSystemTime(Date.now() + 1500);
+      const expired = await postMcp(handle.url, TEST_TOKEN, PING_JSON, sessionId);
+      expect(expired.status).toBe(404);
+    } finally {
+      await handle.close();
+      vi.useRealTimers();
+    }
+  });
+
+  it("keeps an HTTP session alive while requests keep arriving", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    const handle = await startHttpRunner({
+      CAPROVER_MCP_HTTP_TOKEN: TEST_TOKEN,
+      CAPROVER_MCP_HTTP_SESSION_TTL_MS: "1000",
+    });
+    try {
+      const first = await postMcp(handle.url, TEST_TOKEN, buildInitializeJson("session-sliding"));
+      await first.text();
+      const sessionId = first.headers.get(SESSION_HEADER) ?? "";
+      const statuses: number[] = [];
+      for (let attempt = 0; attempt < 3; attempt += 1) {
+        vi.setSystemTime(Date.now() + 600);
+        const ping = await postMcp(handle.url, TEST_TOKEN, PING_JSON, sessionId);
+        await ping.text();
+        statuses.push(ping.status);
+      }
+      expect(statuses).not.toContain(404);
+    } finally {
+      await handle.close();
+      vi.useRealTimers();
+    }
+  });
+
+  it("does not exceed the session cap when initializations arrive at once", async () => {
+    const handle = await startHttpRunner({
+      CAPROVER_MCP_HTTP_TOKEN: TEST_TOKEN,
+      CAPROVER_MCP_MAX_HTTP_SESSIONS: "1",
+    });
+    try {
+      const responses = await Promise.all([
+        postMcp(handle.url, TEST_TOKEN, buildInitializeJson("cap-a")),
+        postMcp(handle.url, TEST_TOKEN, buildInitializeJson("cap-b")),
+        postMcp(handle.url, TEST_TOKEN, buildInitializeJson("cap-c")),
+      ]);
+      await Promise.all(responses.map(async (response) => response.text()));
+      expect(responses.map((response) => response.status).sort()).toStrictEqual([200, 503, 503]);
     } finally {
       await handle.close();
     }
+  });
+
+  it("answers only the exact /health and /mcp paths", async () => {
+    const handle = await startHttpRunner({ CAPROVER_MCP_HTTP_TOKEN: TEST_TOKEN });
+    try {
+      const health = await fetch(`${handle.url}/healthz`);
+      const mcp = await fetch(`${handle.url}/mcpfoo`, { method: "POST", headers: { Authorization: `Bearer ${TEST_TOKEN}` } });
+      expect([health.status, mcp.status]).toStrictEqual([404, 404]);
+    } finally {
+      await handle.close();
+    }
+  });
+
+  it("closes while a session is open", async () => {
+    const handle = await startHttpRunner({ CAPROVER_MCP_HTTP_TOKEN: TEST_TOKEN });
+    const first = await postMcp(handle.url, TEST_TOKEN, buildInitializeJson("close-open"));
+    await first.text();
+    await expect(handle.close()).resolves.toBeUndefined();
   });
 });

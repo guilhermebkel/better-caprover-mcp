@@ -34,9 +34,16 @@ const PLAIN_TEXT = "text/plain";
 
 export class HttpRunner {
   static async run(): Promise<void> {
-    await HttpRunner.start();
-    await new Promise<void>(() => {
-      // Why: HTTP mode runs until the process is stopped.
+    const handle = await HttpRunner.start();
+    await new Promise<void>((resolve) => {
+      const stop = (): void => {
+        handle.close().then(resolve, (error: unknown) => {
+          LogUtil.logError("http_close_failed", error instanceof Error ? error.name : "unknown");
+          resolve();
+        });
+      };
+      process.once("SIGTERM", stop);
+      process.once("SIGINT", stop);
     });
   }
 
@@ -87,10 +94,11 @@ export class HttpRunner {
     HttpModeMarkerUtil.markHttpModeActive(markerPath);
     LogUtil.logInfo("http_server_started");
     return {
-      url: `http://${env.CAPROVER_MCP_HTTP_HOST}:${port}`,
+      url: `http://${NetworkBindUtil.buildUrlHost(env.CAPROVER_MCP_HTTP_HOST)}:${port}`,
       close: async () => {
         HttpModeMarkerUtil.clearHttpModeMarker(markerPath);
-        await new Promise<void>((resolve, reject) => {
+        await sessions.closeAll();
+        const closed = new Promise<void>((resolve, reject) => {
           httpServer.close((error) => {
             if (error === undefined) {
               resolve();
@@ -99,7 +107,8 @@ export class HttpRunner {
             }
           });
         });
-        await sessions.closeAll();
+        httpServer.closeAllConnections();
+        await closed;
       },
     };
   }
@@ -132,13 +141,13 @@ export class HttpRunner {
     context: HttpRequestContext,
   ): Promise<void> {
     const { auth, authenticatedRateLimit, failedAuthRateLimit, sessions, env } = context;
-    const url = request.url ?? "";
-    if (request.method === "GET" && url.startsWith(HEALTH_PATH)) {
+    const { pathname } = new URL(request.url ?? "/", "http://localhost");
+    if (request.method === "GET" && pathname === HEALTH_PATH) {
       response.writeHead(HTTP_OK, { "Content-Type": PLAIN_TEXT });
       response.end("ok");
       return;
     }
-    if (!url.startsWith(MCP_PATH)) {
+    if (pathname !== MCP_PATH) {
       response.writeHead(HTTP_NOT_FOUND, { "Content-Type": PLAIN_TEXT });
       response.end("Not Found");
       return;

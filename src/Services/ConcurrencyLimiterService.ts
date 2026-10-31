@@ -27,22 +27,22 @@ export class ConcurrencyLimiterService {
       return;
     }
     await new Promise<void>((resolve, reject) => {
-      const waiter: ConcurrencyLimiterWaiter = {
-        resolve: () => {
-          this.active += 1;
-          resolve();
-        },
-        reject,
-      };
-      this.waiters.push(waiter);
-      setTimeout(() => {
-        const index = this.waiters.indexOf(waiter);
+      const timer = setTimeout(() => {
+        const index = this.waiters.findIndex((waiter) => waiter.reject === reject);
         if (index === -1) {
           return;
         }
         this.waiters.splice(index, 1);
         reject(new ConcurrencyLimitError(this.maxConcurrent));
       }, this.queueWaitMs);
+      this.waiters.push({
+        resolve: () => {
+          clearTimeout(timer);
+          this.active += 1;
+          resolve();
+        },
+        reject,
+      });
     });
   }
 

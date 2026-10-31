@@ -1,7 +1,11 @@
-import { unlinkSync, writeFileSync } from "node:fs";
+import { existsSync, unlinkSync, writeFileSync } from "node:fs";
 
 export class HttpModeMarkerUtil {
   static readonly DEFAULT_MARKER_PATH = "/tmp/better-caprover-mcp-http.active";
+
+  static isHttpModeActive(markerPath = HttpModeMarkerUtil.DEFAULT_MARKER_PATH): boolean {
+    return existsSync(markerPath);
+  }
 
   static markHttpModeActive(markerPath = HttpModeMarkerUtil.DEFAULT_MARKER_PATH): void {
     writeFileSync(markerPath, "1", { encoding: "utf8" });

@@ -28,27 +28,22 @@ export class OperationRunnerService {
   }
 
   private async run<Input>(toolName: string, operation: OperationPort<Input>, rawInput: unknown): Promise<ToolOutcome> {
+    let result: AuditResult;
+    let outcome: ToolOutcome;
     try {
-      return await this.deps.limiter.run(async () => {
-        try {
-          this.deps.policy.assertCanRun(toolName, operation.risk);
-          const control = ControlFieldsSchema.parse(rawInput);
-          const input = operation.inputSchema.parse(InputStripUtil.stripControlFields(rawInput));
-          const outcome = await this.dispatch(toolName, operation, input, control);
-          this.writeAudit(toolName, operation.risk, outcome.isError ? "error" : "ok");
-          return this.redactOutcome(outcome);
-        } catch (error) {
-          const result: AuditResult = error instanceof OperationDeniedError ? "denied" : "error";
-          const outcome = this.redactOutcome(OperationRunnerService.buildFailure(toolName, error));
-          this.writeAudit(toolName, operation.risk, result);
-          return outcome;
-        }
+      this.deps.policy.assertCanRun(toolName, operation.risk);
+      outcome = await this.deps.limiter.run(async () => {
+        const control = ControlFieldsSchema.parse(rawInput);
+        const input = operation.inputSchema.parse(InputStripUtil.stripControlFields(rawInput));
+        return this.dispatch(toolName, operation, input, control);
       });
+      result = outcome.isError ? "error" : "ok";
     } catch (error) {
-      const outcome = this.redactOutcome(OperationRunnerService.buildFailure(toolName, error));
-      this.writeAudit(toolName, operation.risk, "error");
-      return outcome;
+      result = error instanceof OperationDeniedError ? "denied" : "error";
+      outcome = OperationRunnerService.buildFailure(toolName, error);
     }
+    this.writeAudit(toolName, operation.risk, result);
+    return this.redactOutcome(outcome);
   }
 
   private writeAudit(tool: string, risk: RiskTier, result: AuditResult): void {

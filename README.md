@@ -220,7 +220,7 @@ Without `CAPROVER_URL` and `CAPROVER_PASSWORD`, `init` only prints the configura
 | `CAPROVER_MCP_MAX_HTTP_BODY_BYTES` | `1048576` | Max POST body size on `/mcp` |
 | `CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE` | `120` | Max MCP HTTP requests per minute, counted in two buckets: failed auth and authenticated traffic. Each bucket is shared by every caller. |
 | `CAPROVER_MCP_MAX_HTTP_SESSIONS` | `64` | Max concurrent Streamable HTTP MCP sessions |
-| `CAPROVER_MCP_HTTP_SESSION_TTL_MS` | `86400000` | Max idle lifetime of an HTTP MCP session (ms) |
+| `CAPROVER_MCP_HTTP_SESSION_TTL_MS` | `86400000` | Idle lifetime of an HTTP MCP session (ms); each request renews it |
 | `CAPROVER_MCP_MAX_CONCURRENT` | `5` | Max parallel tool runs in this MCP instance |
 
 Without `CAPROVER_URL` and `CAPROVER_PASSWORD` the server still starts, and every call tells the model what is missing.

@@ -13,8 +13,7 @@ LABEL org.opencontainers.image.source="https://github.com/guilhermebkel/better-c
 LABEL org.opencontainers.image.description="Unofficial MCP server for CapRover"
 LABEL org.opencontainers.image.licenses="MIT"
 COPY --from=build --chmod=755 /app/dist/main.js /usr/local/bin/better-caprover-mcp
-COPY --chmod=755 scripts/docker-healthcheck.sh /usr/local/bin/docker-healthcheck.sh
 EXPOSE 3100
-HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD ["/usr/local/bin/docker-healthcheck.sh"]
+HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 CMD ["better-caprover-mcp", "health"]
 USER node
 ENTRYPOINT ["better-caprover-mcp"]

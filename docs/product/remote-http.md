@@ -37,7 +37,7 @@ The MCP process does not terminate TLS itself; CapRover’s nginx edge handles c
 
 For a `docker run` example (localhost bind, env vars, and client JSON), see the README [**Quick start** — Server and client](../../README.md#2-server-and-client).
 
-The image exposes port `3100` and defines a Docker `HEALTHCHECK` via `scripts/docker-healthcheck.sh`. In HTTP mode (`serve --http`) the process writes a marker file (default `/tmp/better-caprover-mcp-http.active`) and the check requires `GET /health` to return body `ok`. The healthcheck script accepts optional `CAPROVER_MCP_HTTP_MARKER_PATH` to point at that file; it is not a variable on the MCP server itself. Stdio-only runs leave no HTTP marker, so the script exits success and a plain `docker run` without `serve --http` stays healthy.
+The image exposes port `3100` and defines a Docker `HEALTHCHECK` that runs `better-caprover-mcp health`. In HTTP mode (`serve --http`) the process writes a marker file (`/tmp/better-caprover-mcp-http.active`) and the check requires `GET /health` on `CAPROVER_MCP_HTTP_PORT` to return body `ok`. Without `serve --http` (stdio) the check always passes. The process stops cleanly on `SIGTERM`, so `docker stop` does not wait for the kill timeout.
 
 ## Limits
 

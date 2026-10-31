@@ -29,6 +29,7 @@ const isInitializeBody = (parsedBody: unknown): boolean => {
 
 export class HttpSessionRunner {
   private readonly sessionIdToSession = new Map<string, SessionRecord>();
+  private pendingInitializations = 0;
 
   constructor(
     private readonly buildMcpServer: McpServerBuilder,
@@ -52,6 +53,7 @@ export class HttpSessionRunner {
         response.end("Not Found");
         return;
       }
+      session.expiresAtMs = this.getNowMs() + this.sessionTtlMs;
       await session.transport.handleRequest(request, response, parsedBody);
       return;
     }
@@ -60,15 +62,31 @@ export class HttpSessionRunner {
       response.end("Bad Request");
       return;
     }
-    if (this.sessionIdToSession.size >= this.maxSessions) {
+    if (this.sessionIdToSession.size + this.pendingInitializations >= this.maxSessions) {
       response.writeHead(HTTP_SERVICE_UNAVAILABLE, { "Content-Type": PLAIN_TEXT });
       response.end("Service Unavailable");
       return;
     }
+    await this.initializeSession(request, response, parsedBody);
+  }
+
+  async closeAll(): Promise<void> {
+    await Promise.all([...this.sessionIdToSession.values()].map(async (session) => session.transport.close()));
+    this.sessionIdToSession.clear();
+  }
+
+  private async initializeSession(
+    request: IncomingMessage,
+    response: ServerResponse,
+    parsedBody: unknown,
+  ): Promise<void> {
+    this.pendingInitializations += 1;
+    const registration = { isRegistered: false };
     const server = this.buildMcpServer();
     const transport = new StreamableHTTPServerTransport({
       sessionIdGenerator: () => randomUUID(),
       onsessioninitialized: (id) => {
+        registration.isRegistered = true;
         this.sessionIdToSession.set(id, {
           transport,
           expiresAtMs: this.getNowMs() + this.sessionTtlMs,
@@ -78,20 +96,22 @@ export class HttpSessionRunner {
         this.sessionIdToSession.delete(id);
       },
     });
-    await server.connect(transport);
-    await transport.handleRequest(request, response, parsedBody);
-  }
-
-  async closeAll(): Promise<void> {
-    await Promise.all([...this.sessionIdToSession.values()].map(async (session) => session.transport.close()));
-    this.sessionIdToSession.clear();
+    try {
+      await server.connect(transport);
+      await transport.handleRequest(request, response, parsedBody);
+    } finally {
+      this.pendingInitializations -= 1;
+      if (!registration.isRegistered) {
+        await transport.close().catch(() => undefined);
+      }
+    }
   }
 
   private dropExpiredSessions(): void {
     const nowMs = this.getNowMs();
     for (const [sessionId, session] of this.sessionIdToSession.entries()) {
       if (session.expiresAtMs <= nowMs) {
-        void session.transport.close();
+        session.transport.close().catch(() => undefined);
         this.sessionIdToSession.delete(sessionId);
       }
     }
