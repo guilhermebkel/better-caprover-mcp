@@ -20,6 +20,7 @@ import { CaproverClientAdapter } from "@/Adapters/CapRover/CaproverClientAdapter
 import { MockCaproverServer } from "@/Adapters/CapRover/MockCaproverServer.ts";
 import { CaproverConfigError } from "@/Errors/CaproverConfigError.ts";
 import { CaproverRequestError } from "@/Errors/CaproverRequestError.ts";
+import { EnvTestUtil } from "@/Utils/EnvTestUtil.ts";
 
 const FAKE_PASSWORD = "fake-password-9876";
 const API = "/api/v2";
@@ -390,11 +391,10 @@ describe("CaproverClientAdapter.deleteApp()", () => {
 
 describe("CaproverClientAdapter.buildFromEnv()", () => {
   it("is not configured when the password is missing", async () => {
-    const client = CaproverClientAdapter.buildFromEnv({
-      CAPROVER_MCP_MODE: "readonly",
-      CAPROVER_MCP_ALLOW_CRITICAL: false,
-      CAPROVER_URL: "https://captain.example.com",
-    });
+    const client = CaproverClientAdapter.buildFromEnv(EnvTestUtil.build({
+      url: "https://captain.example.com",
+      password: undefined,
+    }));
 
     await expect(client.listApps()).rejects.toBeInstanceOf(CaproverConfigError);
   });

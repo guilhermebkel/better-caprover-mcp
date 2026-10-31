@@ -1,8 +1,13 @@
 import { describe, expect, it } from "vitest";
 import { FakeCaproverClientAdapter } from "@/Adapters/CapRover/FakeCaproverClientAdapter.ts";
+import { RoutingCaproverClientAdapter } from "@/Adapters/CapRover/RoutingCaproverClientAdapter.ts";
 import { OperationManifest } from "@/Operations/OperationManifest.ts";
 import type { AccessMode } from "@/Protocols/AccessProtocol.ts";
 import type { ToolDefinition } from "@/Protocols/OperationProtocol.ts";
+import { DEFAULT_SERVER_NAME } from "@/Schemas/ServerConfigSchema.ts";
+import { AuditLogService } from "@/Services/AuditLogService.ts";
+import { CaproverServerRegistryService } from "@/Services/CaproverServerRegistryService.ts";
+import { ConcurrencyLimiterService } from "@/Services/ConcurrencyLimiterService.ts";
 import { ConfirmationService } from "@/Services/ConfirmationService.ts";
 import { OperationRunnerService } from "@/Services/OperationRunnerService.ts";
 import { PolicyService } from "@/Services/PolicyService.ts";
@@ -10,9 +15,21 @@ import { PolicyService } from "@/Services/PolicyService.ts";
 const FAKE_PASSWORD = "fake-password-9876";
 
 const buildTool = (mode: AccessMode, name: string, fake: FakeCaproverClientAdapter): ToolDefinition => {
-  const policy = new PolicyService(mode, false);
-  const runner = new OperationRunnerService(policy, new ConfirmationService(() => 0), [FAKE_PASSWORD]);
-  const tool = OperationManifest.build(fake, policy, runner).find((candidate) => candidate.name === name);
+  const registry = CaproverServerRegistryService.buildForTest([{
+    name: DEFAULT_SERVER_NAME,
+    client: fake,
+    policy: new PolicyService(mode, false),
+    secrets: [FAKE_PASSWORD],
+  }]);
+  const runner = new OperationRunnerService(
+    registry,
+    new ConfirmationService(() => 0),
+    new AuditLogService(),
+    new ConcurrencyLimiterService(5),
+    () => 0,
+  );
+  const tools = OperationManifest.build(new RoutingCaproverClientAdapter(), registry, runner);
+  const tool = tools.find((candidate) => candidate.name === name);
   if (tool === undefined) {
     throw new Error(`No tool ${name}`);
   }

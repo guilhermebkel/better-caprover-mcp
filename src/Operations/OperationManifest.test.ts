@@ -1,7 +1,12 @@
 import { describe, expect, it } from "vitest";
 import { FakeCaproverClientAdapter } from "@/Adapters/CapRover/FakeCaproverClientAdapter.ts";
+import { RoutingCaproverClientAdapter } from "@/Adapters/CapRover/RoutingCaproverClientAdapter.ts";
 import { OperationManifest } from "@/Operations/OperationManifest.ts";
 import type { ToolDefinition } from "@/Protocols/OperationProtocol.ts";
+import { DEFAULT_SERVER_NAME } from "@/Schemas/ServerConfigSchema.ts";
+import { AuditLogService } from "@/Services/AuditLogService.ts";
+import { CaproverServerRegistryService } from "@/Services/CaproverServerRegistryService.ts";
+import { ConcurrencyLimiterService } from "@/Services/ConcurrencyLimiterService.ts";
 import { ConfirmationService } from "@/Services/ConfirmationService.ts";
 import { OperationRunnerService } from "@/Services/OperationRunnerService.ts";
 import { PolicyService } from "@/Services/PolicyService.ts";
@@ -9,14 +14,26 @@ import { PolicyService } from "@/Services/PolicyService.ts";
 const MAX_DESCRIPTION_LENGTH = 640;
 const MIN_REPEATED_SENTENCE_WORDS = 12;
 const FIELD_NAMES = [
-  "dry_run", "user_confirmed", "confirmation_token", "name_contains", "env_vars", "remove_keys",
+  "server", "dry_run", "user_confirmed", "confirmation_token", "name_contains", "env_vars", "remove_keys",
   "delete_volumes", "response_format",
 ];
 
 const buildTools = (): ToolDefinition[] => {
-  const policy = new PolicyService("admin", false);
-  const runner = new OperationRunnerService(policy, new ConfirmationService(() => 0), []);
-  return OperationManifest.build(new FakeCaproverClientAdapter([]), policy, runner);
+  const fake = new FakeCaproverClientAdapter([]);
+  const registry = CaproverServerRegistryService.buildForTest([{
+    name: DEFAULT_SERVER_NAME,
+    client: fake,
+    policy: new PolicyService("admin", false),
+    secrets: [],
+  }]);
+  const runner = new OperationRunnerService(
+    registry,
+    new ConfirmationService(() => 0),
+    new AuditLogService(),
+    new ConcurrencyLimiterService(5),
+    () => 0,
+  );
+  return OperationManifest.build(new RoutingCaproverClientAdapter(), registry, runner);
 };
 
 describe("OperationManifest.build()", () => {

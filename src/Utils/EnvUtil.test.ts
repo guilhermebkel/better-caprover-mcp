@@ -11,7 +11,16 @@ describe("EnvUtil.read()", () => {
     it("starts in readonly mode with critical locked and no CapRover to reach", () => {
       vi.stubEnv("CAPROVER_MCP_MODE", undefined);
 
-      expect(EnvUtil.read()).toStrictEqual({ CAPROVER_MCP_MODE: "readonly", CAPROVER_MCP_ALLOW_CRITICAL: false });
+      const env = EnvUtil.read();
+      expect(env.CAPROVER_MCP_MODE).toBe("readonly");
+      expect(env.CAPROVER_MCP_ALLOW_CRITICAL).toBe(false);
+      expect(env.servers).toStrictEqual([{
+        name: "default",
+        url: undefined,
+        password: undefined,
+        mode: "readonly",
+        isCriticalAllowed: false,
+      }]);
     });
   });
 

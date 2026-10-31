@@ -4,7 +4,7 @@ import { buildRequestLines, checkReplies, parseCommand, parseLines } from "./pac
 const GOOD_REPLY = {
   jsonrpc: "2.0",
   id: 1,
-  result: { serverInfo: { name: "better-caprover-mcp" }, instructions: "Access mode: readonly." },
+  result: { serverInfo: { name: "better-caprover-mcp" }, instructions: "The default access mode is readonly." },
 };
 
 describe("buildRequestLines()", () => {
@@ -47,7 +47,7 @@ describe("checkReplies()", () => {
   it("reports instructions that do not say readonly", () => {
     const reply = { ...GOOD_REPLY, result: { ...GOOD_REPLY.result, instructions: "Access mode: admin." } };
 
-    expect(checkReplies([reply])).toStrictEqual(["the instructions do not say the server starts in readonly mode"]);
+    expect(checkReplies([reply])).toStrictEqual(["the instructions do not mention readonly mode"]);
   });
 });
 

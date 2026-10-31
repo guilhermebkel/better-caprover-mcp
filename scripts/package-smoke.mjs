@@ -1,5 +1,7 @@
 import { spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { Client } from "@modelcontextprotocol/sdk/client/index.js";
+import { StreamableHTTPClientTransport } from "@modelcontextprotocol/sdk/client/streamableHttp.js";
 
 const TIMEOUT_MS = 30_000;
 const GRACE_MS = 3000;
@@ -10,6 +12,11 @@ const SERVER_NAME = "better-caprover-mcp";
 const DEFAULT_COMMAND = ["node", "dist/main.js"];
 const MAX_SHOWN_CHARS = 80;
 const ARGUMENT_SEPARATORS = new Set(["--"]);
+const HTTP_SMOKE_TOKEN = "smoke-http-token-12345678";
+const HTTP_PORT = "3100";
+const HTTP_OK = 200;
+const HEALTH_WAIT_MS = 15_000;
+const HEALTH_POLL_MS = 200;
 
 export const buildRequestLines = () => {
   const initialize = {
@@ -47,8 +54,8 @@ export const checkReplies = (replies) => {
   if (result.serverInfo?.name !== SERVER_NAME) {
     problems.push(`serverInfo.name is ${JSON.stringify(result.serverInfo?.name)}, expected ${SERVER_NAME}`);
   }
-  if (!String(result.instructions ?? "").includes("Access mode: readonly")) {
-    problems.push("the instructions do not say the server starts in readonly mode");
+  if (!String(result.instructions ?? "").includes("readonly")) {
+    problems.push("the instructions do not mention readonly mode");
   }
   return problems;
 };
@@ -103,7 +110,72 @@ const runSmoke = async (command) => {
   return 0;
 };
 
+const waitForHealth = async (url) => {
+  const deadline = Date.now() + HEALTH_WAIT_MS;
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(`${url}/health`);
+      if (response.status === HTTP_OK) {
+        return;
+      }
+    } catch {
+      // Why: the server may not be listening yet.
+    }
+    await new Promise((resolve) => setTimeout(resolve, HEALTH_POLL_MS));
+  }
+  throw new Error(`HTTP health check did not pass at ${url}/health within ${HEALTH_WAIT_MS} ms`);
+};
+
+export const runHttpSmoke = async (command) => {
+  const [program, ...args] = command;
+  const httpArgs = [...args, "serve", "--http"];
+  const childEnv = {
+    ...globalThis.process.env,
+    CAPROVER_MCP_HTTP_PORT: HTTP_PORT,
+    CAPROVER_MCP_HTTP_TOKENS: JSON.stringify({ smoke: HTTP_SMOKE_TOKEN }),
+  };
+  const child = spawn(program, httpArgs, {
+    env: childEnv,
+    stdio: "inherit",
+  });
+  const baseUrl = `http://127.0.0.1:${HTTP_PORT}`;
+  try {
+    await waitForHealth(baseUrl);
+    const transport = new StreamableHTTPClientTransport(new URL(`${baseUrl}/mcp`), {
+      requestInit: { headers: { Authorization: `Bearer ${HTTP_SMOKE_TOKEN}` } },
+    });
+    const client = new Client({ name: "package-smoke-http", version: "0.0.0" });
+    await client.connect(transport);
+    const name = client.getServerVersion()?.name;
+    const instructions = client.getInstructions() ?? "";
+    await client.close();
+    const problems = [];
+    if (name !== SERVER_NAME) {
+      problems.push(`HTTP serverInfo.name is ${JSON.stringify(name)}, expected ${SERVER_NAME}`);
+    }
+    if (!instructions.includes("readonly")) {
+      problems.push("HTTP instructions do not mention readonly mode");
+    }
+    if (problems.length > 0) {
+      process.stderr.write(`${problems.join("\n")}\n`);
+      return 1;
+    }
+    process.stdout.write(`smoke http ok: ${[program, ...httpArgs].join(" ")}\n`);
+    return 0;
+  } finally {
+    child.kill();
+  }
+};
+
+const runAllSmoke = async (command) => {
+  const stdioCode = await runSmoke(command);
+  if (stdioCode !== 0) {
+    return stdioCode;
+  }
+  return runHttpSmoke(command);
+};
+
 if (process.argv[1] === fileURLToPath(import.meta.url)) {
   const command = parseCommand(process.argv.slice(FIRST_USER_ARG));
-  process.exit(await runSmoke(command));
+  process.exit(await runAllSmoke(command));
 }

@@ -56,6 +56,21 @@ The package and the image are not published yet; until then, build them from thi
 | `CAPROVER_PASSWORD` | none | The CapRover password. CapRover has no user name |
 | `CAPROVER_MCP_MODE` | `readonly` | `readonly`, `operate` or `admin`: how much the server may do |
 | `CAPROVER_MCP_ALLOW_CRITICAL` | off | Set to `1` to unlock critical operations in `admin` mode. No operation is critical yet |
+| `CAPROVER_MCP_HTTP_TOKENS` | none | JSON map of client names to bearer secrets; required for non-local HTTP bind |
+| `CAPROVER_MCP_HTTP_HOST` | `127.0.0.1` | Address for `serve --http` |
+| `CAPROVER_MCP_HTTP_PORT` | `3100` | Port for `serve --http` |
+| `CAPROVER_MCP_SERVERS` / `CAPROVER_MCP_SERVERS_FILE` | none | Several CapRover servers; see `docs/product/remote-http.md` |
+
+### Remote HTTP (optional)
+
+Stdio stays the default. To listen for Streamable HTTP on the same machine:
+
+```bash
+export CAPROVER_MCP_HTTP_TOKENS='{"cursor":"<long-random-secret>"}'
+better-caprover-mcp serve --http
+```
+
+Clients call `http://127.0.0.1:3100/mcp` with `Authorization: Bearer <secret>`. Put TLS in front when the listener is reachable on the network. Details: [`docs/product/remote-http.md`](docs/product/remote-http.md) and ADR 0013.
 
 Without `CAPROVER_URL` and `CAPROVER_PASSWORD` the server still starts, and every call tells the model what is missing. The CapRover password gives full access, so the modes are enforced by this server, not by CapRover. Servers with CapRover's two-factor login turned on are not supported (`docs/adr/0010-the-server-logs-in-with-the-password-only.md`).
 

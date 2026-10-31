@@ -22,6 +22,14 @@ _Avoid_: catalog, registry
 A way of exposing the operations over MCP. The `tools` surface exposes named tools; the `code` surface exposes two tools, `search` and `execute`. Only `tools` exists today; `code` is *planned*.
 _Avoid_: mode (that means the access mode), interface
 
+**Remote HTTP**:
+An optional way to run the MCP server with Streamable HTTP (`better-caprover-mcp serve --http`) so a client on another host can connect. Local stdio remains the default. Bearer tokens in `CAPROVER_MCP_HTTP_TOKENS` protect non-local binds.
+_Avoid_: SSE-only transport
+
+**CapRover server name**:
+When several CapRover servers are configured, the `server` parameter on each tool selects which one to use. With a single `CAPROVER_URL` setup, `server` is optional.
+_Avoid_: cluster id, instance id
+
 **Toolset**:
 A group of operations the `tools` surface turns on together, such as `apps` or `domains`. *Planned.*
 _Avoid_: category, bundle
