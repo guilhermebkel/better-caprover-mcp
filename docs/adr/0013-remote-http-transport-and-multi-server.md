@@ -11,9 +11,21 @@ Phase 5 lets a client reach the MCP server over the network and target more than
 - Per-server mode is enforced by a dedicated `PolicyService` per server. Tools on the MCP surface are the **union** of tiers any server allows; each call is checked against that server's mode.
 - Optional `server_name` on every tool input (shared control fields). `get_overview` includes a `servers` array with `name`, `accessMode`, and `enabledRiskTiers` only—no URLs.
 - One JSON audit line per tool call on stderr: `level: "audit"`, ISO time, `tool`, `server`, `risk`, `result` (`ok` | `denied` | `error`). No argument values or secrets.
-- HTTP limits: max body 1 MiB (`CAPROVER_MCP_MAX_HTTP_BODY_BYTES`); invalid JSON → **400**; rate limit `CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE` per bearer (including failed auth) → **429**; max concurrent in-flight tool executions per CapRover server name (`CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER`, default 5) with a 30s FIFO wait → clear error with the **real server name**.
-- Streamable HTTP runs in **stateful session mode**: one shared `McpApplicationService` (registry, concurrency limiter, CapRover clients) serves all sessions. Each `initialize` creates a transport and `McpServer` instance keyed by `Mcp-Session-Id`; sessions are tied to the bearer token that created them, expire after TTL, and are capped in count. Unknown or wrong-token session headers return **404** or **401** as appropriate.
-- Docker image: `HEALTHCHECK` calls `scripts/docker-healthcheck.sh`, which succeeds when `/health` returns `ok` or when nothing is listening (stdio-only). HTTP deployments should run `serve --http` so `/health` answers.
+- HTTP limits: max body 1 MiB (`CAPROVER_MCP_MAX_HTTP_BODY_BYTES`); invalid JSON → **400**; rate limit `CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE` keyed by **client remote address** (never raw `Authorization` headers), including failed auth → **429**; max concurrent in-flight tool executions per CapRover server name (`CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER`, default 5) with a 30s FIFO wait → clear error with the **real server name**.
+- Streamable HTTP runs in **stateful session mode**: one shared `SharedMcpRuntimeBuilder` (registry, concurrency limiter, CapRover clients) serves all sessions. Each `initialize` creates a transport and `McpServer` instance keyed by `Mcp-Session-Id`; sessions are tied to the bearer token that created them, expire after TTL, and are capped in count. Unknown session ids and session ids bound to another bearer token return **404** with body `Not Found`. Session cap exhaustion returns **503** with body `Service Unavailable`.
+- Docker image: `HEALTHCHECK` runs `scripts/docker-healthcheck.sh`. When HTTP mode is active the process writes a marker file; the script then requires `GET /health` to return body `ok` or the check fails. With no marker (stdio-only), the script exits success so default `docker run` without `serve --http` stays healthy.
+
+## Threats
+
+- **Stolen bearer token:** An attacker with a valid token can run any tool the configured CapRover servers allow. Mitigation: long random tokens per client, TLS at the proxy, non-local bind refused without tokens, rate limits per remote address, audit lines without secrets.
+- **Token brute force and auth flooding:** Repeated wrong tokens or missing auth must not enumerate valid secrets or exhaust CapRover. Mitigation: constant-time comparison, plain **401** with no reason, rate limit keyed by **remote address** (not cleartext headers), stale rate-limit windows pruned.
+- **Session fixation and cross-client reuse:** A session id must not be usable under another bearer token. Mitigation: store the token key on each session; wrong token → **404** (same as unknown id).
+- **Session exhaustion:** Opening unbounded MCP sessions could exhaust memory. Mitigation: max session count with **503** when full; TTL drops idle sessions.
+- **Oversized or malformed HTTP bodies:** Large POST bodies or bad JSON could waste CPU or memory. Mitigation: body size cap (**413**), invalid JSON → **400**.
+- **CapRover overload:** Many parallel tool calls against one server name could flood the Captain API. Mitigation: per-server concurrency limit with FIFO wait then a clear error naming the server.
+- **Multi-server mis-targeting:** Calling the wrong CapRover server could change production instead of staging. Mitigation: require `server_name` when several servers are configured; unknown names list valid names only; overview lists names and modes without URLs.
+- **Secret leakage:** Passwords, tokens, and env values must not appear in tool replies, errors, or logs. Mitigation: redaction on every output path; audit omits argument values; tests plant fake secrets on every path.
+- **False healthy container in HTTP mode:** A process that bound HTTP but stopped answering `/health` should fail Docker health checks. Mitigation: HTTP mode marker + health script that requires `ok` when the marker exists.
 
 ## Considered options
 
@@ -29,8 +41,8 @@ Phase 5 lets a client reach the MCP server over the network and target more than
 - Operations keep a single `CaproverClientPort` in the manifest via `RoutingCaproverClientAdapter` and `AsyncLocalStorage` for the active server.
 - `OperationRunnerService` resolves `server_name`, applies per-server policy, audit, concurrency, and redaction with all configured secrets.
 - Docker exposes `3100`. Terminate TLS at a reverse proxy for network exposure.
-- Phase 2 (#3) stable manifest is not complete on `main`; this work uses the existing 14-operation manifest.
+- Phase 2 (#3) stable manifest is not complete on `main`; this work uses the existing 14-operation manifest and proceeded on the owner's request.
 
 ## Related
 
-- ADR 0005 (safety in code), ADR 0006 (remote deployment option), ADR 0010 (password only), ADR 0011 (confirmation token)
+- ADR 0005 (safety in code), ADR 0010 (password only), ADR 0011 (confirmation token). ADR 0006 covers the QuickJS sandbox for the planned `code` surface, not this HTTP transport.

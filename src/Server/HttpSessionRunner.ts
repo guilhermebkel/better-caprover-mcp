@@ -5,6 +5,7 @@ import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/
 const PLAIN_TEXT = "text/plain";
 const HTTP_BAD_REQUEST = 400;
 const HTTP_NOT_FOUND = 404;
+const HTTP_SERVICE_UNAVAILABLE = 503;
 const DEFAULT_SESSION_TTL_MS = 86_400_000;
 const DEFAULT_MAX_SESSIONS = 64;
 
@@ -32,7 +33,7 @@ const isInitializeBody = (parsedBody: unknown): boolean => {
   });
 };
 
-export class HttpMcpSessionService {
+export class HttpSessionRunner {
   private readonly sessionIdToSession = new Map<string, SessionRecord>();
 
   constructor(
@@ -53,7 +54,12 @@ export class HttpMcpSessionService {
     const sessionId = typeof sessionHeader === "string" && sessionHeader !== "" ? sessionHeader : undefined;
     if (sessionId !== undefined) {
       const session = this.sessionIdToSession.get(sessionId);
-      if (session?.tokenKey !== tokenKey) {
+      if (session === undefined) {
+        response.writeHead(HTTP_NOT_FOUND, { "Content-Type": PLAIN_TEXT });
+        response.end("Not Found");
+        return;
+      }
+      if (session.tokenKey !== tokenKey) {
         response.writeHead(HTTP_NOT_FOUND, { "Content-Type": PLAIN_TEXT });
         response.end("Not Found");
         return;
@@ -67,8 +73,8 @@ export class HttpMcpSessionService {
       return;
     }
     if (this.sessionIdToSession.size >= this.maxSessions) {
-      response.writeHead(HTTP_BAD_REQUEST, { "Content-Type": PLAIN_TEXT });
-      response.end("Bad Request");
+      response.writeHead(HTTP_SERVICE_UNAVAILABLE, { "Content-Type": PLAIN_TEXT });
+      response.end("Service Unavailable");
       return;
     }
     const server = this.buildMcpServer();

@@ -16,6 +16,11 @@ export class HttpRateLimitService {
     if (this.maxRequestsPerWindow <= 0) {
       return;
     }
+    for (const [key, window] of this.clientKeyToWindow.entries()) {
+      if (nowMs - window.windowStartedAtMs >= WINDOW_MS) {
+        this.clientKeyToWindow.delete(key);
+      }
+    }
     const window = this.clientKeyToWindow.get(clientKey);
     if (window === undefined || nowMs - window.windowStartedAtMs >= WINDOW_MS) {
       this.clientKeyToWindow.set(clientKey, { windowStartedAtMs: nowMs, count: 1 });

@@ -34,6 +34,8 @@ const buildEnv = (mode: AccessMode): Env => ({
   CAPROVER_MCP_HTTP_PORT: 3100,
   CAPROVER_MCP_MAX_HTTP_BODY_BYTES: 1_048_576,
   CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE: 120,
+  CAPROVER_MCP_MAX_HTTP_SESSIONS: 64,
+  CAPROVER_MCP_HTTP_SESSION_TTL_MS: 86_400_000,
   CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER: 5,
   servers: [{
     isCriticalAllowed: false,
@@ -109,6 +111,47 @@ describe("ServerBuilder.build()", () => {
       const { client } = await connect({ mode: "operate" });
 
       expect(client.getInstructions()).toContain("Access mode: operate. Enabled risk tiers: read, write.");
+    });
+
+    it("names every configured server in instructions and get_overview when several are configured", async () => {
+      const readonlyFake = new FakeCaproverClientAdapter([]);
+      const operateFake = new FakeCaproverClientAdapter([]);
+      const env: Env = {
+        ...buildEnv("admin"),
+        servers: [
+          {
+            isCriticalAllowed: false,
+            name: "readonly",
+            password: FAKE_PASSWORD,
+            url: "https://captain-readonly.example.com",
+            mode: "readonly",
+          },
+          {
+            isCriticalAllowed: false,
+            name: "operate",
+            password: FAKE_PASSWORD,
+            url: "https://captain-operate.example.com",
+            mode: "operate",
+          },
+        ],
+      };
+      const nameToFakeClient: Record<"readonly" | "operate", FakeCaproverClientAdapter> = {
+        readonly: readonlyFake,
+        operate: operateFake,
+      };
+      const buildClientForEntry: CaproverClientFactory = (entry) => nameToFakeClient[entry.name as "readonly" | "operate"];
+      const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
+      const client = new Client({ name: "multi-server-client", version: "0.0.0" });
+      await ServerBuilder.build(env, () => START_MS, buildClientForEntry).connect(serverTransport);
+      await client.connect(clientTransport);
+
+      expect(client.getInstructions()).toContain("Several CapRover servers are configured");
+      const reply = await callTool(client, "get_overview", { server_name: "readonly" });
+      expect(reply.isError).toBe(false);
+      expect(reply.data.servers).toStrictEqual([
+        { name: "operate", accessMode: "operate", enabledRiskTiers: ["read", "write"] },
+        { name: "readonly", accessMode: "readonly", enabledRiskTiers: ["read"] },
+      ]);
     });
 
     it("registers only the read tools in readonly mode", async () => {

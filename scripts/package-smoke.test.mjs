@@ -51,24 +51,37 @@ describe("checkReplies()", () => {
   });
 });
 
+const DEFAULT_NODE_COMMAND = ["node", "dist/main.js"];
+const NO_SMOKE_FLAGS = { isStdioOnly: false, isHttpOnly: false };
+
 describe("parseCommand()", () => {
   it("runs the local build when no command is given", () => {
-    expect(parseCommand([])).toMatchObject({ command: ["node", "dist/main.js"], stdioOnly: false, httpOnly: false });
+    expect(parseCommand([])).toStrictEqual({
+      command: DEFAULT_NODE_COMMAND,
+      ...NO_SMOKE_FLAGS,
+    });
   });
 
   it("drops the leading -- and keeps the command", () => {
-    expect(parseCommand(["--", "docker", "run", "-i"])).toMatchObject({ command: ["docker", "run", "-i"] });
+    expect(parseCommand(["--", "docker", "run", "-i"])).toStrictEqual({
+      command: ["docker", "run", "-i"],
+      ...NO_SMOKE_FLAGS,
+    });
   });
 
   it("records smoke mode flags", () => {
-    expect(parseCommand(["--http-only", "--", "node", "dist/main.js"])).toMatchObject({ httpOnly: true, stdioOnly: false });
+    expect(parseCommand(["--http-only", "--", ...DEFAULT_NODE_COMMAND])).toStrictEqual({
+      command: DEFAULT_NODE_COMMAND,
+      isStdioOnly: false,
+      isHttpOnly: true,
+    });
   });
 
   it("drops flags and the separator before the command", () => {
-    expect(parseCommand(["--stdio-only", "--", "docker", "run", "-i"])).toMatchObject({
+    expect(parseCommand(["--stdio-only", "--", "docker", "run", "-i"])).toStrictEqual({
       command: ["docker", "run", "-i"],
-      stdioOnly: true,
-      httpOnly: false,
+      isStdioOnly: true,
+      isHttpOnly: false,
     });
   });
 });

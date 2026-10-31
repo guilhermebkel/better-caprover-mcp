@@ -1,13 +1,14 @@
-import { createServer, type Server } from "node:http";
+import { createServer, type IncomingMessage, type Server, type ServerResponse } from "node:http";
 import { HttpBindForbiddenError } from "@/Errors/HttpBindForbiddenError.ts";
 import { HttpBadJsonError } from "@/Errors/HttpBadJsonError.ts";
 import { HttpBodyTooLargeError } from "@/Errors/HttpBodyTooLargeError.ts";
 import { HttpRateLimitError } from "@/Errors/HttpRateLimitError.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
 import { HttpAuthService } from "@/Services/HttpAuthService.ts";
-import { HttpMcpSessionService } from "@/Services/HttpMcpSessionService.ts";
-import { McpApplicationService } from "@/Server/McpApplicationService.ts";
 import { HttpRateLimitService } from "@/Services/HttpRateLimitService.ts";
+import { HttpModeMarker } from "@/Server/HttpModeMarker.ts";
+import { HttpSessionRunner } from "@/Server/HttpSessionRunner.ts";
+import { SharedMcpRuntimeBuilder } from "@/Server/SharedMcpRuntimeBuilder.ts";
 import { EnvUtil } from "@/Utils/EnvUtil.ts";
 import { HttpBodyUtil } from "@/Utils/HttpBodyUtil.ts";
 import { LogUtil } from "@/Utils/LogUtil.ts";
@@ -27,7 +28,7 @@ const PLAIN_TEXT = "text/plain";
 type HttpRequestContext = {
   auth: HttpAuthService;
   rateLimit: HttpRateLimitService;
-  sessions: HttpMcpSessionService;
+  sessions: HttpSessionRunner;
   env: Env;
   getNowMs: () => number;
 };
@@ -48,10 +49,15 @@ export class HttpRunner {
   static async start(env: Env = EnvUtil.read()): Promise<HttpServerHandle> {
     HttpRunner.assertBindAllowed(env);
     const getNowMs = (): number => Date.now();
-    const application = McpApplicationService.buildFromEnv(env, getNowMs);
+    const runtime = SharedMcpRuntimeBuilder.buildFromEnv(env, getNowMs);
     const auth = new HttpAuthService(HttpAuthService.extractTokenSecrets(env.CAPROVER_MCP_HTTP_TOKENS));
     const rateLimit = new HttpRateLimitService(env.CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE);
-    const sessions = new HttpMcpSessionService(() => application.buildMcpServer(), getNowMs);
+    const sessions = new HttpSessionRunner(
+      () => runtime.buildMcpServer(),
+      getNowMs,
+      env.CAPROVER_MCP_MAX_HTTP_SESSIONS,
+      env.CAPROVER_MCP_HTTP_SESSION_TTL_MS,
+    );
     const context: HttpRequestContext = { auth, rateLimit, sessions, env, getNowMs };
     const httpServer = createServer((request, response) => {
       void HttpRunner.handleHttpRequest(request, response, context).catch((error: unknown) => {
@@ -63,10 +69,16 @@ export class HttpRunner {
       });
     });
     const port = await HttpRunner.bindHttpServer(httpServer, env.CAPROVER_MCP_HTTP_HOST, env.CAPROVER_MCP_HTTP_PORT);
+    HttpModeMarker.markHttpModeActive(
+      env.CAPROVER_MCP_HTTP_MARKER_PATH ?? HttpModeMarker.DEFAULT_MARKER_PATH,
+    );
     LogUtil.logInfo("http_server_started");
     return {
       url: `http://${env.CAPROVER_MCP_HTTP_HOST}:${port}`,
       close: async () => {
+        HttpModeMarker.clearHttpModeMarker(
+          env.CAPROVER_MCP_HTTP_MARKER_PATH ?? HttpModeMarker.DEFAULT_MARKER_PATH,
+        );
         await new Promise<void>((resolve, reject) => {
           httpServer.close((error) => {
             if (error === undefined) {
@@ -105,8 +117,8 @@ export class HttpRunner {
   }
 
   private static async handleHttpRequest(
-    request: import("node:http").IncomingMessage,
-    response: import("node:http").ServerResponse,
+    request: IncomingMessage,
+    response: ServerResponse,
     context: HttpRequestContext,
   ): Promise<void> {
     const { auth, rateLimit, sessions, env } = context;
@@ -157,15 +169,11 @@ export class HttpRunner {
     }
   }
 
-  private static buildRateLimitKey(request: import("node:http").IncomingMessage): string {
-    const header = request.headers.authorization;
-    if (typeof header !== "string") {
-      return "anonymous";
-    }
-    return header;
+  private static buildRateLimitKey(request: IncomingMessage): string {
+    return request.socket.remoteAddress ?? "unknown";
   }
 
-  private static readParsedBody(request: import("node:http").IncomingMessage, env: Env): Promise<unknown> {
+  private static readParsedBody(request: IncomingMessage, env: Env): Promise<unknown> {
     if (request.method !== "POST") {
       return Promise.resolve(undefined);
     }

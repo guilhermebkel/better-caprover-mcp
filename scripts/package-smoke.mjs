@@ -16,7 +16,31 @@ const HTTP_PORT = "3100";
 const HTTP_OK = 200;
 const HEALTH_WAIT_MS = 15_000;
 const HEALTH_POLL_MS = 200;
+const DOCKER_HEALTH_WAIT_MS = 60_000;
+const DOCKER_HEALTH_POLL_MS = 500;
 const SIGTERM = "SIGTERM";
+
+const waitForDockerHealthy = async (imageRef) => {
+  const deadline = Date.now() + DOCKER_HEALTH_WAIT_MS;
+  while (Date.now() < deadline) {
+    const list = spawnSync("docker", ["ps", "-q", "--filter", `ancestor=${imageRef}`], { encoding: "utf8" });
+    const containerId = list.stdout.trim().split("\n").find((line) => line.trim() !== "");
+    if (containerId !== undefined && containerId !== "") {
+      const inspect = spawnSync("docker", ["inspect", "-f", "{{.State.Health.Status}}", containerId], { encoding: "utf8" });
+      if (inspect.stdout.trim() === "healthy") {
+        return;
+      }
+    }
+    await new Promise((resolve) => setTimeout(resolve, DOCKER_HEALTH_POLL_MS));
+  }
+  throw new Error(`Docker HEALTHCHECK did not become healthy for ${imageRef} within ${DOCKER_HEALTH_WAIT_MS} ms`);
+};
+
+const readDockerImageRef = (args) => {
+  const serveIndex = args.indexOf("serve");
+  const beforeServe = serveIndex === -1 ? args : args.slice(0, serveIndex);
+  return beforeServe[beforeServe.length - 1];
+};
 
 export const buildRequestLines = () => {
   const initialize = {
@@ -61,26 +85,26 @@ export const checkReplies = (replies) => {
 };
 
 export const parseCommand = (argv) => {
-  const modeFlags = {
-    "--stdio-only": "stdioOnly",
-    "--http-only": "httpOnly",
+  const argvTokenToModeFlagKey = {
+    "--stdio-only": "isStdioOnly",
+    "--http-only": "isHttpOnly",
   };
-  const flags = { stdioOnly: false, httpOnly: false };
+  const modeFlags = { isStdioOnly: false, isHttpOnly: false };
   const separatorIndex = argv.indexOf("--");
   const beforeSeparator = separatorIndex === -1 ? argv : argv.slice(0, separatorIndex);
   const afterSeparator = separatorIndex === -1 ? [] : argv.slice(separatorIndex + 1);
   for (const token of beforeSeparator) {
-    const flagKey = modeFlags[token];
+    const flagKey = argvTokenToModeFlagKey[token];
     if (flagKey !== undefined) {
-      flags[flagKey] = true;
+      modeFlags[flagKey] = true;
     }
   }
   let command = afterSeparator;
   if (separatorIndex === -1) {
-    command = argv.filter((token) => modeFlags[token] === undefined);
+    command = argv.filter((token) => argvTokenToModeFlagKey[token] === undefined);
   }
   const resolved = command.length === 0 ? DEFAULT_COMMAND : command;
-  return { command: resolved, stdioOnly: flags.stdioOnly, httpOnly: flags.httpOnly };
+  return { command: resolved, isStdioOnly: modeFlags.isStdioOnly, isHttpOnly: modeFlags.isHttpOnly };
 };
 
 const stopChildProcessTree = (child) => {
@@ -159,6 +183,15 @@ const waitForHealth = async (url) => {
   throw new Error(`HTTP health check did not pass at ${url}/health within ${HEALTH_WAIT_MS} ms`);
 };
 
+const programToAfterHealthHook = {
+  docker: async (args) => {
+    const imageRef = readDockerImageRef(args);
+    if (imageRef !== undefined) {
+      await waitForDockerHealthy(imageRef);
+    }
+  },
+};
+
 export const runHttpSmoke = async (command) => {
   const [program, ...args] = command;
   const httpArgs = [...args, "serve", "--http"];
@@ -176,6 +209,10 @@ export const runHttpSmoke = async (command) => {
   const baseUrl = `http://127.0.0.1:${HTTP_PORT}`;
   try {
     await waitForHealth(baseUrl);
+    const afterHealth = programToAfterHealthHook[program];
+    if (afterHealth !== undefined) {
+      await afterHealth(args);
+    }
     const transport = new StreamableHTTPClientTransport(new URL(`${baseUrl}/mcp`), {
       requestInit: { headers: { Authorization: `Bearer ${HTTP_SMOKE_TOKEN}` } },
     });
@@ -202,12 +239,12 @@ export const runHttpSmoke = async (command) => {
   }
 };
 
-const runAllSmoke = async ({ command, stdioOnly, httpOnly }) => {
-  if (httpOnly) {
+const runAllSmoke = async ({ command, isStdioOnly, isHttpOnly }) => {
+  if (isHttpOnly) {
     return runHttpSmoke(command);
   }
   const stdioCode = await runSmoke(command);
-  if (stdioCode !== 0 || stdioOnly) {
+  if (stdioCode !== 0 || isStdioOnly) {
     return stdioCode;
   }
   return runHttpSmoke(command);

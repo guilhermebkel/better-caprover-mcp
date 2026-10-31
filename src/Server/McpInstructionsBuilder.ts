@@ -1,6 +1,6 @@
 import type { CaproverServerRegistryService } from "@/Services/CaproverServerRegistryService.ts";
 
-export class McpInstructions {
+export class McpInstructionsBuilder {
   static build(registry: CaproverServerRegistryService): string {
     const serverHint = registry.getIsMultiServer()
       ? "Several CapRover servers are configured: every tool call must name which server to use."

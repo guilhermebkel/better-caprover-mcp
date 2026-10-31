@@ -27,7 +27,7 @@ An optional way to run the MCP server with Streamable HTTP (`better-caprover-mcp
 _Avoid_: SSE-only transport
 
 **CapRover server name**:
-When several CapRover servers are configured, the `server` parameter on each tool selects which one to use. With a single `CAPROVER_URL` setup, `server` is optional.
+When several CapRover servers are configured, the `server_name` parameter on each tool selects which one to use (names come from `get_overview`). With a single `CAPROVER_URL` setup, `server_name` is optional.
 _Avoid_: cluster id, instance id
 
 **Toolset**:

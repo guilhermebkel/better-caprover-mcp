@@ -1160,66 +1160,6 @@
     },
     {
       "files": [
-        "src/Services/HttpMcpSessionService.ts"
-      ],
-      "rules": {
-        "no-restricted-imports": [
-          "error",
-          {
-            "patterns": [
-              {
-                "group": [
-                  "../*",
-                  "../**"
-                ],
-                "message": "Import from \"@/...\" instead of a relative parent path."
-              },
-              {
-                "group": [
-                  "./*",
-                  "./**"
-                ],
-                "message": "Import from \"@/...\" even within the same folder."
-              },
-              {
-                "regex": "^@/.*\\.js$",
-                "message": "Import the source file itself: \"@/....ts\" (allowImportingTsExtensions)."
-              },
-              {
-                "group": [
-                  "caprover-api"
-                ],
-                "message": "Import the CapRover SDK only in src/Adapters/CapRover/."
-              },
-              {
-                "group": [
-                  "quickjs-emscripten",
-                  "quickjs-emscripten/**"
-                ],
-                "message": "Import the sandbox engine only in src/Adapters/Sandbox/."
-              },
-              {
-                "group": [
-                  "child_process",
-                  "node:child_process"
-                ],
-                "message": "No shell and no child process in the server: nothing runs commands on the host."
-              },
-              {
-                "group": [
-                  "@/**/Operations/**",
-                  "@/**/Surfaces/**",
-                  "@/**/Server/**"
-                ],
-                "message": "Services must not import Operations, Surfaces, Server: layers only import the ones below them."
-              }
-            ]
-          }
-        ]
-      }
-    },
-    {
-      "files": [
         "src/Adapters/**/*.ts"
       ],
       "rules": {
@@ -1758,7 +1698,16 @@
         "src/**/*.test.ts"
       ],
       "rules": {
-        "local/describe-target": "error"
+        "local/describe-target": "error",
+        "local/no-fixed-wait": "error"
+      }
+    },
+    {
+      "files": [
+        "scripts/**/*.test.mjs"
+      ],
+      "rules": {
+        "local/no-fixed-wait": "error"
       }
     }
   ],

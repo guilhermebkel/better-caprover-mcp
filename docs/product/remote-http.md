@@ -45,7 +45,7 @@ docker run -d --name caprover-mcp -p 3100:3100 \
   serve --http
 ```
 
-The image exposes port `3100`. For HTTP, health-check `GET /health` from your orchestrator (the stock image does not define a Docker `HEALTHCHECK`, so default `docker run` with stdio stays healthy).
+The image exposes port `3100` and defines a Docker `HEALTHCHECK` via `scripts/docker-healthcheck.sh`. In HTTP mode (`serve --http`) the check requires `GET /health` to return body `ok`. Stdio-only runs leave no HTTP marker, so the script exits success and a plain `docker run` without `serve --http` stays healthy.
 
 ## Several CapRover servers
 
@@ -80,7 +80,7 @@ Alternatively, set the same array in `CAPROVER_MCP_SERVERS` (one line of JSON).
 
 Every tool call must include `"server_name": "prod"` or `"server_name": "staging"`. `get_overview` lists configured servers and their modes without CapRover URLs.
 
-The legacy variables `CAPROVER_URL` and `CAPROVER_PASSWORD` still define a single server when no multi-server list is set; then `server` is optional.
+The legacy variables `CAPROVER_URL` and `CAPROVER_PASSWORD` still define a single server when no multi-server list is set; then `server_name` is optional.
 
 ## Limits
 
@@ -89,7 +89,9 @@ The legacy variables `CAPROVER_URL` and `CAPROVER_PASSWORD` still define a singl
 | `CAPROVER_MCP_HTTP_HOST` | `127.0.0.1` | Bind address |
 | `CAPROVER_MCP_HTTP_PORT` | `3100` | TCP port |
 | `CAPROVER_MCP_MAX_HTTP_BODY_BYTES` | `1048576` | Max POST body size |
-| `CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE` | `120` | Max MCP HTTP requests per minute per bearer |
+| `CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE` | `120` | Max MCP HTTP requests per minute per client remote address |
+| `CAPROVER_MCP_MAX_HTTP_SESSIONS` | `64` | Max concurrent Streamable HTTP MCP sessions |
+| `CAPROVER_MCP_HTTP_SESSION_TTL_MS` | `86400000` | Max idle lifetime of an HTTP MCP session (milliseconds) |
 | `CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER` | `5` | Max parallel tool runs per server name |
 
 Audit lines on stderr record time, tool name, server name, risk tier, and result—never argument values or secrets.

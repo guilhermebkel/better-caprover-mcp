@@ -9,7 +9,7 @@ const MAX_PASSWORD_ENV_LENGTH = 128;
 const MAX_PASSWORD_FILE_LENGTH = 4096;
 const MIN_HTTP_TOKEN_LENGTH = 8;
 
-export const ServerNameSchema = z.string().min(1).max(MAX_SERVER_NAME_LENGTH).regex(
+export const ServerNameSchema: z.ZodType<string> = z.string().min(1).max(MAX_SERVER_NAME_LENGTH).regex(
   /^[a-z][a-z0-9-]*$/,
   "Server name must start with a lowercase letter and contain only lowercase letters, digits and dashes.",
 );
@@ -46,8 +46,15 @@ export const HttpTokensSchema: z.ZodType<Record<string, string>> = z.record(
   "CAPROVER_MCP_HTTP_TOKENS must name at least one client token.",
 );
 
-export const ServerToolInputSchema = z.object({
-  server_name: z.string().min(1).max(MAX_SERVER_NAME_LENGTH).optional().describe(
-    "Which configured CapRover server to use. Required when several servers are configured; omit when there is only one.",
+export type ServerToolInput = { server_name?: string };
+
+const ServerToolInputObjectSchema = z.object({
+  server_name: ServerNameSchema.optional().describe(
+    "Which configured CapRover server to use: one of the `name` values listed in `get_overview` under `servers`. "
+    + "Required when several servers are configured; omit when there is only one.",
   ),
 });
+
+export const ServerToolInputSchema: z.ZodType<ServerToolInput> = ServerToolInputObjectSchema;
+
+export { ServerToolInputObjectSchema };

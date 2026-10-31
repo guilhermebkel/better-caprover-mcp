@@ -1,17 +1,16 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { CaproverClientAdapter } from "@/Adapters/CapRover/CaproverClientAdapter.ts";
 import { FakeCaproverClientAdapter } from "@/Adapters/CapRover/FakeCaproverClientAdapter.ts";
-import { buildDefaultMockRoutes } from "@/Adapters/CapRover/MockCaproverRoutes.ts";
+import { MockCaproverRouteBuilder } from "@/Adapters/CapRover/MockCaproverRouteBuilder.ts";
 import { MockCaproverServer } from "@/Adapters/CapRover/MockCaproverServer.ts";
 import { RoutingCaproverClientAdapter } from "@/Adapters/CapRover/RoutingCaproverClientAdapter.ts";
 import { OperationManifest } from "@/Operations/OperationManifest.ts";
 import type { ToolDefinition } from "@/Protocols/OperationProtocol.ts";
 import { DEFAULT_SERVER_NAME } from "@/Schemas/ServerConfigSchema.ts";
+import { SharedMcpRuntimeBuilder } from "@/Server/SharedMcpRuntimeBuilder.ts";
 import { AuditLogService } from "@/Services/AuditLogService.ts";
 import { CaproverServerRegistryService } from "@/Services/CaproverServerRegistryService.ts";
 import { ConcurrencyLimiterService } from "@/Services/ConcurrencyLimiterService.ts";
 import { ConfirmationService } from "@/Services/ConfirmationService.ts";
-import { McpApplicationService } from "@/Server/McpApplicationService.ts";
 import { OperationRunnerService } from "@/Services/OperationRunnerService.ts";
 import { EnvUtil } from "@/Utils/EnvUtil.ts";
 
@@ -30,7 +29,7 @@ afterEach(async () => {
 });
 
 const startMock = async (
-  routes = buildDefaultMockRoutes(),
+  routes = MockCaproverRouteBuilder.buildDefault(),
 ): Promise<{
   url: string;
   mock: MockCaproverServer;
@@ -58,7 +57,7 @@ const buildMultiEnv = async (): Promise<{
 };
 
 const buildRunnerFromEnv = (env: ReturnType<typeof EnvUtil.read>): OperationRunnerService => (
-  McpApplicationService.buildFromEnv(env, () => 1_700_000_000_000).buildRunner()
+  SharedMcpRuntimeBuilder.buildFromEnv(env, () => 1_700_000_000_000).buildRunner()
 );
 
 const buildTools = (
@@ -111,7 +110,10 @@ describe("CaproverServerRegistryService.buildFromEnv()", () => {
     const allowed = await scaleApp.call({ server_name: "operate", app_name: "web", instance_count: 2 });
 
     expect(denied.isError).toBe(true);
-    expect(denied.summary).toContain("CapRover servers configuration");
+    expect(denied.summary).toBe(
+      "scale_app is a write operation. This server runs in \"readonly\" mode, which does not allow it. "
+      + "Do not try another way. Tell the person to set this server's mode to \"operate\" in the CapRover servers configuration and restart.",
+    );
     expect(readonlyMock.requests.some((request) => request.path.includes("update"))).toBe(false);
     expect(allowed.isError).toBe(false);
     expect(operateMock.requests.some((request) => request.path.includes("update"))).toBe(true);
@@ -192,19 +194,19 @@ describe("CaproverServerRegistryService.buildFromEnv()", () => {
 
   it("returns a concurrency message after waiting when the per-server limit is saturated", async () => {
     vi.useFakeTimers();
-    const { url } = await startMock();
+    let resolveHang = (): void => undefined;
+    const hangFirst = new Promise<void>((resolve) => {
+      resolveHang = resolve;
+    });
+    const routes = MockCaproverRouteBuilder.buildDefault();
+    const mock = new MockCaproverServer(routes, { hangGetAppDefinitionsUntil: () => hangFirst });
+    mockServers.push(mock);
+    const url = await mock.start();
     vi.stubEnv("CAPROVER_URL", url);
     vi.stubEnv("CAPROVER_PASSWORD", FAKE_PASSWORD);
     vi.stubEnv("CAPROVER_MCP_MODE", "admin");
     vi.stubEnv("CAPROVER_MCP_MAX_CONCURRENT_PER_SERVER", "1");
     const env = EnvUtil.read();
-    let resolveHang = (): void => undefined;
-    const hangFirst = new Promise<import("@/Protocols/CaproverClientProtocol.ts").CaproverAppList>((resolve) => {
-      resolveHang = () => {
-        resolve({ apps: [], rootDomain: "example.com" });
-      };
-    });
-    vi.spyOn(CaproverClientAdapter.prototype, "listApps").mockImplementationOnce(() => hangFirst);
     const runner = new OperationRunnerService(
       CaproverServerRegistryService.buildFromEnv(env),
       new ConfirmationService(() => 0),
@@ -222,7 +224,9 @@ describe("CaproverServerRegistryService.buildFromEnv()", () => {
     vi.useRealTimers();
     await first;
     expect(blocked.isError).toBe(true);
-    expect(blocked.summary).toContain(`Too many concurrent calls for server "${DEFAULT_SERVER_NAME}"`);
+    expect(blocked.summary).toBe(
+      `Too many concurrent calls for server "${DEFAULT_SERVER_NAME}" (limit 1). Wait for other calls to finish, then try again.`,
+    );
   });
 
   it("writes one audit line per call without argument values", async () => {
@@ -251,7 +255,7 @@ describe("CaproverServerRegistryService.buildFromEnv()", () => {
     expect(audit?.server).toBe(DEFAULT_SERVER_NAME);
     expect(audit?.risk).toBe("read");
     expect(audit?.result).toBe("ok");
-    expect(typeof audit?.time).toBe("string");
+    expect(audit?.time).toMatch(/^\d{4}-\d{2}-\d{2}T/);
     expect(JSON.stringify(audit)).not.toContain("hidden-value");
   });
 });
