@@ -18,6 +18,7 @@ Folders are created when the first file needs them.
 - `src/Surfaces/`: the `tools` and `code` surfaces that expose the operations over MCP.
 - `src/Server/`: the server builder and the transports; `src/main.ts` is the entry point.
 - `scripts/`: the harness (lint, checks, package smoke test, SDK drift check) and the integration tests.
+- `site/`: the GitHub Pages landing page, served at `better-caprover-mcp.guilherr.me`. `.github/workflows/pages.yml` publishes it on every push to `main` that touches it. Not part of the npm package.
 - `design/`: the brand kit (logo, web icons, deck, guidelines); see `design/README.md`. Not part of the npm package.
 - Tests sit next to the file they test (`*.test.ts`, `*.test.mjs`).
 
