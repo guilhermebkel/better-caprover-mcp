@@ -447,7 +447,7 @@ details .ans a { color: var(--text); }
 /* =========================================================
    CTA + FOOTER
    ========================================================= */
-.cta { background: var(--accent); color: var(--accent-contrast); padding-block: clamp(72px, 9vw, 128px); }
+.cta { --accent: oklch(0.903 0.19 104); --accent-contrast: oklch(0.2 0.04 104); background: var(--accent); color: var(--accent-contrast); padding-block: clamp(72px, 9vw, 128px); }
 .cta__grid { display: grid; grid-template-columns: minmax(0, 7fr) minmax(0, 5fr); gap: clamp(32px, 5vw, 80px); align-items: end; }
 .cta h2 { font-size: clamp(2.75rem, 1rem + 7vw, 6rem); letter-spacing: -0.045em; line-height: 0.98; font-weight: 500; }
 .cta p { font-size: var(--fs-lg); color: color-mix(in oklch, var(--accent-contrast) 82%, var(--accent)); max-width: 36ch; }
