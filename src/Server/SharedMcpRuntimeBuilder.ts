@@ -65,7 +65,8 @@ export class SharedMcpRuntimeBuilder {
 
   buildMcpServer(): McpServer {
     const runner = this.buildRunner();
-    const tools = OperationManifest.build(this.parts.client, this.parts.policy, runner);
+    const tools = OperationManifest.build(this.parts.client, this.parts.policy, runner)
+      .filter((tool) => this.parts.policy.canRun(tool.risk));
     const server = new McpServer(
       { name: McpServerMetadataUtil.SERVER_NAME, version: __PACKAGE_VERSION__ },
       { instructions: McpInstructionsBuilder.build(this.parts.policy) },

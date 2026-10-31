@@ -13,7 +13,7 @@ const FAKE_PASSWORD = "fake-password-9876";
 const FAKE_ENV_VALUE = "fake-env-value-123";
 const START_MS = 1_000_000;
 const AUDIT_LIST_APPS_OK = "{\"level\":\"audit\",\"time\":\"1970-01-01T00:00:00.000Z\",\"tool\":\"list_apps\",\"risk\":\"read\",\"result\":\"ok\"}\n";
-const AUDIT_SCALE_DENIED = "{\"level\":\"audit\",\"time\":\"1970-01-01T00:00:00.000Z\",\"tool\":\"scale_app\",\"risk\":\"write\",\"result\":\"denied\"}\n";
+const AUDIT_LIST_APPS_ERROR = "{\"level\":\"audit\",\"time\":\"1970-01-01T00:00:00.000Z\",\"tool\":\"list_apps\",\"risk\":\"read\",\"result\":\"error\"}\n";
 const PLANTED_LIST_FILTER = "planted-audit-filter-xyzzy";
 
 type Setup = {
@@ -114,11 +114,16 @@ describe("ServerBuilder.build()", () => {
       expect(client.getInstructions()).toContain("Access mode: operate. Enabled risk tiers: read, write.");
     });
 
-    it("registers every operation as a tool in every mode", async () => {
-      const expected = [...READ_TOOLS, ...WRITE_TOOLS, "delete_app"];
-      expect(await listToolNames("readonly")).toStrictEqual(expected);
-      expect(await listToolNames("operate")).toStrictEqual(expected);
-      expect(await listToolNames("admin")).toStrictEqual(expected);
+    it("registers only the read tools in readonly mode", async () => {
+      expect(await listToolNames("readonly")).toStrictEqual(READ_TOOLS);
+    });
+
+    it("adds the write tools in operate mode", async () => {
+      expect(await listToolNames("operate")).toStrictEqual([...READ_TOOLS, ...WRITE_TOOLS]);
+    });
+
+    it("adds the delete tool in admin mode", async () => {
+      expect(await listToolNames("admin")).toStrictEqual([...READ_TOOLS, ...WRITE_TOOLS, "delete_app"]);
     });
 
     it("marks read tools as read-only and delete as destructive", async () => {
@@ -140,13 +145,13 @@ describe("ServerBuilder.build()", () => {
       });
     });
 
-    it("refuses a write in readonly mode before it reaches CapRover", async () => {
+    it("refuses a tool that the mode did not register", async () => {
       const { client, fake } = await connect({ mode: "readonly" });
 
       const reply = await callTool(client, "delete_app", { app_name: "web" });
 
       expect(reply.isError).toBe(true);
-      expect(reply.text).toContain("CAPROVER_MCP_MODE=admin");
+      expect(reply.text).toContain("Tool delete_app not found");
       expect(fake.calls).toStrictEqual([]);
     });
   });
@@ -514,14 +519,14 @@ describe("ServerBuilder.build()", () => {
       expect(auditLines[0]).not.toContain(PLANTED_LIST_FILTER);
     });
 
-    it("logs denied when a write is refused in readonly mode", async () => {
+    it("writes exactly one error audit line when list_apps fails", async () => {
       const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
-      const { client } = await connect({ mode: "readonly", getNowMs: () => 0 });
+      const { client } = await connect({ getNowMs: () => 0, failureMessage: "CapRover unavailable" });
       stderr.mockClear();
 
-      await callTool(client, "scale_app", { app_name: "web", instance_count: 2 });
+      await callTool(client, "list_apps", {});
 
-      expect(readAuditLines(stderr)).toStrictEqual([AUDIT_SCALE_DENIED]);
+      expect(readAuditLines(stderr)).toStrictEqual([AUDIT_LIST_APPS_ERROR]);
     });
   });
 });

@@ -1,4 +1,4 @@
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { FakeCaproverClientAdapter } from "@/Adapters/CapRover/FakeCaproverClientAdapter.ts";
 import { OperationManifest } from "@/Operations/OperationManifest.ts";
 import type { AccessMode } from "@/Protocols/AccessProtocol.ts";
@@ -11,6 +11,14 @@ import { OperationRunnerService } from "@/Services/OperationRunnerService.ts";
 import { PolicyService } from "@/Services/PolicyService.ts";
 
 const FAKE_PASSWORD = "fake-password-9876";
+const AUDIT_SCALE_DENIED = "{\"level\":\"audit\",\"time\":\"1970-01-01T00:00:00.000Z\",\"tool\":\"scale_app\",\"risk\":\"write\",\"result\":\"denied\"}\n";
+const AUDIT_LIST_APPS_ERROR = "{\"level\":\"audit\",\"time\":\"1970-01-01T00:00:00.000Z\",\"tool\":\"list_apps\",\"risk\":\"read\",\"result\":\"error\"}\n";
+
+const readAuditLines = (stderr: { mock: { calls: readonly unknown[][] } }): string[] => {
+  return stderr.mock.calls
+    .map((call) => String(call[0]))
+    .filter((line: string) => line.includes("\"level\":\"audit\""));
+};
 
 const buildEnv = (mode: AccessMode): Env => ({
   CAPROVER_MCP_MODE: mode,
@@ -47,6 +55,10 @@ const buildTool = (mode: AccessMode, name: string, fake: FakeCaproverClientAdapt
 };
 
 describe("OperationRunnerService.buildTool()", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
   describe("when the mode does not allow the operation", () => {
     it("refuses a write in readonly mode before it reads anything", async () => {
       const fake = new FakeCaproverClientAdapter([FakeCaproverClientAdapter.buildApp()]);
@@ -100,6 +112,26 @@ describe("OperationRunnerService.buildTool()", () => {
       const outcome = await buildTool("admin", "list_apps", fake).call({});
 
       expect(outcome).toStrictEqual({ isError: true, summary: "bad login [REDACTED]", data: {} });
+    });
+
+    it("writes exactly one error audit line to stderr", async () => {
+      const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+      const fake = new FakeCaproverClientAdapter([], { failureMessage: "CapRover unavailable" });
+
+      await buildTool("admin", "list_apps", fake).call({});
+
+      expect(readAuditLines(stderr)).toStrictEqual([AUDIT_LIST_APPS_ERROR]);
+    });
+  });
+
+  describe("audit lines on stderr", () => {
+    it("writes exactly one denied audit line when policy refuses the call", async () => {
+      const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+      const fake = new FakeCaproverClientAdapter([FakeCaproverClientAdapter.buildApp()]);
+
+      await buildTool("readonly", "scale_app", fake).call({ app_name: "web", instance_count: 2 });
+
+      expect(readAuditLines(stderr)).toStrictEqual([AUDIT_SCALE_DENIED]);
     });
   });
 });
