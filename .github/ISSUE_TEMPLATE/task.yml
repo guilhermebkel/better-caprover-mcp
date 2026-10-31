@@ -1,0 +1,80 @@
+name: Task (spec for an agent or a person)
+description: A piece of work written so that someone can do it from this issue alone, without the conversation that created it.
+title: "[task] "
+labels: ["task", "needs-triage"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Write it so an agent that only reads this issue can do it. One issue is one pull request. If it needs two, split it.
+        **Never paste a password, a token, a server address or app content.** Use invented data.
+  - type: textarea
+    id: context
+    attributes:
+      label: Context
+      description: Why this exists and what is true today. Link the planning section or the ADR that explains it.
+    validations:
+      required: true
+  - type: textarea
+    id: scope
+    attributes:
+      label: Scope
+      description: A numbered checklist in the order it should be done. Each item can be checked by someone else. Say what to build, not which methods to write (that goes in Where to look).
+      placeholder: |
+        - [ ] S1. ...
+        - [ ] S2. ...
+    validations:
+      required: true
+  - type: textarea
+    id: out-of-scope
+    attributes:
+      label: Out of scope
+      description: What looks related but belongs to another issue (link it).
+  - type: textarea
+    id: acceptance
+    attributes:
+      label: Acceptance criteria
+      description: Numbered, one behavior each, written as `WHEN <condition> THEN <observable result>`. Put the edge cases and error cases in the same list, marked `[edge]`. Observable behavior, not tasks.
+      placeholder: |
+        - **AC1** WHEN ... THEN ...
+        - **AC2** [edge] WHEN ... THEN ...
+    validations:
+      required: true
+  - type: textarea
+    id: tests
+    attributes:
+      label: Tests
+      description: >-
+        What must be proven, by AC number where it helps, with the data or fixtures to use.
+        Never the kind of test, a test file or a tool; the agent picks the level
+        (docs/test-standards.md, Which level).
+        Right - AC4: in readonly mode, a delete call changes nothing and says why.
+        Wrong - integration test for AC4.
+        New output paths are redacted and proven with a fake secret.
+    validations:
+      required: true
+  - type: textarea
+    id: where-to-look
+    attributes:
+      label: Where to look
+      description: Files, ADRs, GLOSSARY terms and issues the agent should read first.
+  - type: input
+    id: blocked-by
+    attributes:
+      label: Blocked by
+      description: Issues that must be closed before this one can start, like `#12, #15`. Write `none` if nothing blocks it.
+      placeholder: none
+    validations:
+      required: true
+  - type: textarea
+    id: needs-input
+    attributes:
+      label: Needs input
+      description: Decisions, content or access only a person can give. If this has text, the issue is not `ready-for-agent`.
+  - type: checkboxes
+    id: privacy
+    attributes:
+      label: Privacy
+      options:
+        - label: This issue has no password, token, server address or app content.
+          required: true

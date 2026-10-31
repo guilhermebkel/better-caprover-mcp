@@ -1,0 +1,20 @@
+{
+  "path": [
+    "src",
+    "scripts"
+  ],
+  "format": [
+    "typescript",
+    "tsx",
+    "javascript"
+  ],
+  "ignore": [
+    "**/*.test.ts",
+    "**/*.test.mjs"
+  ],
+  "minTokens": 50,
+  "threshold": 1,
+  "reporters": [
+    "console"
+  ]
+}

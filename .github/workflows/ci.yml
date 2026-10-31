@@ -1,0 +1,81 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+# Why: the jobs run in parallel and together run everything `pnpm check` runs, plus the Docker path; CI never uses lint-staged.
+jobs:
+  typecheck-lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - uses: actions/cache@v4
+        with:
+          path: tsconfig.tsbuildinfo
+          key: tsbuildinfo-${{ hashFiles('pnpm-lock.yaml', 'tsconfig.json') }}
+      - run: pnpm typecheck
+      # Why: ESLint's content cache is keyed by the config, so a rule or config change re-lints every file even on a hit; Oxlint keeps no cache.
+      - uses: actions/cache@v4
+        with:
+          path: .eslintcache
+          key: eslint-${{ hashFiles('pnpm-lock.yaml', 'eslint.config.mjs', '.oxlintrc.json', 'scripts/eslint-local-rules.mjs', 'tsconfig.json') }}
+      - run: pnpm lint
+
+  quality:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm quality
+
+  unit:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm test
+
+  package-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+      - run: pnpm smoke
+      # Why: this is the way a user runs it: the packed tarball through npx, not the folder.
+      - run: npm pack --silent
+      - run: pnpm smoke -- npx --yes --package ./better-caprover-mcp-0.0.0.tgz better-caprover-mcp
+
+  docker-smoke:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version-file: .nvmrc
+      - run: docker build -t better-caprover-mcp:ci .
+      # Why: `-i` is what a stdio client passes; without it the server gets no input and exits.
+      - run: node scripts/package-smoke.mjs -- docker run -i --rm better-caprover-mcp:ci

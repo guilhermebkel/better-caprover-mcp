@@ -1,0 +1,27 @@
+name: Idea or question
+description: Something worth deciding before it becomes a task. Triage turns it into a task issue, or closes it.
+title: "[idea] "
+labels: ["enhancement", "needs-triage"]
+body:
+  - type: textarea
+    id: problem
+    attributes:
+      label: The problem
+      description: What a person or an agent cannot do or understand today.
+    validations:
+      required: true
+  - type: textarea
+    id: proposal
+    attributes:
+      label: What you would like
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives and what happens if we do nothing
+  - type: textarea
+    id: open-questions
+    attributes:
+      label: Open questions
+      description: What must be answered before this can be written as a task.
