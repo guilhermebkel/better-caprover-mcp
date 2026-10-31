@@ -7,18 +7,25 @@ const NAME_PATTERN = /static readonly NAME = "(\w+)"/;
 const RISK_PATTERN = /readonly risk: RiskTier = "(\w+)"/;
 const TIERS = ["read", "write", "destructive", "critical"];
 const TOTAL_PATTERN = /\b(\d+) operations\b/g;
-const NAME_IN_SECTION = /<code class="tr__name">(\w+)<\/code>/g;
+const TOOLSET_IN_SECTION = /<code class="ts__name">(\w+)<\/code>/g;
+const MANIFEST_PATH = "src/Surfaces/OperationManifestSurface.ts";
+const TOOLSET_PATTERN = /runner\.buildTool\(\w+\.NAME, .*, "(\w+)"\),/g;
 const SUBJECTS = { count: "all operations", read: "read operations", write: "write operations", destructive: "destructive operations", critical: "critical operations" };
 const README_ITEM = /^\s*(?:critical:\s*)?`(\w+)`/;
 
-// Why: each text is read only in the places named here (the markers, the number before "operations", the operations table, the tools section), so a name in code format elsewhere never fails the check.
+// Why: each text is read only in the places named here (the markers, the number before "operations", the operations table, the toolsets of the tools section), so a name in code format elsewhere never fails the check.
 export const SPECS = [
   { path: "README.md", markers: ["count"], names: { reader: "readme-table", complete: true } },
   { path: "AGENTS.md", total: true },
   { path: "site/llms.txt", total: true },
-  // Why: the landing page shows the main operations only; the README table is the complete list, so the page may omit an operation but never name one that does not exist.
-  { path: "site/index.html", markers: ["count", "critical"], names: { reader: "site-tools", complete: false } },
+  // Why: the landing page lists the toolsets, not every operation; the README table is the complete list of operations.
+  { path: "site/index.html", markers: ["count"], toolsets: true },
 ];
+
+export const readToolsets = (manifestText) => {
+  const names = [...manifestText.matchAll(TOOLSET_PATTERN)].map((match) => match[1]);
+  return [...new Set(names)];
+};
 
 export const buildToolName = (operationName) => operationName.replaceAll(/([A-Z])/g, "_$1").toLowerCase();
 
@@ -103,17 +110,8 @@ const readReadmeNames = (text) => {
   return found;
 };
 
-const readSiteNames = (text) => {
-  const section = readSection(text, /<section id="tools">/, /<\/section>/);
-  if (section === null) {
-    return null;
-  }
-  const matches = [...section.text.matchAll(NAME_IN_SECTION)];
-  return matches.map((match) => ({ name: match[1], index: section.offset + match.index }));
-};
-
-const NAME_READERS = { "readme-table": readReadmeNames, "site-tools": readSiteNames };
-const NAME_PLACE = { "readme-table": "operations table", "site-tools": "tools section" };
+const NAME_READERS = { "readme-table": readReadmeNames };
+const NAME_PLACE = { "readme-table": "operations table" };
 
 const checkNames = (spec, text, operations) => {
   const place = NAME_PLACE[spec.names.reader];
@@ -135,7 +133,24 @@ const checkNames = (spec, text, operations) => {
   return problems;
 };
 
-export const findDocDrift = (operations, texts) => {
+const checkToolsets = (spec, text, toolsets) => {
+  const section = readSection(text, /<section id="tools">/, /<\/section>/);
+  const matches = section === null ? [] : [...section.text.matchAll(TOOLSET_IN_SECTION)];
+  if (matches.length === 0) {
+    return [`${spec.path} has no list of toolsets in the tools section to read.`];
+  }
+  const problems = [];
+  for (const match of matches.filter((item) => !toolsets.includes(item[1]))) {
+    problems.push(`${spec.path}:${findLine(text, section.offset + match.index)} names ${match[1]} in the tools section, which is not a toolset.`);
+  }
+  const named = matches.map((match) => match[1]);
+  for (const name of toolsets.filter((item) => !named.includes(item))) {
+    problems.push(`${spec.path} lacks the toolset ${name} in the tools section.`);
+  }
+  return problems;
+};
+
+export const findDocDrift = (operations, texts, toolsets) => {
   const counts = countTiers(operations);
   const problems = [];
   for (const spec of SPECS) {
@@ -146,7 +161,8 @@ export const findDocDrift = (operations, texts) => {
     }
     const numberProblems = checkNumbers(spec, text, counts);
     const nameProblems = spec.names === undefined ? [] : checkNames(spec, text, operations);
-    problems.push(...numberProblems, ...nameProblems);
+    const toolsetProblems = spec.toolsets === true ? checkToolsets(spec, text, toolsets) : [];
+    problems.push(...numberProblems, ...nameProblems, ...toolsetProblems);
   }
   return problems;
 };
@@ -156,6 +172,7 @@ const run = () => {
     .filter((file) => OPERATION_FILE.test(file) && !file.endsWith(".test.ts"))
     .map((file) => ({ path: `${OPERATIONS_DIR}/${file}`, text: readFileSync(`${OPERATIONS_DIR}/${file}`, "utf8") }));
   const operations = readOperations(sources);
+  const toolsets = readToolsets(readFileSync(MANIFEST_PATH, "utf8"));
   const texts = {};
   for (const spec of SPECS) {
     try {
@@ -164,14 +181,14 @@ const run = () => {
       // Why: a missing file is reported by findDocDrift with its path.
     }
   }
-  const problems = findDocDrift(operations, texts);
+  const problems = findDocDrift(operations, texts, toolsets);
   if (problems.length > 0) {
     process.stderr.write(`${problems.join("\n")}\n`);
     return 1;
   }
   const counts = countTiers(operations);
   const perTier = TIERS.map((tier) => `${counts[tier]} ${tier}`).join(", ");
-  process.stdout.write(`Operation texts agree with the code: ${counts.count} operations (${perTier}).\n`);
+  process.stdout.write(`Operation texts agree with the code: ${counts.count} operations (${perTier}) in ${toolsets.length} toolsets.\n`);
   return 0;
 };
 
