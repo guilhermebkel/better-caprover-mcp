@@ -135,6 +135,37 @@ Set LOG_LEVEL=debug on the api app, but show me what changes first.
 
 To let the agent change apps, set `CAPROVER_MCP_MODE=operate`; for deleting, `admin`.
 
+### Run it as a server over HTTP
+
+Use this when the client reaches the server over the network. Bind to localhost only (`127.0.0.1:3100`), and put TLS in front for anything else.
+
+```bash
+docker run -d --name caprover-mcp -p 127.0.0.1:3100:3100 \
+  -e CAPROVER_URL=https://captain.your-domain.com \
+  -e CAPROVER_PASSWORD='your CapRover password' \
+  -e CAPROVER_MCP_HTTP_HOST=0.0.0.0 \
+  -e CAPROVER_MCP_HTTP_TOKEN='your-long-random-secret' \
+  ghcr.io/guilhermebkel/better-caprover-mcp:latest \
+  serve --http
+```
+
+Then point the client at it:
+
+```json
+{
+  "mcpServers": {
+    "caprover": {
+      "url": "http://127.0.0.1:3100/mcp",
+      "headers": {
+        "Authorization": "Bearer your-long-random-secret"
+      }
+    }
+  }
+}
+```
+
+More on HTTP bind and TLS: [`docs/product/remote-http.md`](docs/product/remote-http.md). Limits and other variables: [Configuration](#configuration).
+
 ## Example
 
 <sub>Real output of the built server against a CapRover 1.15.5. The agent asks to delete an app; nothing is deleted yet.</sub>
@@ -186,6 +217,14 @@ The mode decides which operations the client sees at all. Only the person can ch
 | `CAPROVER_PASSWORD` | none | The CapRover password |
 | `CAPROVER_MCP_MODE` | `readonly` | `readonly`, `operate` or `admin` |
 | `CAPROVER_MCP_ALLOW_CRITICAL` | off | Set to `1` to unlock critical operations in `admin` mode. No operation is critical yet |
+| `CAPROVER_MCP_HTTP_TOKEN` | none | Bearer secret for `serve --http` (minimum 8 characters); required for non-local HTTP bind |
+| `CAPROVER_MCP_HTTP_HOST` | `127.0.0.1` | Address for `serve --http` |
+| `CAPROVER_MCP_HTTP_PORT` | `3100` | Port for `serve --http` |
+| `CAPROVER_MCP_MAX_HTTP_BODY_BYTES` | `1048576` | Max POST body size on `/mcp` |
+| `CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE` | `120` | Max MCP HTTP requests per minute, counted in two buckets: failed auth and authenticated traffic. Each bucket is shared by every caller. |
+| `CAPROVER_MCP_MAX_HTTP_SESSIONS` | `64` | Max concurrent Streamable HTTP MCP sessions |
+| `CAPROVER_MCP_HTTP_SESSION_TTL_MS` | `86400000` | Idle lifetime of an HTTP MCP session (ms); each request renews it |
+| `CAPROVER_MCP_MAX_CONCURRENT` | `5` | Max parallel tool runs in this MCP instance |
 
 Without `CAPROVER_URL` and `CAPROVER_PASSWORD` the server still starts, and every call tells the model what is missing.
 
@@ -228,7 +267,7 @@ Found a way around any of this? Open an issue without secrets in it.
 <details>
 <summary><b>Does it work with CapRover's two-factor login?</b></summary>
 
-No. The code lasts 30 seconds and a client starts this server again every session, so it cannot be kept in an environment variable. The server logs in with the password only ([ADR 0010](docs/adr/0010-the-server-logs-in-with-the-password-only.md)).
+No. The code lasts 30 seconds. Over stdio, a client restarts the server each session; over HTTP the process is long-lived, but the server still has no way to obtain a fresh code, so it cannot be kept in an environment variable. The server logs in with the password only ([ADR 0010](docs/adr/0010-the-server-logs-in-with-the-password-only.md)).
 
 </details>
 
@@ -252,7 +291,7 @@ The endpoint it uses is missing in older CapRover versions (1.15.5 has none). Th
 - [ ] **The rest of the CapRover API** (about 56 more SDK methods): [#3](https://github.com/guilhermebkel/better-caprover-mcp/issues/3)
 - [ ] **Diagnostics** (`diagnose_app`, `find_issues`): [#4](https://github.com/guilhermebkel/better-caprover-mcp/issues/4)
 - [ ] **Code Mode** (`search` and `execute` in a sandbox) and a benchmark: [#5](https://github.com/guilhermebkel/better-caprover-mcp/issues/5)
-- [ ] **Remote HTTP and several CapRover servers:** [#6](https://github.com/guilhermebkel/better-caprover-mcp/issues/6)
+- [x] **Remote HTTP (one CapRover server per MCP instance):** [#6](https://github.com/guilhermebkel/better-caprover-mcp/issues/6) — multi-server in one process is out of scope; run one instance per Captain.
 
 ## Contributing
 

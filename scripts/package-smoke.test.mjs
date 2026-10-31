@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { buildRequestLines, checkReplies, parseCommand, parseLines } from "./package-smoke.mjs";
+import { buildRequestLines, checkReplies, parseCommand, parseLines, waitForDockerHealthy } from "./package-smoke.mjs";
 
 const GOOD_REPLY = {
   jsonrpc: "2.0",
@@ -51,12 +51,48 @@ describe("checkReplies()", () => {
   });
 });
 
+const DEFAULT_NODE_COMMAND = ["node", "dist/main.js"];
+const NO_SMOKE_FLAGS = { isStdioOnly: false, isHttpOnly: false };
+
 describe("parseCommand()", () => {
   it("runs the local build when no command is given", () => {
-    expect(parseCommand([])).toStrictEqual(["node", "dist/main.js"]);
+    expect(parseCommand([])).toStrictEqual({
+      command: DEFAULT_NODE_COMMAND,
+      ...NO_SMOKE_FLAGS,
+    });
   });
 
   it("drops the leading -- and keeps the command", () => {
-    expect(parseCommand(["--", "docker", "run", "-i"])).toStrictEqual(["docker", "run", "-i"]);
+    expect(parseCommand(["--", "docker", "run", "-i"])).toStrictEqual({
+      command: ["docker", "run", "-i"],
+      ...NO_SMOKE_FLAGS,
+    });
+  });
+
+  it("records smoke mode flags", () => {
+    expect(parseCommand(["--http-only", "--", ...DEFAULT_NODE_COMMAND])).toStrictEqual({
+      command: DEFAULT_NODE_COMMAND,
+      isStdioOnly: false,
+      isHttpOnly: true,
+    });
+  });
+
+  it("drops flags and the separator before the command", () => {
+    expect(parseCommand(["--stdio-only", "--", "docker", "run", "-i"])).toStrictEqual({
+      command: ["docker", "run", "-i"],
+      isStdioOnly: true,
+      isHttpOnly: false,
+    });
+  });
+});
+
+describe("waitForDockerHealthy()", () => {
+  it("returns when docker inspect reports healthy", async () => {
+    const results = {
+      "docker:ps": { stdout: "container-id\n", stderr: "", status: 0 },
+      "docker:inspect": { stdout: "healthy\n", stderr: "", status: 0 },
+    };
+    const runSpawnSync = (command, args) => results[`${command}:${args[0]}`] ?? { stdout: "", stderr: "", status: 1 };
+    await expect(waitForDockerHealthy("ghcr.io/example/image:tag", runSpawnSync)).resolves.toBeUndefined();
   });
 });

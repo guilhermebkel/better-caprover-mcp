@@ -11,7 +11,11 @@ describe("EnvUtil.read()", () => {
     it("starts in readonly mode with critical locked and no CapRover to reach", () => {
       vi.stubEnv("CAPROVER_MCP_MODE", undefined);
 
-      expect(EnvUtil.read()).toStrictEqual({ CAPROVER_MCP_MODE: "readonly", CAPROVER_MCP_ALLOW_CRITICAL: false });
+      const env = EnvUtil.read();
+      expect(env.CAPROVER_MCP_MODE).toBe("readonly");
+      expect(env.CAPROVER_MCP_ALLOW_CRITICAL).toBe(false);
+      expect(env.CAPROVER_URL).toBeUndefined();
+      expect(env.CAPROVER_PASSWORD).toBeUndefined();
     });
   });
 
@@ -69,6 +73,29 @@ describe("EnvUtil.read()", () => {
       vi.stubEnv("CAPROVER_PASSWORD", "fake password with spaces");
 
       expect(EnvUtil.read().CAPROVER_PASSWORD).toBe("fake password with spaces");
+    });
+  });
+
+  describe("when HTTP limits are set", () => {
+    it("refuses a non-positive CAPROVER_MCP_HTTP_PORT", () => {
+      vi.stubEnv("CAPROVER_MCP_HTTP_PORT", "0");
+
+      expect(() => EnvUtil.read()).toThrow(/CAPROVER_MCP_HTTP_PORT must be a positive integer/);
+    });
+  });
+
+  describe("when the HTTP token is set", () => {
+    it("treats an empty value as not set", () => {
+      vi.stubEnv("CAPROVER_MCP_HTTP_TOKEN", "");
+
+      expect(EnvUtil.read().CAPROVER_MCP_HTTP_TOKEN).toBeUndefined();
+    });
+
+    it("refuses a token shorter than the minimum with the exact message", () => {
+      vi.stubEnv("CAPROVER_MCP_HTTP_TOKEN", "short");
+
+      expect(() => EnvUtil.read()).toThrow(InvalidEnvError);
+      expect(() => EnvUtil.read()).toThrow(/CAPROVER_MCP_HTTP_TOKEN must be at least 8 characters\./);
     });
   });
 });

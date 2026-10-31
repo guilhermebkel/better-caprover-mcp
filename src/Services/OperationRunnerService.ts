@@ -1,13 +1,16 @@
 import { z } from "zod";
+import { ConcurrencyLimitError } from "@/Errors/ConcurrencyLimitError.ts";
 import { MissingPreviewError } from "@/Errors/MissingPreviewError.ts";
+import { OperationDeniedError } from "@/Errors/OperationDeniedError.ts";
 import { ToolFailureError } from "@/Errors/ToolFailureError.ts";
 import type { RiskTier } from "@/Protocols/AccessProtocol.ts";
+import type { AuditResult } from "@/Protocols/AuditProtocol.ts";
+import type { OperationRunnerDeps } from "@/Protocols/OperationRunnerProtocol.ts";
 import type { ControlFields } from "@/Protocols/ControlProtocol.ts";
 import type { OperationPort, OperationResult, ToolDefinition, ToolOutcome } from "@/Protocols/OperationProtocol.ts";
 import { ControlFieldsSchema } from "@/Schemas/ControlSchema.ts";
-import type { ConfirmationService } from "@/Services/ConfirmationService.ts";
-import type { PolicyService } from "@/Services/PolicyService.ts";
 import { FingerprintUtil } from "@/Utils/FingerprintUtil.ts";
+import { InputStripUtil } from "@/Utils/InputStripUtil.ts";
 import { LogUtil } from "@/Utils/LogUtil.ts";
 import { OperationBuilderUtil } from "@/Utils/OperationBuilderUtil.ts";
 import { RedactUtil } from "@/Utils/RedactUtil.ts";
@@ -15,11 +18,7 @@ import { RedactUtil } from "@/Utils/RedactUtil.ts";
 const TIERS_NEEDING_CONFIRMATION: ReadonlySet<RiskTier> = new Set<RiskTier>(["destructive", "critical"]);
 
 export class OperationRunnerService {
-  constructor(
-    private readonly policy: PolicyService,
-    private readonly confirmation: ConfirmationService,
-    private readonly secrets: readonly string[],
-  ) {}
+  constructor(private readonly deps: OperationRunnerDeps) {}
 
   buildTool<Input>(operationName: string, operation: OperationPort<Input>): ToolDefinition {
     const toolName = OperationBuilderUtil.buildToolName(operationName);
@@ -29,15 +28,26 @@ export class OperationRunnerService {
   }
 
   private async run<Input>(toolName: string, operation: OperationPort<Input>, rawInput: unknown): Promise<ToolOutcome> {
+    let result: AuditResult;
+    let outcome: ToolOutcome;
     try {
-      this.policy.assertCanRun(toolName, operation.risk);
-      const input = operation.inputSchema.parse(rawInput);
-      const control = ControlFieldsSchema.parse(rawInput);
-      const outcome = await this.dispatch(toolName, operation, input, control);
-      return this.redactOutcome(outcome);
+      this.deps.policy.assertCanRun(toolName, operation.risk);
+      outcome = await this.deps.limiter.run(async () => {
+        const control = ControlFieldsSchema.parse(rawInput);
+        const input = operation.inputSchema.parse(InputStripUtil.stripControlFields(rawInput));
+        return this.dispatch(toolName, operation, input, control);
+      });
+      result = outcome.isError ? "error" : "ok";
     } catch (error) {
-      return this.redactOutcome(OperationRunnerService.buildFailure(toolName, error));
+      result = error instanceof OperationDeniedError ? "denied" : "error";
+      outcome = OperationRunnerService.buildFailure(toolName, error);
     }
+    this.writeAudit(toolName, operation.risk, result);
+    return this.redactOutcome(outcome);
+  }
+
+  private writeAudit(tool: string, risk: RiskTier, result: AuditResult): void {
+    LogUtil.logAudit({ tool, risk, result, atMs: this.deps.getNowMs() });
   }
 
   private async dispatch<Input>(
@@ -69,12 +79,12 @@ export class OperationRunnerService {
     const fingerprint = FingerprintUtil.build(toolName, input);
     const token = control.confirmation_token;
     const hasToken = control.user_confirmed === true && token !== undefined;
-    const isConfirmed = hasToken && this.confirmation.consumeToken(token, fingerprint);
+    const isConfirmed = hasToken && this.deps.confirmation.consumeToken(token, fingerprint);
     if (isConfirmed) {
       return OperationRunnerService.buildDone(await operation.execute(input));
     }
     const preview = await OperationRunnerService.runPreview(toolName, operation, input);
-    const newToken = this.confirmation.createToken(fingerprint);
+    const newToken = this.deps.confirmation.createToken(fingerprint);
     const wasRefused = control.user_confirmed === true;
     const reason = wasRefused ? "The confirmation token is missing, expired, or from a different call. " : "";
     return {
@@ -104,7 +114,10 @@ export class OperationRunnerService {
     if (error instanceof z.ZodError) {
       return { isError: true, summary: `Invalid input for ${toolName}:\n${z.prettifyError(error)}`, data: {} };
     }
-    if (error instanceof ToolFailureError) {
+    const isToolFailure = error instanceof ToolFailureError
+      || error instanceof OperationDeniedError
+      || error instanceof ConcurrencyLimitError;
+    if (isToolFailure) {
       return { isError: true, summary: error.message, data: {} };
     }
     LogUtil.logError("unexpected_failure", error instanceof Error ? error.name : "unknown");
@@ -112,10 +125,10 @@ export class OperationRunnerService {
   }
 
   private redactOutcome(outcome: ToolOutcome): ToolOutcome {
-    const data = RedactUtil.redactValue(outcome.data, this.secrets);
+    const data = RedactUtil.redactValue(outcome.data, this.deps.secrets);
     return {
       isError: outcome.isError,
-      summary: RedactUtil.redactText(outcome.summary, this.secrets),
+      summary: RedactUtil.redactText(outcome.summary, this.deps.secrets),
       data: typeof data === "object" && data !== null && !Array.isArray(data) ? Object.fromEntries(Object.entries(data)) : {},
     };
   }

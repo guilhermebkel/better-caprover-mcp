@@ -1,0 +1,119 @@
+import type { IncomingMessage, ServerResponse } from "node:http";
+import { randomUUID } from "node:crypto";
+import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
+import type {
+  McpServerBuilder,
+  SessionRecord,
+} from "@/Protocols/HttpSessionRunnerProtocol.ts";
+
+const PLAIN_TEXT = "text/plain";
+const HTTP_BAD_REQUEST = 400;
+const HTTP_NOT_FOUND = 404;
+const HTTP_SERVICE_UNAVAILABLE = 503;
+const DEFAULT_SESSION_TTL_MS = 86_400_000;
+const DEFAULT_MAX_SESSIONS = 64;
+
+const isInitializeBody = (parsedBody: unknown): boolean => {
+  if (parsedBody === undefined) {
+    return false;
+  }
+  const messages = Array.isArray(parsedBody) ? parsedBody : [parsedBody];
+  return messages.some((message) => {
+    if (typeof message !== "object" || message === null || !("method" in message)) {
+      return false;
+    }
+    const method = (message as { method?: unknown }).method;
+    return method === "initialize";
+  });
+};
+
+export class HttpSessionRunner {
+  private readonly sessionIdToSession = new Map<string, SessionRecord>();
+  private pendingInitializations = 0;
+
+  constructor(
+    private readonly buildMcpServer: McpServerBuilder,
+    private readonly getNowMs: () => number,
+    private readonly maxSessions = DEFAULT_MAX_SESSIONS,
+    private readonly sessionTtlMs = DEFAULT_SESSION_TTL_MS,
+  ) {}
+
+  async handleRequest(
+    request: IncomingMessage,
+    response: ServerResponse,
+    parsedBody: unknown,
+  ): Promise<void> {
+    this.dropExpiredSessions();
+    const sessionHeader = request.headers["mcp-session-id"];
+    const sessionId = typeof sessionHeader === "string" && sessionHeader !== "" ? sessionHeader : undefined;
+    if (sessionId !== undefined) {
+      const session = this.sessionIdToSession.get(sessionId);
+      if (session === undefined) {
+        response.writeHead(HTTP_NOT_FOUND, { "Content-Type": PLAIN_TEXT });
+        response.end("Not Found");
+        return;
+      }
+      session.expiresAtMs = this.getNowMs() + this.sessionTtlMs;
+      await session.transport.handleRequest(request, response, parsedBody);
+      return;
+    }
+    if (!isInitializeBody(parsedBody)) {
+      response.writeHead(HTTP_BAD_REQUEST, { "Content-Type": PLAIN_TEXT });
+      response.end("Bad Request");
+      return;
+    }
+    if (this.sessionIdToSession.size + this.pendingInitializations >= this.maxSessions) {
+      response.writeHead(HTTP_SERVICE_UNAVAILABLE, { "Content-Type": PLAIN_TEXT });
+      response.end("Service Unavailable");
+      return;
+    }
+    await this.initializeSession(request, response, parsedBody);
+  }
+
+  async closeAll(): Promise<void> {
+    await Promise.all([...this.sessionIdToSession.values()].map(async (session) => session.transport.close()));
+    this.sessionIdToSession.clear();
+  }
+
+  private async initializeSession(
+    request: IncomingMessage,
+    response: ServerResponse,
+    parsedBody: unknown,
+  ): Promise<void> {
+    this.pendingInitializations += 1;
+    const registration = { isRegistered: false };
+    const server = this.buildMcpServer();
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: () => randomUUID(),
+      onsessioninitialized: (id) => {
+        registration.isRegistered = true;
+        this.sessionIdToSession.set(id, {
+          transport,
+          expiresAtMs: this.getNowMs() + this.sessionTtlMs,
+        });
+      },
+      onsessionclosed: (id) => {
+        this.sessionIdToSession.delete(id);
+      },
+    });
+    try {
+      await server.connect(transport);
+      await transport.handleRequest(request, response, parsedBody);
+    } finally {
+      this.pendingInitializations -= 1;
+      if (!registration.isRegistered) {
+        await transport.close().catch(() => undefined);
+      }
+    }
+  }
+
+  private dropExpiredSessions(): void {
+    const nowMs = this.getNowMs();
+    for (const [sessionId, session] of this.sessionIdToSession.entries()) {
+      if (session.expiresAtMs <= nowMs) {
+        session.transport.close().catch(() => undefined);
+        this.sessionIdToSession.delete(sessionId);
+      }
+    }
+  }
+}

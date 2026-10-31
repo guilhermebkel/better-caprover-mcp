@@ -16,10 +16,14 @@ import { ScaleAppOperation } from "@/Operations/ScaleAppOperation.ts";
 import { SetEnvVarsOperation } from "@/Operations/SetEnvVarsOperation.ts";
 import { AppResolverService } from "@/Services/AppResolverService.ts";
 import type { OperationRunnerService } from "@/Services/OperationRunnerService.ts";
-import type { PolicyService } from "@/Services/PolicyService.ts";
+import type { PolicyServicePort } from "@/Protocols/AccessProtocol.ts";
 
 export class OperationManifest {
-  static build(client: CaproverClientPort, policy: PolicyService, runner: OperationRunnerService): ToolDefinition[] {
+  static build(
+    client: CaproverClientPort,
+    policy: PolicyServicePort,
+    runner: OperationRunnerService,
+  ): ToolDefinition[] {
     const resolver = new AppResolverService(client);
     return [
       runner.buildTool(GetOverviewOperation.NAME, new GetOverviewOperation(client, policy)),

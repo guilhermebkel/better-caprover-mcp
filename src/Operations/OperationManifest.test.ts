@@ -2,6 +2,9 @@ import { describe, expect, it } from "vitest";
 import { FakeCaproverClientAdapter } from "@/Adapters/CapRover/FakeCaproverClientAdapter.ts";
 import { OperationManifest } from "@/Operations/OperationManifest.ts";
 import type { ToolDefinition } from "@/Protocols/OperationProtocol.ts";
+import type { Env } from "@/Protocols/EnvProtocol.ts";
+import type { CaproverClientFactory } from "@/Protocols/SharedMcpRuntimeProtocol.ts";
+import { ConcurrencyLimiterService } from "@/Services/ConcurrencyLimiterService.ts";
 import { ConfirmationService } from "@/Services/ConfirmationService.ts";
 import { OperationRunnerService } from "@/Services/OperationRunnerService.ts";
 import { PolicyService } from "@/Services/PolicyService.ts";
@@ -13,10 +16,34 @@ const FIELD_NAMES = [
   "delete_volumes", "response_format",
 ];
 
+const buildTestEnv = (): Env => ({
+  CAPROVER_MCP_MODE: "admin",
+  CAPROVER_MCP_ALLOW_CRITICAL: false,
+  CAPROVER_URL: "https://captain.example.com",
+  CAPROVER_PASSWORD: undefined,
+  CAPROVER_MCP_HTTP_HOST: "127.0.0.1",
+  CAPROVER_MCP_HTTP_PORT: 3100,
+  CAPROVER_MCP_MAX_HTTP_BODY_BYTES: 1_048_576,
+  CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE: 120,
+  CAPROVER_MCP_MAX_HTTP_SESSIONS: 64,
+  CAPROVER_MCP_HTTP_SESSION_TTL_MS: 86_400_000,
+  CAPROVER_MCP_MAX_CONCURRENT: 5,
+});
+
 const buildTools = (): ToolDefinition[] => {
-  const policy = new PolicyService("admin", false);
-  const runner = new OperationRunnerService(policy, new ConfirmationService(() => 0), []);
-  return OperationManifest.build(new FakeCaproverClientAdapter([]), policy, runner);
+  const fake = new FakeCaproverClientAdapter([]);
+  const env = buildTestEnv();
+  const createClient: CaproverClientFactory = () => fake;
+  const client = createClient(env);
+  const policy = new PolicyService(env.CAPROVER_MCP_MODE, env.CAPROVER_MCP_ALLOW_CRITICAL);
+  const runner = new OperationRunnerService({
+    policy,
+    secrets: [],
+    confirmation: new ConfirmationService(() => 0),
+    limiter: new ConcurrencyLimiterService(5),
+    getNowMs: () => 0,
+  });
+  return OperationManifest.build(client, policy, runner);
 };
 
 describe("OperationManifest.build()", () => {

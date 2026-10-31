@@ -16,7 +16,7 @@ Many fast low-level tests, few slow ones. Pick the lowest level that can fail fo
 
 - **Unit and service tests** for utils, schemas, services and operations (with a double for the CapRover client).
 - **Server tests** for what a client sees: a real MCP client talks to the built server object in memory.
-- **Package smoke** (`pnpm smoke`) for the built bundle: it starts the server the way a client does, through `node`, `npx` and `docker run -i`, and checks the reply to `initialize` and that stdout carries nothing but JSON-RPC. CI runs it for `npx` and for Docker.
+- **Package smoke** (`pnpm smoke`) for the built bundle: it starts the server through `node`, `npx`, and `docker run -i` (stdio `initialize`), and through `serve --http` for Streamable HTTP. CI runs both stdio and HTTP smoke for `npx` and Docker.
 - **Integration** against a real CapRover in Docker (`pnpm test:integration`, files `scripts/*.integration.test.mjs`), for what a double cannot prove: login, deploy, logs, and the built bundle talking to CapRover over stdio. `pnpm test` leaves these out. They need `pnpm build` first and a CapRover with its default password, or `CAPROVER_TEST_URL` and `CAPROVER_TEST_PASSWORD`. `scripts/start-caprover.sh` starts one in Docker, locally and in CI.
 
 A bug found at a high level (smoke, integration, a user report) is first reproduced in a lower-level test, then fixed.

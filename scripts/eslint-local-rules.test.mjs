@@ -528,9 +528,11 @@ ruleTester.run("verb-function-name", localRules.rules["verb-function-name"], {
   ],
 });
 
+const SCHEMA_FILE = "src/Schemas/ChatSchema.ts";
+
 tsRuleTester.run("schema-file", localRules.rules["schema-file"], {
   valid: [
-    { name: "a schema built in a Schema file", filename: "src/Schemas/ChatSchema.ts", code: "const ChatSchema = z.object({ id: z.string() });" },
+    { name: "a schema built in a Schema file", filename: SCHEMA_FILE, code: "const ChatSchema = z.object({ id: z.string() });" },
     { name: "a schema imported from a Schema file", filename: SERVICE_FILE, code: "import { ChatSchema } from \"../Schemas/ChatSchema\"; ChatSchema.parse(x);" },
     { name: "a schema methods call on an imported schema", filename: "src/Utils/A.ts", code: "SCHEMA.safeParse(value);" },
   ],
@@ -550,6 +552,37 @@ tsRuleTester.run("schema-file", localRules.rules["schema-file"], {
   ],
 });
 
+tsRuleTester.run("types-in-protocol-files", localRules.rules["types-in-protocol-files"], {
+  valid: [
+    { name: "types in a Protocol file", filename: PROTOCOL_FILE, code: "export type Chat = { id: string };" },
+    { name: "types in a Schema file", filename: SCHEMA_FILE, code: "export type Chat = { id: string };" },
+    { name: "types in a test file", filename: "src/Services/ChatService.test.ts", code: "type Setup = { id: string };" },
+    { name: "types in a declaration file", filename: "src/types/BuildGlobals.d.ts", code: "declare type BuildId = string;" },
+    { name: "a class in product code", filename: SERVICE_FILE, code: "export class ChatService {}" },
+    { name: "re-exporting a type", filename: SERVICE_FILE, code: "export type { Chat } from \"@/Protocols/ChatProtocol.ts\";" },
+  ],
+  invalid: [
+    {
+      name: "a type alias in a service file",
+      filename: SERVICE_FILE,
+      code: "type Chat = { id: string };",
+      errors: [{ messageId: "outside" }],
+    },
+    {
+      name: "an interface in an operation file",
+      filename: LIST_APPS_FILE,
+      code: "interface Foo { id: string }",
+      errors: [{ messageId: "outside" }],
+    },
+    {
+      name: "an enum outside Protocol",
+      filename: SERVICE_FILE,
+      code: "enum Kind { A }",
+      errors: [{ messageId: "outside" }],
+    },
+  ],
+});
+
 tsRuleTester.run("protocol-types-only", localRules.rules["protocol-types-only"], {
   valid: [
     {
@@ -557,7 +590,7 @@ tsRuleTester.run("protocol-types-only", localRules.rules["protocol-types-only"],
       filename: PROTOCOL_FILE,
       code: "import type { A } from \"x\"; export type B = A; export interface CPort { run(): void } export enum D { E } export type { A };",
     },
-    { name: "values in a Schema file", filename: "src/Schemas/ChatSchema.ts", code: "export const MAX = 1; export function f() {}" },
+    { name: "values in a Schema file", filename: SCHEMA_FILE, code: "export const MAX = 1; export function f() {}" },
     { name: "values in any other file", filename: SERVICE_FILE, code: "export const MAX = 1; export class A {}" },
   ],
   invalid: [

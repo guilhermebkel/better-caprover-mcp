@@ -1,16 +1,20 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { FakeCaproverClientAdapter } from "@/Adapters/CapRover/FakeCaproverClientAdapter.ts";
-import type { FakeCaproverOptions } from "@/Adapters/CapRover/FakeCaproverClientAdapter.ts";
+import type { FakeCaproverOptions } from "@/Protocols/FakeCaproverClientProtocol.ts";
 import type { AccessMode } from "@/Protocols/AccessProtocol.ts";
 import type { CaproverApp } from "@/Protocols/CaproverClientProtocol.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
+import type { CaproverClientFactory } from "@/Protocols/SharedMcpRuntimeProtocol.ts";
 import { ServerBuilder } from "@/Server/ServerBuilder.ts";
 
 const FAKE_PASSWORD = "fake-password-9876";
 const FAKE_ENV_VALUE = "fake-env-value-123";
 const START_MS = 1_000_000;
+const AUDIT_LIST_APPS_OK = "{\"level\":\"audit\",\"time\":\"1970-01-01T00:00:00.000Z\",\"tool\":\"list_apps\",\"risk\":\"read\",\"result\":\"ok\"}\n";
+const AUDIT_LIST_APPS_ERROR = "{\"level\":\"audit\",\"time\":\"1970-01-01T00:00:00.000Z\",\"tool\":\"list_apps\",\"risk\":\"read\",\"result\":\"error\"}\n";
+const PLANTED_LIST_FILTER = "planted-audit-filter-xyzzy";
 
 type Setup = {
   client: Client;
@@ -28,14 +32,23 @@ const buildEnv = (mode: AccessMode): Env => ({
   CAPROVER_MCP_ALLOW_CRITICAL: false,
   CAPROVER_URL: "https://captain.example.com",
   CAPROVER_PASSWORD: FAKE_PASSWORD,
+  CAPROVER_MCP_HTTP_HOST: "127.0.0.1",
+  CAPROVER_MCP_HTTP_PORT: 3100,
+  CAPROVER_MCP_MAX_HTTP_BODY_BYTES: 1_048_576,
+  CAPROVER_MCP_MAX_HTTP_REQUESTS_PER_MINUTE: 120,
+  CAPROVER_MCP_MAX_HTTP_SESSIONS: 64,
+  CAPROVER_MCP_HTTP_SESSION_TTL_MS: 86_400_000,
+  CAPROVER_MCP_MAX_CONCURRENT: 5,
 });
+
+const buildTestClient = (fake: FakeCaproverClientAdapter): CaproverClientFactory => () => fake;
 
 const connect = async (options: SetupOptions = {}): Promise<Setup> => {
   const { mode = "admin", apps = [FakeCaproverClientAdapter.buildApp()], getNowMs = () => START_MS, ...fakeOptions } = options;
   const fake = new FakeCaproverClientAdapter(apps, fakeOptions);
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
   const client = new Client({ name: "test-client", version: "0.0.0" });
-  await ServerBuilder.build(buildEnv(mode), fake, getNowMs).connect(serverTransport);
+  await ServerBuilder.build(buildEnv(mode), getNowMs, buildTestClient(fake)).connect(serverTransport);
   await client.connect(clientTransport);
   return { client, fake };
 };
@@ -67,6 +80,12 @@ const callTool = async (client: Client, name: string, args: Record<string, unkno
     text: readFirstText(result.content),
     data: Object.fromEntries(Object.entries(result.structuredContent ?? {})),
   };
+};
+
+const readAuditLines = (stderr: { mock: { calls: readonly unknown[][] } }): string[] => {
+  return stderr.mock.calls
+    .map((call) => String(call[0]))
+    .filter((line: string) => line.includes("\"level\":\"audit\""));
 };
 
 const READ_TOOLS = [
@@ -469,6 +488,45 @@ describe("ServerBuilder.build()", () => {
       const reply = await callTool(client, "get_app", { app_name: "web" });
 
       expect(reply.text).toContain("The server has no app with a similar name.");
+    });
+  });
+
+  describe("when a tool runs", () => {
+    afterEach(() => {
+      vi.restoreAllMocks();
+    });
+
+    it("writes exactly one audit line for a list_apps call", async () => {
+      const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+      const { client } = await connect({ getNowMs: () => 0 });
+      stderr.mockClear();
+
+      await callTool(client, "list_apps", {});
+
+      expect(readAuditLines(stderr)).toStrictEqual([AUDIT_LIST_APPS_OK]);
+    });
+
+    it("omits tool argument values from the audit line", async () => {
+      const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+      const { client } = await connect({ getNowMs: () => 0 });
+      stderr.mockClear();
+
+      await callTool(client, "list_apps", { name_contains: PLANTED_LIST_FILTER });
+
+      const auditLines = readAuditLines(stderr);
+      expect(auditLines.length).toBeGreaterThan(0);
+      expect(auditLines).toStrictEqual([AUDIT_LIST_APPS_OK]);
+      expect(auditLines[0]).not.toContain(PLANTED_LIST_FILTER);
+    });
+
+    it("writes exactly one error audit line when list_apps fails", async () => {
+      const stderr = vi.spyOn(process.stderr, "write").mockReturnValue(true);
+      const { client } = await connect({ getNowMs: () => 0, failureMessage: "CapRover unavailable" });
+      stderr.mockClear();
+
+      await callTool(client, "list_apps", {});
+
+      expect(readAuditLines(stderr)).toStrictEqual([AUDIT_LIST_APPS_ERROR]);
     });
   });
 });

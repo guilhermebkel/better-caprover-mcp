@@ -1,17 +1,11 @@
+import type { EnvVarsPlan } from "@/Protocols/SetEnvVarsProtocol.ts";
 import type { RiskTier } from "@/Protocols/AccessProtocol.ts";
 import type { SetEnvVarsInput } from "@/Protocols/AppInputProtocol.ts";
-import type { CaproverApp, CaproverClientPort, CaproverEnvVar } from "@/Protocols/CaproverClientProtocol.ts";
+import type { CaproverApp, CaproverClientPort } from "@/Protocols/CaproverClientProtocol.ts";
 import type { OperationPort, OperationResult } from "@/Protocols/OperationProtocol.ts";
 import { SetEnvVarsInputSchema } from "@/Schemas/AppInputSchema.ts";
 import type { AppResolverService } from "@/Services/AppResolverService.ts";
 import { DotenvUtil } from "@/Utils/DotenvUtil.ts";
-
-type EnvVarsPlan = {
-  merged: CaproverEnvVar[];
-  addedKeys: string[];
-  updatedKeys: string[];
-  removedKeys: string[];
-};
 
 export class SetEnvVarsOperation implements OperationPort<SetEnvVarsInput> {
   static readonly NAME = "setEnvVars";

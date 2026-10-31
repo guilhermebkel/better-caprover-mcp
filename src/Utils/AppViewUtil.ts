@@ -1,9 +1,5 @@
+import type { MaskedEnvVar } from "@/Protocols/AppViewProtocol.ts";
 import type { CaproverApp, CaproverEnvVar } from "@/Protocols/CaproverClientProtocol.ts";
-
-type MaskedEnvVar = {
-  key: string;
-  isSet: boolean;
-};
 
 export class AppViewUtil {
   static buildConcise(app: CaproverApp): Record<string, unknown> {

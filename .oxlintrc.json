@@ -691,6 +691,7 @@
     "local/no-bare-string-field": "error",
     "local/schema-file": "error",
     "local/protocol-types-only": "error",
+    "local/types-in-protocol-files": "error",
     "local/interface-for-contracts": "error",
     "local/no-inferred-type": "error",
     "local/error-location": "error",
@@ -1698,7 +1699,16 @@
         "src/**/*.test.ts"
       ],
       "rules": {
-        "local/describe-target": "error"
+        "local/describe-target": "error",
+        "local/no-fixed-wait": "error"
+      }
+    },
+    {
+      "files": [
+        "scripts/**/*.test.mjs"
+      ],
+      "rules": {
+        "local/no-fixed-wait": "error"
       }
     }
   ],
