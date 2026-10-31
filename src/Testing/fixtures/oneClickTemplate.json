@@ -1,0 +1,33 @@
+{
+  "status": 100,
+  "description": "Done",
+  "data": {
+    "appTemplate": {
+      "captainVersion": 4,
+      "services": {
+        "$$cap_appname": {
+          "image": "postgres:16"
+        }
+      },
+      "caproverOneClickApp": {
+        "instructions": {
+          "start": "start",
+          "end": "end"
+        },
+        "displayName": "PostgreSQL",
+        "variables": [
+          {
+            "id": "$$cap_pg_pass",
+            "label": "Password",
+            "defaultValue": "",
+            "description": "The database password"
+          },
+          {
+            "id": "$$cap_appname",
+            "label": "App name"
+          }
+        ]
+      }
+    }
+  }
+}

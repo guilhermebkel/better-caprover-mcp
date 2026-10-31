@@ -4,6 +4,7 @@ import type { CaproverClientPort } from "@/Protocols/CaproverClientProtocol.ts";
 import type { OperationPort, OperationResult } from "@/Protocols/OperationProtocol.ts";
 import { AppNameInputSchema } from "@/Schemas/AppInputSchema.ts";
 import type { AppResolverService } from "@/Services/AppResolverService.ts";
+import { GetAppRuntimeOutputSchema } from "@/Schemas/AppOutputSchema.ts";
 
 export class GetAppRuntimeOperation implements OperationPort<AppNameInput> {
   static readonly NAME = "getAppRuntime";
@@ -14,6 +15,8 @@ export class GetAppRuntimeOperation implements OperationPort<AppNameInput> {
     + "`status` is `unknown` when CapRover reports a value this server does not know.";
 
   readonly inputSchema = AppNameInputSchema;
+
+  readonly outputSchema = GetAppRuntimeOutputSchema;
 
   readonly risk: RiskTier = "read";
 

@@ -1,0 +1,19 @@
+{
+  "status": 100,
+  "description": "Done",
+  "data": {
+    "unusedImages": [
+      {
+        "id": "sha256:aaa",
+        "tags": [
+          "old:1",
+          "old:2"
+        ]
+      },
+      {
+        "id": "sha256:bbb",
+        "tags": null
+      }
+    ]
+  }
+}

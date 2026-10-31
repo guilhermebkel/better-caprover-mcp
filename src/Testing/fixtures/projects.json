@@ -1,0 +1,19 @@
+{
+  "status": 100,
+  "description": "Done",
+  "data": {
+    "projects": [
+      {
+        "id": "p-1",
+        "name": "shop",
+        "description": "The shop"
+      },
+      {
+        "id": "p-2",
+        "name": "blog",
+        "description": "The blog",
+        "parentProjectId": "p-1"
+      }
+    ]
+  }
+}

@@ -9,34 +9,44 @@
       "reason": "The adapter logs in with the password before the first call."
     },
     "getAllThemes": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "list_themes"
     },
     "getCurrentTheme": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "get_current_theme"
     },
     "setCurrentTheme": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "set_current_theme"
     },
     "saveTheme": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "save_theme"
     },
     "deleteTheme": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "delete_theme"
     },
     "getProFeaturesState": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "get_pro_state"
     },
     "setProApiKey": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "set_pro_api_key"
     },
     "getProConfigs": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "list_pro_alerts"
     },
     "setProConfigs": {
-      "status": "planned"
+      "status": "planned",
+      "reason": "The alert action metadata is typed `any` in the SDK and CapRover does not document its shape; a strict input schema needs a response recorded from a CapRover Pro server first."
     },
     "getOtpStatus": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "get_two_factor_status"
     },
     "setOtpStatus": {
       "status": "excluded",
@@ -47,23 +57,28 @@
       "operation": "get_overview"
     },
     "updateRootDomain": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "update_root_domain"
     },
     "enableRootSsl": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "enable_root_ssl"
     },
     "forceSsl": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "set_force_ssl"
     },
     "getAllApps": {
       "status": "operation",
       "operation": "list_apps, get_app and every operation that reads an app first"
     },
     "getAllProjects": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "list_projects"
     },
     "getAppsRuntime": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "list_apps_runtime"
     },
     "getAppRuntime": {
       "status": "operation",
@@ -74,34 +89,40 @@
       "operation": "get_build_logs"
     },
     "fetchAppLogsInHex": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "get_app_logs"
     },
     "fetchAppLogs": {
       "status": "operation",
       "operation": "get_app_logs"
     },
     "uploadAppData": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "deploy_archive"
     },
     "registerProject": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "create_project"
     },
     "updateProject": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "update_project"
     },
     "uploadCaptainDefinitionContent": {
       "status": "operation",
       "operation": "deploy_image"
     },
     "updateConfigAndSave": {
-      "status": "planned"
+      "status": "planned",
+      "reason": "It re-sends the whole app definition, so it is offered only in the `code` surface (Phase 4), with a warning; the `tools` surface edits an app through small named operations."
     },
     "patchAppDefinition": {
       "status": "operation",
       "operation": "set_env_vars, scale_app"
     },
     "renameApp": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "rename_app"
     },
     "registerNewApp": {
       "status": "operation",
@@ -112,7 +133,8 @@
       "operation": "delete_app"
     },
     "deleteProjects": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "delete_projects"
     },
     "enableSslForBaseDomain": {
       "status": "operation",
@@ -127,114 +149,148 @@
       "operation": "enable_ssl"
     },
     "removeCustomDomain": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "remove_custom_domain"
     },
     "getLoadBalancerInfo": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "get_load_balancer"
     },
     "getNetDataInfo": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "get_net_data"
     },
     "updateNetDataInfo": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "set_net_data"
     },
     "getGoAccessInfo": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "get_go_access"
     },
     "updateGoAccessInfo": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "set_go_access"
     },
     "getGoAccessReports": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "list_go_access_reports"
     },
     "getGoAccessReport": {
-      "status": "planned"
+      "status": "planned",
+      "reason": "The SDK parses every answer as JSON, but a GoAccess report is an HTML page, so the call cannot return it; it needs an answer recorded from a real CapRover and a text-capable call in the adapter."
     },
     "changePass": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "set_password"
     },
     "getVersionInfo": {
       "status": "operation",
       "operation": "get_overview"
     },
     "createBackup": {
-      "status": "planned"
+      "status": "planned",
+      "reason": "It returns a one-time download token that this server must not return, and the MCP has no way to stream the archive; it waits for a design with resources or an upload target."
     },
     "performUpdate": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "update_caprover"
     },
     "getNginxConfig": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "get_nginx_config"
     },
     "setNginxConfig": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "set_nginx_config"
     },
     "getUnusedImages": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "list_unused_images"
     },
     "deleteImages": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "delete_images"
     },
     "getDiskUsage": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "get_disk_usage"
     },
     "getDiskCleanUpSettings": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "get_disk_cleanup"
     },
     "setDiskCleanUpSettings": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "set_disk_cleanup"
     },
     "getDockerRegistries": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "list_registries"
     },
     "enableSelfHostedDockerRegistry": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "enable_self_hosted_registry"
     },
     "disableSelfHostedDockerRegistry": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "disable_self_hosted_registry"
     },
     "addDockerRegistry": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "add_registry"
     },
     "updateDockerRegistry": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "update_registry"
     },
     "deleteDockerRegistry": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "delete_registry"
     },
     "setDefaultPushDockerRegistry": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "set_default_push_registry"
     },
     "forceBuild": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "start_build"
     },
     "getAllNodes": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "list_nodes"
     },
     "getAllOneClickApps": {
       "status": "operation",
       "operation": "list_one_click_apps"
     },
     "getOneClickAppByName": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "get_one_click_app"
     },
     "getAllOneClickAppRepos": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "list_one_click_repos"
     },
     "addNewCustomOneClickRepo": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "add_one_click_repo"
     },
     "deleteCustomOneClickRepo": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "delete_one_click_repo"
     },
     "addDockerNode": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "add_node"
     },
     "startOneClickAppDeploy": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "deploy_one_click"
     },
     "getOneClickAppDeployProgress": {
-      "status": "planned"
+      "status": "operation",
+      "operation": "get_one_click_deploy_progress"
     },
     "executeGenericApiCommand": {
       "status": "excluded",

@@ -4,6 +4,7 @@ import type { OperationPort, OperationResult } from "@/Protocols/OperationProtoc
 import { AppNameInputSchema } from "@/Schemas/AppInputSchema.ts";
 import type { AppResolverService } from "@/Services/AppResolverService.ts";
 import { AppViewUtil } from "@/Utils/AppViewUtil.ts";
+import { GetAppOutputSchema } from "@/Schemas/AppOutputSchema.ts";
 
 export class GetAppOperation implements OperationPort<AppNameInput> {
   static readonly NAME = "getApp";
@@ -14,6 +15,8 @@ export class GetAppOperation implements OperationPort<AppNameInput> {
     + "If the app does not exist, it returns an error with the closest app names.";
 
   readonly inputSchema = AppNameInputSchema;
+
+  readonly outputSchema = GetAppOutputSchema;
 
   readonly risk: RiskTier = "read";
 

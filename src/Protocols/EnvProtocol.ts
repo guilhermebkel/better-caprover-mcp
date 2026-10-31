@@ -1,9 +1,10 @@
-import type { AccessMode } from "@/Protocols/AccessProtocol.ts";
+import type { AccessMode, Toolset } from "@/Protocols/AccessProtocol.ts";
 import type { LogLevel } from "@/Protocols/LogProtocol.ts";
 
 export type Env = {
   CAPROVER_MCP_MODE: AccessMode;
   CAPROVER_MCP_ALLOW_CRITICAL: boolean;
+  CAPROVER_MCP_TOOLSETS: Toolset[];
   CAPROVER_MCP_TRANSPORT: "stdio" | "http";
   CAPROVER_MCP_LOG_LEVEL: LogLevel;
   CAPROVER_URL?: string;

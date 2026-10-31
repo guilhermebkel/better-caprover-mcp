@@ -4,6 +4,7 @@ import type { CaproverApp, CaproverClientPort } from "@/Protocols/CaproverClient
 import type { OperationPort, OperationResult } from "@/Protocols/OperationProtocol.ts";
 import { ListAppsInputSchema } from "@/Schemas/AppInputSchema.ts";
 import { AppViewUtil } from "@/Utils/AppViewUtil.ts";
+import { ListAppsOutputSchema } from "@/Schemas/AppOutputSchema.ts";
 
 export class ListAppsOperation implements OperationPort<ListAppsInput> {
   static readonly NAME = "listApps";
@@ -21,6 +22,8 @@ export class ListAppsOperation implements OperationPort<ListAppsInput> {
     + "It returns at most `limit` apps, so set `limit` or `name_contains` when `isTruncated` is true.";
 
   readonly inputSchema = ListAppsInputSchema;
+
+  readonly outputSchema = ListAppsOutputSchema;
 
   readonly risk: RiskTier = "read";
 

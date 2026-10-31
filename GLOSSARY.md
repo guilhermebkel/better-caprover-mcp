@@ -27,7 +27,7 @@ An optional way to run the MCP server with Streamable HTTP (`better-caprover-mcp
 _Avoid_: SSE-only transport
 
 **Toolset**:
-A group of operations the `tools` surface turns on together, such as `apps` or `domains`. *Planned.*
+A group of operations the `tools` surface turns on together, such as `apps` or `domains`. `CAPROVER_MCP_TOOLSETS` picks them; the default is `core,apps,domains,oneclick` so the tool list stays short. The list is in `docs/product/risk-tiers.md`.
 _Avoid_: category, bundle
 
 **Password**:
@@ -39,15 +39,27 @@ How much the server may do: `readonly` (the default), `operate` or `admin`. The 
 _Avoid_: permission level, role
 
 **Risk tier**:
-What an operation can do to the server: `read`, `write`, `destructive` or `critical`. A critical operation needs `admin` and `CAPROVER_MCP_ALLOW_CRITICAL=1`. No operation is critical yet.
+What an operation can do to the server: `read`, `write`, `destructive` or `critical`. A critical operation needs `admin` and `CAPROVER_MCP_ALLOW_CRITICAL=1`. Eight operations are critical: the ones that can lock the server out or break every app (`docs/product/risk-tiers.md`).
 _Avoid_: severity, level
+
+**Elicitation**:
+The MCP feature by which the server asks the person a question through the client. When the client supports it, a destructive or critical call that holds a valid confirmation token still asks the person before it runs; a decline or a cancel stops it. When the client cannot ask, the token alone applies.
+_Avoid_: prompt, popup
+
+**Guide topic**:
+A short document the server serves by name (`modes`, `code-mode`, `app-definition`, `env-vars`, `deploy`, `errors`) through the `get_guide` operation and as the resource `caprover://docs/<topic>`. An error that needs a topic names it.
+_Avoid_: help page, manual
+
+**Batch**:
+An operation that applies one change to a list of items, one call per item, in order. It stops at the first failure and returns `applied` and `notApplied`. CapRover has no transactions, so the applied items stay applied and a batch is never called atomic.
+_Avoid_: bulk, transaction
 
 **Policy**:
 The rule of which risk tiers a mode allows, kept in `PolicyService`. `OperationRunnerService` applies it to every call, together with `dry_run`, the confirmation of destructive calls and the masking of secrets.
 _Avoid_: guard, middleware
 
 **Confirmation token**:
-The code that a destructive operation returns with its preview. It is tied to that exact call (the operation and its inputs), works once and expires after 5 minutes. The server keeps it in memory, so a restart cancels it.
+The code that a destructive or critical operation returns with its preview. It is tied to that exact call (the operation and its inputs), works once and expires after 5 minutes. The server keeps it in memory, so a restart cancels it.
 _Avoid_: nonce, approval code
 
 **Code Mode**:

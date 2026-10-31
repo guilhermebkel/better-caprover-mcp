@@ -1,6 +1,7 @@
 import { z } from "zod";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
-import { AccessModeSchema } from "@/Schemas/AccessSchema.ts";
+import { AccessModeSchema, DEFAULT_TOOLSETS, TOOLSETS, ToolsetSchema } from "@/Schemas/AccessSchema.ts";
+import type { Toolset } from "@/Protocols/AccessProtocol.ts";
 
 const OptionalTextSchema = z.string().optional().transform((text) => (text === undefined || text === "" ? undefined : text));
 
@@ -37,6 +38,26 @@ const parsePositiveIntFromEnv = (name: string, defaultValue: number): z.ZodType<
   })
 );
 
+const toolsetsFromEnv = z.string().optional().transform((text, context): Toolset[] => {
+  if (text === undefined || text.trim() === "") {
+    return [...DEFAULT_TOOLSETS];
+  }
+  const names = text.split(",").map((name) => name.trim()).filter((name) => name !== "");
+  const results = names.map((name) => ToolsetSchema.safeParse(name));
+  const unknown = names.filter((_name, index) => !results[index]?.success);
+  if (unknown.length > 0) {
+    context.addIssue({
+      code: "custom",
+      message: `CAPROVER_MCP_TOOLSETS names unknown toolsets: ${unknown.join(", ")}. Valid names: ${TOOLSETS.join(", ")}.`,
+    });
+    return z.NEVER;
+  }
+  return names.filter((name, index) => names.indexOf(name) === index).flatMap((name) => {
+    const parsed = ToolsetSchema.safeParse(name);
+    return parsed.success ? [parsed.data] : [];
+  });
+});
+
 const httpTokenFromEnv = z.string().optional().transform((text, context) => {
   if (text === undefined || text === "") {
     return undefined;
@@ -55,6 +76,7 @@ const httpTokenFromEnv = z.string().optional().transform((text, context) => {
 export type RawEnvValues = {
   CAPROVER_MCP_MODE: Env["CAPROVER_MCP_MODE"];
   CAPROVER_MCP_ALLOW_CRITICAL: boolean;
+  CAPROVER_MCP_TOOLSETS: Toolset[];
   CAPROVER_MCP_TRANSPORT: Env["CAPROVER_MCP_TRANSPORT"];
   CAPROVER_MCP_LOG_LEVEL: Env["CAPROVER_MCP_LOG_LEVEL"];
   CAPROVER_URL?: string;
@@ -72,6 +94,7 @@ export type RawEnvValues = {
 export const RawEnvSchema: z.ZodType<RawEnvValues> = z.object({
   CAPROVER_MCP_MODE: AccessModeSchema.default("readonly"),
   CAPROVER_MCP_ALLOW_CRITICAL: z.string().optional().transform((text) => text === "1"),
+  CAPROVER_MCP_TOOLSETS: toolsetsFromEnv,
   CAPROVER_MCP_TRANSPORT: TransportSchema,
   CAPROVER_MCP_LOG_LEVEL: LogLevelSchema,
   CAPROVER_URL: OptionalTextSchema.pipe(

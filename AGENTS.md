@@ -2,7 +2,7 @@
 
 An unofficial MCP server for CapRover. It lets an agent (Claude, Cursor, Codex) operate a CapRover server, with setup in one command (`npx` or Docker) and safety by default: it starts read-only. Vocabulary is in `GLOSSARY.md`; decisions are in `docs/adr/`; planned work is in GitHub issues.
 
-Today the server exposes 14 operations on the `tools` surface (`src/Surfaces/OperationManifestSurface.ts`). The `code` surface and the rest of the CapRover API are planned work; the docs below describe the rules they follow.
+Today the server exposes 67 operations on the `tools` surface (`src/Surfaces/OperationManifestSurface.ts`), in ten toolsets that `CAPROVER_MCP_TOOLSETS` picks. Every SDK method is an operation, internal, excluded or planned with a reason (`scripts/sdk-coverage.json`). The `code` surface is planned work; the docs below describe the rules it follows.
 
 ## Layout
 
@@ -58,7 +58,7 @@ Read the doc for the situation; run the command when there is one. The index doe
 | Iterating on changed source | `docs/test-standards.md`, `docs/code-standards.md` ("Before committing") | `pnpm test:changed` |
 | Before committing | `docs/code-standards.md` ("Before committing"), `.github/PULL_REQUEST_TEMPLATE.md` | `pnpm check:changed` |
 | Full verification (CI gate) | `.github/PULL_REQUEST_TEMPLATE.md` | `pnpm check` |
-| Adding or changing an operation | `docs/mcp-standards.md`, `docs/product/adding-an-operation.md`, `docs/code-standards.md` ("Boundaries and security") | — |
+| Adding or changing an operation | `docs/mcp-standards.md`, `docs/product/adding-an-operation.md`, `docs/product/risk-tiers.md`, `docs/code-standards.md` ("Boundaries and security") | `pnpm sdk:drift` |
 | An operation or field description, the server instructions, a guide topic or an error message | `docs/prompt-standards.md`, `docs/mcp-standards.md` | `pnpm test` |
 | Changing how the server talks to CapRover | `docs/test-standards.md` ("Which level") | `pnpm test:integration` |
 | Packaging (npx, Docker) | `Dockerfile`, `scripts/package-smoke.mjs` | `pnpm build`, `pnpm smoke` |

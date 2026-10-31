@@ -4,6 +4,8 @@ export type ResponseFormat = "concise" | "detailed";
 
 export type GetOverviewInput = { dry_run?: undefined };
 
+export type GetAccessInput = { dry_run?: undefined };
+
 export type ListAppsInput = {
   name_contains?: string;
   limit?: number;
@@ -35,3 +37,11 @@ export type AddCustomDomainInput = AppNameInput & Pick<ControlFields, "dry_run">
 export type EnableSslInput = AppNameInput & Pick<ControlFields, "dry_run"> & { domain?: string };
 
 export type DeleteAppInput = AppNameInput & ControlFields & { delete_volumes?: boolean };
+
+export type ListAppsRuntimeField = "appName" | "status" | "desiredInstances" | "runningInstances" | "collectionError";
+
+export type RenameAppInput = AppNameInput & Pick<ControlFields, "dry_run"> & { new_app_name: string };
+
+export type StartBuildInput = Pick<ControlFields, "dry_run"> & { webhook_path: string };
+
+export type DeployArchiveInput = AppNameInput & Pick<ControlFields, "dry_run"> & { source_archive: string };

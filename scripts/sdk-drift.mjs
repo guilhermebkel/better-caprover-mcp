@@ -6,7 +6,7 @@ const COVERAGE_PATH = "scripts/sdk-coverage.json";
 const API_MANAGER_DECLARATION = "export default class ApiManager";
 const METHOD_LINE = /^ {4}(\w+)\(/gm;
 const VALID_STATUSES = new Set(["operation", "planned", "excluded", "internal"]);
-const STATUSES_WITH_REASON = new Set(["excluded", "internal"]);
+const STATUSES_WITH_REASON = new Set(["excluded", "internal", "planned"]);
 
 export const readSdkMethods = (typesText) => {
   // Why: the same file declares the authentication classes before ApiManager, and only ApiManager is the SDK surface.

@@ -1,0 +1,36 @@
+{
+  "status": 100,
+  "description": "Done",
+  "data": {
+    "nodes": [
+      {
+        "nodeId": "n-1",
+        "type": "manager",
+        "isLeader": true,
+        "hostname": "captain-1",
+        "architecture": "x86_64",
+        "operatingSystem": "linux",
+        "nanoCpu": 2000000000,
+        "memoryBytes": 8000000000,
+        "dockerEngineVersion": "27.0.0",
+        "ip": "10.0.0.1",
+        "state": "ready",
+        "status": "active"
+      },
+      {
+        "nodeId": "n-2",
+        "type": "gateway",
+        "isLeader": false,
+        "hostname": "worker-1",
+        "architecture": "x86_64",
+        "operatingSystem": "linux",
+        "nanoCpu": 1000000000,
+        "memoryBytes": 4000000000,
+        "dockerEngineVersion": "27.0.0",
+        "ip": "10.0.0.2",
+        "state": "ready",
+        "status": "drain"
+      }
+    ]
+  }
+}

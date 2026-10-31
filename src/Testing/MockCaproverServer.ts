@@ -77,6 +77,10 @@ export class MockCaproverServer {
       chunks.push(Buffer.from(chunk as Uint8Array));
     }
     const text = Buffer.concat(chunks).toString("utf8");
-    return text === "" ? undefined : JSON.parse(text);
+    const isForm = (request.headers["content-type"] ?? "").startsWith("multipart/form-data");
+    if (text === "") {
+      return undefined;
+    }
+    return isForm ? text : JSON.parse(text);
   }
 }

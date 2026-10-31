@@ -18,6 +18,7 @@ export class ToolsSurface {
         {
           description: tool.description,
           inputSchema: tool.inputSchema,
+          outputSchema: tool.outputSchema,
           annotations: ToolsSurface.RISK_TO_ANNOTATIONS[tool.risk],
         },
         async (args: unknown) => {

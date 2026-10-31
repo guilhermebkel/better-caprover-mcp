@@ -6,6 +6,7 @@ import type { OperationPort, OperationResult } from "@/Protocols/OperationProtoc
 import { SetEnvVarsInputSchema } from "@/Schemas/AppInputSchema.ts";
 import type { AppResolverService } from "@/Services/AppResolverService.ts";
 import { DotenvUtil } from "@/Utils/DotenvUtil.ts";
+import { SetEnvVarsOutputSchema } from "@/Schemas/AppOutputSchema.ts";
 
 export class SetEnvVarsOperation implements OperationPort<SetEnvVarsInput> {
   static readonly NAME = "setEnvVars";
@@ -15,6 +16,8 @@ export class SetEnvVarsOperation implements OperationPort<SetEnvVarsInput> {
     + "It returns the keys added, updated and removed, never a value. It writes to the server; with `dry_run` it changes nothing.";
 
   readonly inputSchema = SetEnvVarsInputSchema;
+
+  readonly outputSchema = SetEnvVarsOutputSchema;
 
   readonly risk: RiskTier = "write";
 

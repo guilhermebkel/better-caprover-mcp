@@ -4,6 +4,7 @@ import type { CaproverClientPort } from "@/Protocols/CaproverClientProtocol.ts";
 import type { OperationPort, OperationResult } from "@/Protocols/OperationProtocol.ts";
 import { GetOverviewInputSchema } from "@/Schemas/AppInputSchema.ts";
 import type { PolicyServicePort } from "@/Protocols/AccessProtocol.ts";
+import { GetOverviewOutputSchema } from "@/Schemas/AppOutputSchema.ts";
 
 export class GetOverviewOperation implements OperationPort<GetOverviewInput> {
   static readonly NAME = "getOverview";
@@ -13,6 +14,8 @@ export class GetOverviewOperation implements OperationPort<GetOverviewInput> {
     + "To see the apps, use `list_apps`. It always returns one summary object.";
 
   readonly inputSchema = GetOverviewInputSchema;
+
+  readonly outputSchema = GetOverviewOutputSchema;
 
   readonly risk: RiskTier = "read";
 

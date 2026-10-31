@@ -1046,6 +1046,212 @@ const arrowFunction = {
   },
 };
 
+const SCHEMAS_FILE = /(^|\/)src\/Schemas\/[^/]+\.ts$/;
+const INPUT_SCHEMA_NAME = /InputSchema$/;
+const VAGUE_FIELD_NAMES = new Set([
+  "id", "name", "input", "data", "value", "values", "content", "text", "type", "key", "item", "items", "info", "payload",
+  "args", "params", "options", "object", "obj",
+]);
+
+const CALL_NODE_TYPES = new Set(["CallExpression"]);
+const BLOCK_NODE_TYPES = new Set(["BlockStatement"]);
+const IDENTIFIER_NODE_TYPES = new Set(["Identifier"]);
+const OBJECT_NODE_TYPES = new Set(["ObjectExpression"]);
+const PROPERTY_NODE_TYPES = new Set(["Property"]);
+const LOOSE_CALLS = new Set(["object", "looseObject"]);
+const STRICT_CALLS = new Set(["strictObject"]);
+const DESCRIBE_CALLS = new Set(["describe"]);
+
+const readCallName = (callNode) => {
+  const { callee } = callNode;
+  return callee.property?.name ?? callee.name;
+};
+
+const findChainCalls = (node) => {
+  const calls = [];
+  let current = node;
+  while (current !== undefined && CALL_NODE_TYPES.has(current.type)) {
+    calls.push(current);
+    current = current.callee.object;
+  }
+  return calls;
+};
+
+const readObjectBody = (init) => {
+  const body = init?.body;
+  return body !== undefined && !BLOCK_NODE_TYPES.has(body.type) ? body : init;
+};
+
+const isDescribedField = (valueNode) => {
+  if (IDENTIFIER_NODE_TYPES.has(valueNode.type)) {
+    return valueNode.name.endsWith("Schema");
+  }
+  return findChainCalls(valueNode).some((call) => DESCRIBE_CALLS.has(readCallName(call)));
+};
+
+const readObjectFields = (callNode) => {
+  const shape = callNode?.arguments[0];
+  const properties = shape !== undefined && OBJECT_NODE_TYPES.has(shape.type) ? shape.properties : [];
+  return properties.filter((property) => PROPERTY_NODE_TYPES.has(property.type));
+};
+
+const strictInputSchema = {
+  meta: {
+    type: "problem",
+    messages: {
+      loose: "The input schema \"{{name}}\" must be built with z.strictObject, so a field with a wrong name fails instead of being ignored.",
+      undescribed: "The field \"{{field}}\" of an input schema needs a .describe(...), or a shared described schema, so the model knows what to send.",
+    },
+  },
+  create(context) {
+    if (!SCHEMAS_FILE.test(context.filename.replaceAll("\\", "/"))) {
+      return {};
+    }
+    return {
+      "VariableDeclarator"(node) {
+        const name = node.id?.name ?? "";
+        if (!INPUT_SCHEMA_NAME.test(name) || node.init === null) {
+          return;
+        }
+        const calls = findChainCalls(readObjectBody(node.init));
+        const names = calls.map(readCallName);
+        const isLoose = names.some((callName) => LOOSE_CALLS.has(callName));
+        const isStrict = names.some((callName) => STRICT_CALLS.has(callName));
+        if (isLoose && !isStrict) {
+          context.report({ node: node.id, messageId: "loose", data: { name } });
+          return;
+        }
+        const strictCall = calls.find((call) => STRICT_CALLS.has(readCallName(call)));
+        for (const field of readObjectFields(strictCall)) {
+          if (!isDescribedField(field.value)) {
+            context.report({ node: field, messageId: "undescribed", data: { field: field.key.name ?? field.key.value } });
+          }
+        }
+      },
+    };
+  },
+};
+
+const noVagueFieldName = {
+  meta: {
+    type: "problem",
+    messages: {
+      vague: "The field name \"{{field}}\" does not say the kind of value. Use app_name, registry_id, image_name, job_id and the like.",
+    },
+  },
+  create(context) {
+    if (!SCHEMAS_FILE.test(context.filename.replaceAll("\\", "/"))) {
+      return {};
+    }
+    return {
+      "CallExpression[callee.property.name='strictObject']"(node) {
+        for (const field of readObjectFields(node)) {
+          const fieldName = field.key.name ?? field.key.value;
+          if (VAGUE_FIELD_NAMES.has(fieldName)) {
+            context.report({ node: field.key, messageId: "vague", data: { field: fieldName } });
+          }
+        }
+      },
+    };
+  },
+};
+
+const TOOLS_SURFACE_FILE = /(^|\/)src\/Surfaces\/ToolsSurface\.ts$/;
+const RISK_TIERS = new Set(["read", "write", "destructive", "critical"]);
+const READ_TIERS = new Set(["read"]);
+const TIER_ANNOTATIONS = {
+  read: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },
+  write: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  destructive: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
+  critical: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },
+};
+const TIER_DESCRIPTION_PARTS = {
+  read: ["Read-only. "],
+  write: ["`dry_run`"],
+  destructive: ["Without `user_confirmed`"],
+  critical: ["Without `user_confirmed`", "CAPROVER_MCP_ALLOW_CRITICAL=1"],
+};
+
+const collectText = (node) => {
+  if (node === undefined || node === null) {
+    return "";
+  }
+  const quasiText = node.quasis?.map((quasi) => quasi.value.cooked).join("") ?? "";
+  const literalText = typeof node.value === "string" ? node.value : "";
+  return literalText + quasiText + collectText(node.left) + collectText(node.right);
+};
+
+const readProperty = (classNode, propertyName) => {
+  return classNode.body.body.find((member) => member.type === "PropertyDefinition" && member.key?.name === propertyName);
+};
+
+const checkOperationClass = (context, node) => {
+  const risk = readProperty(node, "risk")?.value?.value;
+  if (!RISK_TIERS.has(risk)) {
+    context.report({ node: node.id, messageId: "risk", data: { name: node.id.name } });
+    return;
+  }
+  const hasPreview = node.body.body.some((member) => member.type === "MethodDefinition" && member.key?.name === "describeChange");
+  const isRead = READ_TIERS.has(risk);
+  if (isRead && hasPreview) {
+    context.report({ node: node.id, messageId: "readPreview", data: { name: node.id.name } });
+  }
+  if (!isRead && !hasPreview) {
+    context.report({ node: node.id, messageId: "missingPreview", data: { name: node.id.name, risk } });
+  }
+  const description = collectText(readProperty(node, "description")?.value);
+  const missing = TIER_DESCRIPTION_PARTS[risk].filter((part) => !description.includes(part));
+  for (const part of missing) {
+    context.report({ node: node.id, messageId: "description", data: { name: node.id.name, risk, part } });
+  }
+};
+
+const checkAnnotationTable = (context, node) => {
+  for (const tier of node.properties) {
+    const expected = TIER_ANNOTATIONS[tier.key?.name];
+    const actual = Object.fromEntries(
+      (tier.value?.properties ?? []).map((property) => [property.key?.name, property.value?.value]),
+    );
+    const readEntries = (annotations) => JSON.stringify(Object.entries(annotations ?? {}).toSorted());
+    if (readEntries(expected) !== readEntries(actual)) {
+      context.report({ node: tier, messageId: "annotations", data: { tier: tier.key?.name } });
+    }
+  }
+};
+
+const operationMetadata = {
+  meta: {
+    type: "problem",
+    messages: {
+      risk: "Operation \"{{name}}\" must declare `readonly risk: RiskTier = \"read\" | \"write\" | \"destructive\" | \"critical\"` with a literal.",
+      readPreview: "Operation \"{{name}}\" is read and changes nothing, so it has no describeChange.",
+      missingPreview: "Operation \"{{name}}\" is {{risk}} and must implement describeChange, the preview of dry_run and of the confirmation.",
+      description: "The description of the {{risk}} operation \"{{name}}\" must contain \"{{part}}\".",
+      annotations: "The MCP annotations of the tier \"{{tier}}\" must match docs/mcp-standards.md: read is read-only and idempotent, write is not destructive, destructive and critical are destructive, none is open-world.",
+    },
+  },
+  create(context) {
+    const filename = context.filename.replaceAll("\\", "/");
+    if (TOOLS_SURFACE_FILE.test(filename)) {
+      return {
+        "PropertyDefinition[key.name='RISK_TO_ANNOTATIONS'] > ObjectExpression"(node) {
+          checkAnnotationTable(context, node);
+        },
+      };
+    }
+    if (!isOperationsFile(filename)) {
+      return {};
+    }
+    return {
+      "ClassDeclaration"(node) {
+        if (OPERATION_CLASS.test(node.id?.name ?? "")) {
+          checkOperationClass(context, node);
+        }
+      },
+    };
+  },
+};
+
 export const localRules = {
   rules: {
     "comment-marker": commentMarker,
@@ -1068,6 +1274,9 @@ export const localRules = {
     "no-fixed-wait": noFixedWait,
     "verb-function-name": verbFunctionName,
     "arrow-function": arrowFunction,
+    "strict-input-schema": strictInputSchema,
+    "no-vague-field-name": noVagueFieldName,
+    "operation-metadata": operationMetadata,
   },
 };
 

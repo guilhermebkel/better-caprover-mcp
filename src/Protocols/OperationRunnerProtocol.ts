@@ -10,4 +10,9 @@ export type OperationRunnerDeps = {
   confirmation: ConfirmationServicePort;
   limiter: ConcurrencyLimiterServicePort;
   getNowMs: () => number;
+  askPerson?: AskPerson;
 };
+
+export type PersonAnswer = "accepted" | "declined" | "unavailable";
+
+export type AskPerson = (message: string) => Promise<PersonAnswer>;

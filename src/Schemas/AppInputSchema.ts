@@ -7,19 +7,25 @@ import type {
   DeployImageInput,
   EnableSslInput,
   GetLogsInput,
+  GetAccessInput,
   GetOverviewInput,
+  DeployArchiveInput,
+  RenameAppInput,
+  StartBuildInput,
   ListAppsInput,
+  ListAppsRuntimeField,
   ListOneClickAppsInput,
   ScaleAppInput,
   SetEnvVarsInput,
 } from "@/Protocols/AppInputProtocol.ts";
+import type { ListInput } from "@/Protocols/ListProtocol.ts";
+import { buildListInputSchema, MAX_LIST_LIMIT } from "@/Schemas/ListSchema.ts";
 import {
   ConfirmationTokenFieldSchema,
   DryRunFieldSchema,
   UserConfirmedFieldSchema,
 } from "@/Schemas/ControlSchema.ts";
 
-export const MAX_LIST_LIMIT = 200;
 export const MAX_LOG_LINES = 500;
 export const MAX_INSTANCE_COUNT = 50;
 export const MAX_ENV_VARS_LENGTH = 20_000;
@@ -30,8 +36,10 @@ const MAX_TEXT_LENGTH = 200;
 const MAX_IMAGE_NAME_LENGTH = 255;
 const MAX_DOMAIN_LENGTH = 253;
 const MAX_ENV_KEY_LENGTH = 128;
+const MAX_WEBHOOK_PATH_LENGTH = 300;
+export const MAX_ARCHIVE_BASE64_LENGTH = 5_000_000;
 
-const AppNameFieldSchema = z.string().min(1).max(MAX_APP_NAME_LENGTH).describe(
+export const AppNameFieldSchema = z.string().min(1).max(MAX_APP_NAME_LENGTH).describe(
   "An app name as returned by `list_apps`.",
 );
 
@@ -43,11 +51,13 @@ const LinesFieldSchema = z.number().int().min(1).max(MAX_LOG_LINES).optional().d
   `How many of the last lines to return, from 1 to ${MAX_LOG_LINES}. Default: 100.`,
 );
 
-const DomainFieldSchema = z.string().trim().toLowerCase().min(1).max(MAX_DOMAIN_LENGTH).regex(
+export const DomainFieldSchema = z.string().trim().toLowerCase().min(1).max(MAX_DOMAIN_LENGTH).regex(
   /^[a-z0-9]([a-z0-9-]*[a-z0-9])?(\.[a-z0-9]([a-z0-9-]*[a-z0-9])?)+$/,
 );
 
 export const GetOverviewInputSchema: z.ZodType<GetOverviewInput> = z.strictObject({});
+
+export const GetAccessInputSchema: z.ZodType<GetAccessInput> = z.strictObject({});
 
 export const ListAppsInputSchema: z.ZodType<ListAppsInput> = z.strictObject({
   name_contains: z.string().min(1).max(MAX_TEXT_LENGTH).optional().describe(
@@ -136,4 +146,32 @@ export const DeleteAppInputSchema: z.ZodType<DeleteAppInput> = z.strictObject({
   dry_run: DryRunFieldSchema,
   user_confirmed: UserConfirmedFieldSchema,
   confirmation_token: ConfirmationTokenFieldSchema,
+});
+
+export const ListAppsRuntimeInputSchema: z.ZodType<ListInput<ListAppsRuntimeField>> = buildListInputSchema(
+  ["appName", "status", "desiredInstances", "runningInstances", "collectionError"],
+  "apps",
+);
+
+export const RenameAppInputSchema: z.ZodType<RenameAppInput> = z.strictObject({
+  app_name: AppNameFieldSchema,
+  new_app_name: z.string().min(1).max(MAX_NEW_APP_NAME_LENGTH).regex(/^[a-z0-9]+(-[a-z0-9]+)*$/).describe(
+    "The new app name: lowercase letters, digits and single dashes, for example `my-api-v2`.",
+  ),
+  dry_run: DryRunFieldSchema,
+});
+
+export const StartBuildInputSchema: z.ZodType<StartBuildInput> = z.strictObject({
+  webhook_path: z.string().max(MAX_WEBHOOK_PATH_LENGTH).regex(/^\/user\/apps\/webhooks\/triggerbuild\?[\w=&.-]+$/).describe(
+    "The build webhook path of the app, from its Deployment tab in CapRover, starting with `/user/apps/webhooks/triggerbuild?`. It holds a secret token and is never returned.",
+  ),
+  dry_run: DryRunFieldSchema,
+});
+
+export const DeployArchiveInputSchema: z.ZodType<DeployArchiveInput> = z.strictObject({
+  app_name: AppNameFieldSchema,
+  source_archive: z.string().min(1).max(MAX_ARCHIVE_BASE64_LENGTH).regex(/^[A-Za-z0-9+/]+={0,2}$/).describe(
+    `A tar archive of the source, in base64, with a \`captain-definition\` file at its root. At most ${MAX_ARCHIVE_BASE64_LENGTH} characters.`,
+  ),
+  dry_run: DryRunFieldSchema,
 });

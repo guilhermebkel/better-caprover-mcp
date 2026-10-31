@@ -56,6 +56,18 @@ describe("findDrift()", () => {
     expect(findDrift(["login"], withoutReason)).toStrictEqual(["login is excluded and needs a reason."]);
   });
 
+  it("asks for the reason a method is kept as planned", () => {
+    const withoutReason = { methods: { login: { status: "planned" } } };
+
+    expect(findDrift(["login"], withoutReason)).toStrictEqual(["login is planned and needs a reason."]);
+  });
+
+  it("accepts a planned method that has a reason", () => {
+    const withReason = { methods: { login: { status: "planned", reason: "It waits for the code surface." } } };
+
+    expect(findDrift(["login"], withReason)).toStrictEqual([]);
+  });
+
   it("asks for the operation name on an operation", () => {
     const withoutName = { methods: { login: { status: "operation" } } };
 

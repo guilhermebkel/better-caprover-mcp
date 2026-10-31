@@ -730,3 +730,232 @@ ruleTester.run("file-suffix", localRules.rules["file-suffix"], {
     { name: "a file in a subfolder without the suffix of the top folder", code: ONE_CONSTANT, filename: "src/Adapters/CapRover/Client.ts", errors: [{ messageId: "suffix" }] },
   ],
 });
+
+const INPUT_SCHEMA_FILE = "src/Schemas/DomainInputSchema.ts";
+
+tsRuleTester.run("strict-input-schema", localRules.rules["strict-input-schema"], {
+  valid: [
+    {
+      name: "a strict object whose every field is described",
+      filename: INPUT_SCHEMA_FILE,
+      code: "export const AddDomainInputSchema = z.strictObject({ app_name: z.string().describe(\"An app.\"), dry_run: DryRunFieldSchema });",
+    },
+    {
+      name: "a strict object with a refinement after it",
+      filename: INPUT_SCHEMA_FILE,
+      code: "export const AddDomainInputSchema = z.strictObject({ a_name: z.string().describe(\"x\") }).refine((input) => true);",
+    },
+    {
+      name: "a builder that returns a strict object",
+      filename: INPUT_SCHEMA_FILE,
+      code: "export const buildListInputSchema = (noun) => z.strictObject({ limit: z.number().describe(\"x\") });",
+    },
+    {
+      name: "a schema that is not an input schema",
+      filename: INPUT_SCHEMA_FILE,
+      code: "export const ControlFieldsSchema = z.object({ dry_run: z.boolean().optional() });",
+    },
+    {
+      name: "a file outside src/Schemas",
+      filename: SERVICE_FILE,
+      code: "const AddInputSchema = z.object({ a: z.string() });",
+    },
+  ],
+  invalid: [
+    {
+      name: "an input schema built with z.object",
+      filename: INPUT_SCHEMA_FILE,
+      code: "export const AddDomainInputSchema = z.object({ app_name: z.string().describe(\"x\") });",
+      errors: [{ messageId: "loose" }],
+    },
+    {
+      name: "an input schema built with z.looseObject",
+      filename: INPUT_SCHEMA_FILE,
+      code: "export const AddDomainInputSchema = z.looseObject({ app_name: z.string().describe(\"x\") });",
+      errors: [{ messageId: "loose" }],
+    },
+    {
+      name: "a field without a description",
+      filename: INPUT_SCHEMA_FILE,
+      code: "export const AddDomainInputSchema = z.strictObject({ app_name: z.string() });",
+      errors: [{ messageId: "undescribed" }],
+    },
+    {
+      name: "one described field and one that is not",
+      filename: INPUT_SCHEMA_FILE,
+      code: "export const AddDomainInputSchema = z.strictObject({ a_name: z.string().describe(\"x\"), b_name: z.number().optional() });",
+      errors: [{ messageId: "undescribed" }],
+    },
+  ],
+});
+
+tsRuleTester.run("no-vague-field-name", localRules.rules["no-vague-field-name"], {
+  valid: [
+    {
+      name: "field names that say the kind of value",
+      filename: INPUT_SCHEMA_FILE,
+      code: "export const A = z.strictObject({ app_name: z.string(), registry_id: z.string(), job_id: z.string(), limit: z.number() });",
+    },
+    {
+      name: "a vague name outside src/Schemas",
+      filename: SERVICE_FILE,
+      code: "const A = z.strictObject({ name: z.string() });",
+    },
+  ],
+  invalid: [
+    {
+      name: "name",
+      filename: INPUT_SCHEMA_FILE,
+      code: "export const A = z.strictObject({ name: z.string() });",
+      errors: [{ messageId: "vague" }],
+    },
+    {
+      name: "id and data in one object",
+      filename: INPUT_SCHEMA_FILE,
+      code: "export const A = z.strictObject({ id: z.string(), data: z.string() });",
+      errors: [{ messageId: "vague" }, { messageId: "vague" }],
+    },
+    {
+      name: "a vague name in a nested strict object",
+      filename: INPUT_SCHEMA_FILE,
+      code: "export const A = z.strictObject({ variables: z.array(z.strictObject({ value: z.string() })) });",
+      errors: [{ messageId: "vague" }],
+    },
+  ],
+});
+
+const READ_OPERATION = [
+  "export class GetThingOperation {",
+  "  readonly description = \"Read-only. Reads a thing.\";",
+  "  readonly risk: RiskTier = \"read\";",
+  "}",
+].join("\n");
+
+const buildOperation = (risk, description, withPreview) => [
+  "export class SetThingOperation {",
+  `  readonly description = ${JSON.stringify(description)};`,
+  `  readonly risk: RiskTier = "${risk}";`,
+  withPreview ? "  async describeChange() { return {}; }" : "",
+  "}",
+].join("\n");
+
+const TOOLS_SURFACE_FILE = "src/Surfaces/ToolsSurface.ts";
+const GET_THING_FILE = "src/Operations/GetThingOperation.ts";
+const SET_THING_FILE = "src/Operations/SetThingOperation.ts";
+
+const buildAnnotationTable = (writeBody) => [
+  "class ToolsSurface { static readonly RISK_TO_ANNOTATIONS = {",
+  "  read: { readOnlyHint: true, idempotentHint: true, openWorldHint: false },",
+  `  write: { ${writeBody} },`,
+  "  destructive: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },",
+  "  critical: { readOnlyHint: false, destructiveHint: true, openWorldHint: false },",
+  "}; }",
+].join("\n");
+
+tsRuleTester.run("operation-metadata", localRules.rules["operation-metadata"], {
+  valid: [
+    {
+      name: "a read operation with no preview and a Read-only description",
+      filename: GET_THING_FILE,
+      code: READ_OPERATION,
+    },
+    {
+      name: "a write operation that mentions dry_run and has a preview",
+      filename: SET_THING_FILE,
+      code: buildOperation("write", "Sets a thing. With `dry_run` it changes nothing.", true),
+    },
+    {
+      name: "a destructive operation that asks for confirmation",
+      filename: SET_THING_FILE,
+      code: buildOperation("destructive", "Deletes a thing. Without `user_confirmed` it only returns a preview.", true),
+    },
+    {
+      name: "a critical operation that names the switch",
+      filename: SET_THING_FILE,
+      code: buildOperation("critical", "Without `user_confirmed` it previews. It needs CAPROVER_MCP_ALLOW_CRITICAL=1.", true),
+    },
+    {
+      name: "a description split across lines with a plus",
+      filename: SET_THING_FILE,
+      code: "export class SetThingOperation { readonly description = \"Sets. \" + \"With `dry_run` nothing.\"; readonly risk = \"write\"; describeChange() {} }",
+    },
+    {
+      name: "the annotations that match the tiers",
+      filename: TOOLS_SURFACE_FILE,
+      code: buildAnnotationTable("readOnlyHint: false, destructiveHint: false, openWorldHint: false"),
+    },
+    {
+      name: "a helper class in src/Operations that is not an operation",
+      filename: "src/Operations/ThingCatalog.ts",
+      code: "export class ThingCatalog { }",
+    },
+  ],
+  invalid: [
+    {
+      name: "an operation with no risk",
+      filename: SET_THING_FILE,
+      code: "export class SetThingOperation { readonly description = \"x\"; }",
+      errors: [{ messageId: "risk" }],
+    },
+    {
+      name: "a risk that is not a tier",
+      filename: SET_THING_FILE,
+      code: buildOperation("huge", "x", true),
+      errors: [{ messageId: "risk" }],
+    },
+    {
+      name: "a read operation with a preview",
+      filename: GET_THING_FILE,
+      code: READ_OPERATION.replace("}", "  describeChange() {}\n}"),
+      errors: [{ messageId: "readPreview" }],
+    },
+    {
+      name: "a read operation whose description does not start with Read-only.",
+      filename: GET_THING_FILE,
+      code: READ_OPERATION.replace("Read-only. ", ""),
+      errors: [{ messageId: "description" }],
+    },
+    {
+      name: "a write operation without a preview",
+      filename: SET_THING_FILE,
+      code: buildOperation("write", "Sets a thing. With `dry_run` it changes nothing.", false),
+      errors: [{ messageId: "missingPreview" }],
+    },
+    {
+      name: "a write operation that does not mention dry_run",
+      filename: SET_THING_FILE,
+      code: buildOperation("write", "Sets a thing.", true),
+      errors: [{ messageId: "description" }],
+    },
+    {
+      name: "a destructive operation that does not mention the confirmation",
+      filename: SET_THING_FILE,
+      code: buildOperation("destructive", "Deletes a thing.", true),
+      errors: [{ messageId: "description" }],
+    },
+    {
+      name: "a critical operation that names neither the confirmation nor the switch",
+      filename: SET_THING_FILE,
+      code: buildOperation("critical", "Changes a thing.", true),
+      errors: [{ messageId: "description" }, { messageId: "description" }],
+    },
+    {
+      name: "a write annotation that says destructive",
+      filename: TOOLS_SURFACE_FILE,
+      code: buildAnnotationTable("readOnlyHint: false, destructiveHint: true, openWorldHint: false"),
+      errors: [{ messageId: "annotations" }],
+    },
+    {
+      name: "a write annotation that is open-world",
+      filename: TOOLS_SURFACE_FILE,
+      code: buildAnnotationTable("readOnlyHint: false, destructiveHint: false, openWorldHint: true"),
+      errors: [{ messageId: "annotations" }],
+    },
+    {
+      name: "a write annotation that lacks a hint",
+      filename: TOOLS_SURFACE_FILE,
+      code: buildAnnotationTable("readOnlyHint: false, openWorldHint: false"),
+      errors: [{ messageId: "annotations" }],
+    },
+  ],
+});

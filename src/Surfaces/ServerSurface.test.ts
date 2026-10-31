@@ -1,9 +1,10 @@
 import { Client } from "@modelcontextprotocol/sdk/client/index.js";
 import { InMemoryTransport } from "@modelcontextprotocol/sdk/inMemory.js";
+import { ElicitRequestSchema, type ElicitResult } from "@modelcontextprotocol/sdk/types.js";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { FakeCaproverClientAdapter } from "@/Testing/FakeCaproverClientAdapter.ts";
 import type { FakeCaproverOptions } from "@/Protocols/FakeCaproverClientProtocol.ts";
-import type { AccessMode } from "@/Protocols/AccessProtocol.ts";
+import type { AccessMode, Toolset } from "@/Protocols/AccessProtocol.ts";
 import type { CaproverApp } from "@/Protocols/CaproverClientProtocol.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
 import type { CaproverClientFactory } from "@/Protocols/SharedMcpRuntimeProtocol.ts";
@@ -21,15 +22,23 @@ type Setup = {
   fake: FakeCaproverClientAdapter;
 };
 
+type ElicitationAnswer = "accept" | "decline" | "cancel";
+
 type SetupOptions = FakeCaproverOptions & {
+  elicitation?: ElicitationAnswer;
   mode?: AccessMode;
+  toolsets?: Toolset[];
+  isCriticalAllowed?: boolean;
   apps?: CaproverApp[];
   getNowMs?: () => number;
 };
 
-const buildEnv = (mode: AccessMode): Env => ({
+const DEFAULT_TOOLSETS: Toolset[] = ["core", "apps", "domains", "oneclick"];
+
+const buildEnv = (mode: AccessMode, toolsets: Toolset[], isCriticalAllowed: boolean): Env => ({
   CAPROVER_MCP_MODE: mode,
-  CAPROVER_MCP_ALLOW_CRITICAL: false,
+  CAPROVER_MCP_ALLOW_CRITICAL: isCriticalAllowed,
+  CAPROVER_MCP_TOOLSETS: toolsets,
   CAPROVER_MCP_TRANSPORT: "stdio",
   CAPROVER_MCP_LOG_LEVEL: "info",
   CAPROVER_URL: "https://captain.example.com",
@@ -45,18 +54,43 @@ const buildEnv = (mode: AccessMode): Env => ({
 
 const buildTestClient = (fake: FakeCaproverClientAdapter): CaproverClientFactory => () => fake;
 
+const ANSWER_TO_ELICIT_RESULT: Record<ElicitationAnswer, ElicitResult> = {
+  accept: { action: "accept", content: { confirm: true } },
+  decline: { action: "decline" },
+  cancel: { action: "cancel" },
+};
+
+const buildClient = (elicitation: ElicitationAnswer | undefined): Client => {
+  if (elicitation === undefined) {
+    return new Client({ name: "test-client", version: "0.0.0" });
+  }
+  const client = new Client({ name: "test-client", version: "0.0.0" }, { capabilities: { elicitation: {} } });
+  client.setRequestHandler(ElicitRequestSchema, () => Promise.resolve(ANSWER_TO_ELICIT_RESULT[elicitation]));
+  return client;
+};
+
 const connect = async (options: SetupOptions = {}): Promise<Setup> => {
-  const { mode = "admin", apps = [FakeCaproverClientAdapter.buildApp()], getNowMs = () => START_MS, ...fakeOptions } = options;
+  const {
+    elicitation,
+    mode = "admin",
+    toolsets = DEFAULT_TOOLSETS,
+    isCriticalAllowed = false,
+    apps = [FakeCaproverClientAdapter.buildApp()],
+    getNowMs = () => START_MS,
+    ...fakeOptions
+  } = options;
   const fake = new FakeCaproverClientAdapter(apps, fakeOptions);
   const [clientTransport, serverTransport] = InMemoryTransport.createLinkedPair();
-  const client = new Client({ name: "test-client", version: "0.0.0" });
-  await ServerSurface.build(buildEnv(mode), getNowMs, buildTestClient(fake)).connect(serverTransport);
+  const client = buildClient(elicitation);
+  const env = buildEnv(mode, toolsets, isCriticalAllowed);
+  const createClient = buildTestClient(fake);
+  await ServerSurface.build(env, getNowMs, createClient).connect(serverTransport);
   await client.connect(clientTransport);
   return { client, fake };
 };
 
-const listToolNames = async (mode: AccessMode): Promise<string[]> => {
-  const { client } = await connect({ mode });
+const listToolNames = async (mode: AccessMode, options: SetupOptions = {}): Promise<string[]> => {
+  const { client } = await connect({ ...options, mode });
   const { tools } = await client.listTools();
   return tools.map((tool) => tool.name);
 };
@@ -92,15 +126,47 @@ const readAuditLines = (stderr: { mock: { calls: readonly unknown[][] } }): stri
 
 const READ_TOOLS = [
   "get_overview",
+  "get_access",
+  "get_guide",
   "list_apps",
   "get_app",
   "get_app_runtime",
   "get_app_logs",
   "get_build_logs",
+  "list_apps_runtime",
   "list_one_click_apps",
+  "get_one_click_app",
+  "list_one_click_repos",
+  "get_one_click_deploy_progress",
 ];
 
-const WRITE_TOOLS = ["create_app", "deploy_image", "set_env_vars", "scale_app", "add_custom_domain", "enable_ssl"];
+const WRITE_TOOLS = [
+  "create_app",
+  "deploy_image",
+  "deploy_archive",
+  "start_build",
+  "set_env_vars",
+  "scale_app",
+  "rename_app",
+  "add_custom_domain",
+  "enable_ssl",
+  "enable_root_ssl",
+  "set_force_ssl",
+  "add_one_click_repo",
+  "deploy_one_click",
+];
+
+const DESTRUCTIVE_TOOLS = ["delete_app", "remove_custom_domain", "delete_one_click_repo"];
+
+const DELETE_APP_CALL = "deleteApp:web:";
+
+const ROOT_DOMAIN_INPUT = { root_domain: "apps.example.org" };
+
+const DELETE_IMAGE_B_CALL = "deleteImages:sha256:b";
+
+const CRITICAL_TOOLS = ["update_root_domain"];
+
+const sortNames = (names: string[]): string[] => names.toSorted((first, second) => first.localeCompare(second));
 
 describe("ServerSurface.build()", () => {
   describe("what a client sees", () => {
@@ -117,15 +183,27 @@ describe("ServerSurface.build()", () => {
     });
 
     it("registers only the read tools in readonly mode", async () => {
-      expect(await listToolNames("readonly")).toStrictEqual(READ_TOOLS);
+      expect(sortNames(await listToolNames("readonly"))).toStrictEqual(sortNames(READ_TOOLS));
     });
 
     it("adds the write tools in operate mode", async () => {
-      expect(await listToolNames("operate")).toStrictEqual([...READ_TOOLS, ...WRITE_TOOLS]);
+      expect(sortNames(await listToolNames("operate"))).toStrictEqual(sortNames([...READ_TOOLS, ...WRITE_TOOLS]));
     });
 
-    it("adds the delete tool in admin mode", async () => {
-      expect(await listToolNames("admin")).toStrictEqual([...READ_TOOLS, ...WRITE_TOOLS, "delete_app"]);
+    it("adds the destructive tools in admin mode and keeps the critical ones out", async () => {
+      expect(sortNames(await listToolNames("admin"))).toStrictEqual(
+        sortNames([...READ_TOOLS, ...WRITE_TOOLS, ...DESTRUCTIVE_TOOLS]),
+      );
+    });
+
+    it("adds the critical tools only in admin mode with the critical switch on", async () => {
+      expect(sortNames(await listToolNames("admin", { isCriticalAllowed: true }))).toStrictEqual(
+        sortNames([...READ_TOOLS, ...WRITE_TOOLS, ...DESTRUCTIVE_TOOLS, ...CRITICAL_TOOLS]),
+      );
+    });
+
+    it("keeps the critical tools out of operate mode even with the critical switch on", async () => {
+      expect(await listToolNames("operate", { isCriticalAllowed: true })).not.toContain("update_root_domain");
     });
 
     it("marks read tools as read-only and delete as destructive", async () => {
@@ -394,7 +472,7 @@ describe("ServerSurface.build()", () => {
 
       expect(reply.isError).toBe(false);
       expect(reply.data).toStrictEqual({ appName: "web", deletedVolumes: [] });
-      expect(fake.calls).toContain("deleteApp:web:");
+      expect(fake.calls).toContain(DELETE_APP_CALL);
     });
 
     it("refuses user_confirmed without a token and returns a new preview", async () => {
@@ -490,6 +568,234 @@ describe("ServerSurface.build()", () => {
       const reply = await callTool(client, "get_app", { app_name: "web" });
 
       expect(reply.text).toContain("The server has no app with a similar name.");
+    });
+  });
+
+  describe("toolsets", () => {
+    it("registers only the operations of the named toolsets", async () => {
+      const names = await listToolNames("admin", { toolsets: ["projects"] });
+
+      expect(sortNames(names)).toStrictEqual(sortNames(["list_projects", "create_project", "update_project", "delete_projects"]));
+    });
+
+    it("registers no operation of a toolset that was not named", async () => {
+      const names = await listToolNames("admin", { toolsets: ["core"] });
+
+      expect(names).not.toContain("create_app");
+      expect(names).not.toContain("list_projects");
+    });
+  });
+
+  describe("get_access", () => {
+    it("reports the mode, the tiers, the toolsets, the version and the Pro state", async () => {
+      const { client } = await connect({ mode: "operate", toolsets: ["core", "apps"] });
+
+      const reply = await callTool(client, "get_access", {});
+
+      expect(reply.data).toStrictEqual({
+        accessMode: "operate",
+        enabledRiskTiers: ["read", "write"],
+        isCriticalUnlocked: false,
+        surface: "tools",
+        toolsets: ["core", "apps"],
+        isElicitationAvailable: false,
+        caproverVersion: "1.14.1",
+        isProFeatureFlagEnabled: true,
+        isProSubscribed: false,
+      });
+    });
+
+    it("says critical operations are unlocked when the switch is on in admin mode", async () => {
+      const { client } = await connect({ mode: "admin", isCriticalAllowed: true });
+
+      const reply = await callTool(client, "get_access", {});
+
+      expect(reply.data).toMatchObject({ isCriticalUnlocked: true, enabledRiskTiers: ["read", "write", "destructive", "critical"] });
+    });
+
+    it("says the client can ask the person when it supports elicitation", async () => {
+      const { client } = await connect({ elicitation: "accept" });
+
+      const reply = await callTool(client, "get_access", {});
+
+      expect(reply.data).toMatchObject({ isElicitationAvailable: true });
+    });
+
+    it("still answers when the Pro state cannot be read", async () => {
+      const { client } = await connect({ failureMessage: "no pro", failOnCall: "getProState" });
+
+      const reply = await callTool(client, "get_access", {});
+
+      expect(reply.data).toMatchObject({ proStateError: "The Pro state could not be read: no pro" });
+    });
+  });
+
+  describe("get_guide", () => {
+    it("returns the topic that was asked for", async () => {
+      const { client } = await connect({ mode: "readonly" });
+
+      const reply = await callTool(client, "get_guide", { topic: "env-vars" });
+
+      expect(reply.data).toMatchObject({ topic: "env-vars" });
+      expect(reply.text).toContain("KEY=value");
+    });
+
+    it("answers an unknown topic with the valid names", async () => {
+      const { client } = await connect({ mode: "readonly" });
+
+      const reply = await callTool(client, "get_guide", { topic: "pizza" });
+
+      expect(reply.isError).toBe(true);
+      expect(reply.data).toStrictEqual({ topics: ["modes", "code-mode", "app-definition", "env-vars", "deploy", "errors"] });
+    });
+
+    it("serves every topic as a resource caprover://docs/<topic>", async () => {
+      const { client } = await connect({ mode: "readonly" });
+
+      const { resources } = await client.listResources();
+      const result = await client.readResource({ uri: "caprover://docs/modes" });
+
+      expect(resources.map((resource) => resource.uri)).toStrictEqual([
+        "caprover://docs/modes",
+        "caprover://docs/code-mode",
+        "caprover://docs/app-definition",
+        "caprover://docs/env-vars",
+        "caprover://docs/deploy",
+        "caprover://docs/errors",
+      ]);
+      expect(JSON.stringify(result.contents)).toContain("CAPROVER_MCP_MODE");
+    });
+  });
+
+  describe("critical operations", () => {
+    it("changes nothing on the first call and returns a preview with a token", async () => {
+      const { client, fake } = await connect({ mode: "admin", isCriticalAllowed: true });
+
+      const reply = await callTool(client, "update_root_domain", ROOT_DOMAIN_INPUT);
+
+      expect(reply.data).toMatchObject({ requires_confirmation: true });
+      expect(fake.calls).toStrictEqual(["getSystemInfo"]);
+    });
+
+    it("runs once the person confirmed with the token of the preview", async () => {
+      const { client, fake } = await connect({ mode: "admin", isCriticalAllowed: true });
+      const preview = await callTool(client, "update_root_domain", ROOT_DOMAIN_INPUT);
+
+      const reply = await callTool(client, "update_root_domain", {
+        ...ROOT_DOMAIN_INPUT,
+        user_confirmed: true,
+        confirmation_token: preview.data.confirmation_token,
+      });
+
+      expect(reply.isError).toBe(false);
+      expect(fake.calls).toContain("updateRootDomain:apps.example.org:false");
+    });
+
+    it("refuses to register when the critical switch is off", async () => {
+      const { client, fake } = await connect({ mode: "admin", isCriticalAllowed: false });
+
+      const reply = await callTool(client, "update_root_domain", ROOT_DOMAIN_INPUT);
+
+      expect(reply.isError).toBe(true);
+      expect(fake.calls).toStrictEqual([]);
+    });
+  });
+
+  describe("elicitation", () => {
+    const confirmDelete = async (client: Client): Promise<ToolReply> => {
+      const preview = await callTool(client, "delete_app", { app_name: "web" });
+      return callTool(client, "delete_app", {
+        app_name: "web",
+        user_confirmed: true,
+        confirmation_token: preview.data.confirmation_token,
+      });
+    };
+
+    it("deletes when the person accepts the question of the client", async () => {
+      const { client, fake } = await connect({ elicitation: "accept" });
+
+      const reply = await confirmDelete(client);
+
+      expect(reply.isError).toBe(false);
+      expect(fake.calls).toContain(DELETE_APP_CALL);
+    });
+
+    it.each(["decline", "cancel"] as const)("deletes nothing when the person answers %s", async (answer) => {
+      const { client, fake } = await connect({ elicitation: answer });
+
+      const reply = await confirmDelete(client);
+
+      expect(reply.isError).toBe(true);
+      expect(reply.text).toContain("The person declined delete_app");
+      expect(fake.calls).not.toContain(DELETE_APP_CALL);
+    });
+
+    it("keeps the token flow when the client cannot ask", async () => {
+      const { client, fake } = await connect({});
+
+      const reply = await confirmDelete(client);
+
+      expect(reply.isError).toBe(false);
+      expect(fake.calls).toContain(DELETE_APP_CALL);
+    });
+  });
+
+  describe("outputs", () => {
+    it("declares an output schema on every registered tool", async () => {
+      const { client } = await connect({
+        mode: "admin",
+        isCriticalAllowed: true,
+        toolsets: ["core", "apps", "domains", "projects", "oneclick", "registries", "cluster", "maintenance", "monitoring", "account"],
+      });
+
+      const { tools } = await client.listTools();
+
+      expect(tools.length).toBeGreaterThan(60);
+      expect(tools.filter((tool) => tool.outputSchema?.type !== "object").map((tool) => tool.name)).toStrictEqual([]);
+    });
+  });
+
+  describe("batch writes", () => {
+    const IMAGE_IDS = ["sha256:a", "sha256:b", "sha256:c"];
+
+    const confirmDeleteImages = async (client: Client): Promise<ToolReply> => {
+      const preview = await callTool(client, "delete_images", { image_ids: IMAGE_IDS });
+      return callTool(client, "delete_images", {
+        image_ids: IMAGE_IDS,
+        user_confirmed: true,
+        confirmation_token: preview.data.confirmation_token,
+      });
+    };
+
+    it("applies every item when none fails", async () => {
+      const { client, fake } = await connect({ isCriticalAllowed: true, toolsets: ["maintenance"] });
+
+      const reply = await confirmDeleteImages(client);
+
+      expect(reply.data).toMatchObject({ applied: IMAGE_IDS, notApplied: [] });
+      expect(fake.calls.filter((call) => call.startsWith("deleteImages"))).toStrictEqual([
+        "deleteImages:sha256:a",
+        DELETE_IMAGE_B_CALL,
+        "deleteImages:sha256:c",
+      ]);
+    });
+
+    it("stops at the first failure and reports what was and was not applied", async () => {
+      const { client, fake } = await connect({
+        isCriticalAllowed: true,
+        toolsets: ["maintenance"],
+        failureMessage: "image in use",
+        failOnCall: DELETE_IMAGE_B_CALL,
+      });
+
+      const reply = await confirmDeleteImages(client);
+
+      expect(reply.isError).toBe(true);
+      expect(reply.data).toMatchObject({ applied: ["sha256:a"], notApplied: ["sha256:b", "sha256:c"], failure: "image in use" });
+      expect(fake.calls.filter((call) => call.startsWith("deleteImages"))).toStrictEqual([
+        "deleteImages:sha256:a",
+        DELETE_IMAGE_B_CALL,
+      ]);
     });
   });
 

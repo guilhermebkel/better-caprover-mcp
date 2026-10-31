@@ -1,0 +1,25 @@
+{
+  "status": 100,
+  "description": "Done",
+  "data": {
+    "registries": [
+      {
+        "id": "reg-1",
+        "registryUser": "deploy",
+        "registryPassword": "fake-registry-password-77",
+        "registryDomain": "registry.example.com",
+        "registryImagePrefix": "team",
+        "registryType": "REMOTE_REG"
+      },
+      {
+        "id": "reg-2",
+        "registryUser": "",
+        "registryPassword": "",
+        "registryDomain": "registry.captain.example.com",
+        "registryImagePrefix": "",
+        "registryType": "LOCAL_REG"
+      }
+    ],
+    "defaultPushRegistryId": "reg-2"
+  }
+}

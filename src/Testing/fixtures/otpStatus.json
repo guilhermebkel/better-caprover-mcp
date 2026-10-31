@@ -1,0 +1,8 @@
+{
+  "status": 100,
+  "description": "Done",
+  "data": {
+    "isEnabled": true,
+    "otpPath": "/x"
+  }
+}

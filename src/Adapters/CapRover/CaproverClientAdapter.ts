@@ -9,21 +9,66 @@ import type {
   CaproverBuildLogs,
   CaproverClientPort,
   CaproverConfig,
+  CaproverDiskCleanup,
   CaproverEnvVar,
+  CaproverGoAccess,
+  CaproverGoAccessReport,
+  CaproverLoadBalancer,
+  CaproverNetData,
+  CaproverNginxConfig,
+  CaproverNode,
+  CaproverNodeDisks,
   CaproverOneClickApp,
+  CaproverOneClickProgress,
+  CaproverOneClickTemplate,
+  CaproverProAlert,
+  CaproverProject,
+  CaproverProState,
+  CaproverRegistryList,
   CaproverSystemInfo,
+  CaproverTheme,
+  CaproverUnusedImage,
   CaptainErrorBody,
+  GoAccessRequest,
   NewAppRequest,
+  NewNodeRequest,
+  NewProjectRequest,
+  OneClickVariableValue,
+  RegistryRequest,
+  ThemeRequest,
 } from "@/Protocols/CaproverClientProtocol.ts";
 import type { Env } from "@/Protocols/EnvProtocol.ts";
 import {
   AppListResponseSchema,
   AppLogsResponseSchema,
   AppRuntimeResponseSchema,
+  AppsRuntimeResponseSchema,
   BuildLogsResponseSchema,
   CaptainErrorSchema,
+  CurrentThemeResponseSchema,
+  DiskCleanupResponseSchema,
+  DiskUsageResponseSchema,
+  GoAccessReportsResponseSchema,
+  GoAccessResponseSchema,
+  LoadBalancerResponseSchema,
+  NetDataResponseSchema,
+  NginxConfigResponseSchema,
+  NodesResponseSchema,
   OneClickAppsResponseSchema,
+  OneClickJobResponseSchema,
+  OneClickProgressResponseSchema,
+  OneClickReposResponseSchema,
+  OneClickTemplateResponseSchema,
+  ProAlertsResponseSchema,
+  ProjectResponseSchema,
+  ProjectsResponseSchema,
+  ProStateResponseSchema,
+  RawNetDataResponseSchema,
+  RegistriesResponseSchema,
   SystemInfoResponseSchema,
+  ThemesResponseSchema,
+  TwoFactorResponseSchema,
+  UnusedImagesResponseSchema,
 } from "@/Schemas/CaproverResponseSchema.ts";
 import { DockerLogUtil } from "@/Utils/DockerLogUtil.ts";
 import { RedactUtil } from "@/Utils/RedactUtil.ts";
@@ -68,17 +113,9 @@ export class CaproverClientAdapter implements CaproverClientPort {
   }
 
   async getAppRuntime(appName: string): Promise<CaproverAppRuntime> {
-    try {
-      return await this.request((api) => api.getAppRuntime(appName), AppRuntimeResponseSchema);
-    } catch (error) {
-      if (error instanceof CaproverRequestError && error.httpStatus === HTTP_NOT_FOUND) {
-        throw new CaproverRequestError(
-          "This CapRover version has no runtime endpoint (CapRover 1.15.5 has none). "
-          + "To see how the app runs, use `get_app_logs` and `get_build_logs`.",
-        );
-      }
-      throw error;
-    }
+    return this.callRuntimeEndpoint(
+      () => this.request((api) => api.getAppRuntime(appName), AppRuntimeResponseSchema),
+    );
   }
 
   async getAppLogs(appName: string): Promise<string> {
@@ -123,6 +160,271 @@ export class CaproverClientAdapter implements CaproverClientPort {
 
   async deleteApp(appName: string, volumeNames: string[]): Promise<void> {
     await this.send((api) => api.deleteApp(appName, volumeNames, undefined));
+  }
+
+  async listAppsRuntime(): Promise<CaproverAppRuntime[]> {
+    return this.callRuntimeEndpoint(
+      () => this.request((api) => api.getAppsRuntime(), AppsRuntimeResponseSchema),
+    );
+  }
+
+  async renameApp(appName: string, newAppName: string): Promise<void> {
+    await this.send((api) => api.renameApp(appName, newAppName));
+  }
+
+  async startBuild(webhookPath: string): Promise<void> {
+    await this.send((api) => api.forceBuild(webhookPath));
+  }
+
+  async uploadAppArchive(appName: string, archive: Uint8Array): Promise<void> {
+    const file = new File([Uint8Array.from(archive)], "source.tar", { type: "application/x-tar" });
+    await this.send((api) => api.uploadAppData(appName, file, true));
+  }
+
+  async removeCustomDomain(appName: string, domain: string): Promise<void> {
+    await this.send((api) => api.removeCustomDomain(appName, domain));
+  }
+
+  async updateRootDomain(rootDomain: string, isForced: boolean): Promise<void> {
+    await this.send((api) => api.updateRootDomain(rootDomain, isForced));
+  }
+
+  async enableRootSsl(emailAddress: string): Promise<void> {
+    await this.send((api) => api.enableRootSsl(emailAddress));
+  }
+
+  async setForceSsl(isEnabled: boolean): Promise<void> {
+    await this.send((api) => api.forceSsl(isEnabled));
+  }
+
+  async listProjects(): Promise<CaproverProject[]> {
+    return this.request((api) => api.getAllProjects(), ProjectsResponseSchema);
+  }
+
+  async createProject(request: NewProjectRequest): Promise<CaproverProject> {
+    const project = { id: "", name: request.name, description: request.description, parentProjectId: request.parentProjectId };
+    return this.request((api) => api.registerProject(project), ProjectResponseSchema);
+  }
+
+  async updateProject(project: CaproverProject): Promise<void> {
+    const definition = {
+      id: project.projectId,
+      name: project.name,
+      description: project.description,
+      parentProjectId: project.parentProjectId,
+    };
+    await this.send((api) => api.updateProject(definition));
+  }
+
+  async deleteProjects(projectIds: string[]): Promise<void> {
+    await this.send((api) => api.deleteProjects(projectIds));
+  }
+
+  async getOneClickApp(templateName: string): Promise<CaproverOneClickTemplate> {
+    const { rootDomain } = await this.getSystemInfo();
+    return this.request((api) => api.getOneClickAppByName(templateName, rootDomain), OneClickTemplateResponseSchema);
+  }
+
+  async listOneClickRepos(): Promise<string[]> {
+    return this.request((api) => api.getAllOneClickAppRepos(), OneClickReposResponseSchema);
+  }
+
+  async addOneClickRepo(repositoryUrl: string): Promise<void> {
+    await this.send((api) => api.addNewCustomOneClickRepo(repositoryUrl));
+  }
+
+  async deleteOneClickRepo(repositoryUrl: string): Promise<void> {
+    await this.send((api) => api.deleteCustomOneClickRepo(repositoryUrl));
+  }
+
+  async startOneClickDeploy(templateName: string, values: OneClickVariableValue[]): Promise<string> {
+    const { template } = await this.getOneClickApp(templateName);
+    const keyed = Object.fromEntries(values.map((entry) => [entry.variableId, entry.value]));
+    return this.request((api) => api.startOneClickAppDeploy(template, keyed, templateName), OneClickJobResponseSchema);
+  }
+
+  async getOneClickDeployProgress(jobId: string): Promise<CaproverOneClickProgress> {
+    return this.request((api) => api.getOneClickAppDeployProgress(jobId), OneClickProgressResponseSchema);
+  }
+
+  async listRegistries(): Promise<CaproverRegistryList> {
+    return this.request((api) => api.getDockerRegistries(), RegistriesResponseSchema);
+  }
+
+  async addRegistry(request: RegistryRequest): Promise<void> {
+    await this.send((api) => api.addDockerRegistry(CaproverClientAdapter.buildRegistryInfo(request)));
+  }
+
+  async updateRegistry(request: RegistryRequest): Promise<void> {
+    await this.send((api) => api.updateDockerRegistry(CaproverClientAdapter.buildRegistryInfo(request)));
+  }
+
+  async deleteRegistry(registryId: string): Promise<void> {
+    await this.send((api) => api.deleteDockerRegistry(registryId));
+  }
+
+  async setDefaultPushRegistry(registryId: string): Promise<void> {
+    await this.send((api) => api.setDefaultPushDockerRegistry(registryId));
+  }
+
+  async enableSelfHostedRegistry(): Promise<void> {
+    await this.send((api) => api.enableSelfHostedDockerRegistry());
+  }
+
+  async disableSelfHostedRegistry(): Promise<void> {
+    await this.send((api) => api.disableSelfHostedDockerRegistry());
+  }
+
+  async listNodes(): Promise<CaproverNode[]> {
+    return this.request((api) => api.getAllNodes(), NodesResponseSchema);
+  }
+
+  async addNode(request: NewNodeRequest): Promise<void> {
+    await this.send((api) => api.addDockerNode(
+      request.nodeRole,
+      request.privateKey,
+      request.remoteNodeIpAddress,
+      request.sshPort,
+      request.sshUser,
+      request.captainIpAddress,
+    ));
+  }
+
+  async getLoadBalancer(): Promise<CaproverLoadBalancer> {
+    return this.request((api) => api.getLoadBalancerInfo(), LoadBalancerResponseSchema);
+  }
+
+  async getDiskUsage(): Promise<CaproverNodeDisks[]> {
+    return this.request((api) => api.getDiskUsage(), DiskUsageResponseSchema);
+  }
+
+  async listUnusedImages(mostRecentLimit: number): Promise<CaproverUnusedImage[]> {
+    return this.request((api) => api.getUnusedImages(mostRecentLimit), UnusedImagesResponseSchema);
+  }
+
+  async deleteImages(imageIds: string[]): Promise<void> {
+    await this.send((api) => api.deleteImages(imageIds));
+  }
+
+  async getDiskCleanup(): Promise<CaproverDiskCleanup> {
+    return this.request((api) => api.getDiskCleanUpSettings(), DiskCleanupResponseSchema);
+  }
+
+  async setDiskCleanup(settings: CaproverDiskCleanup): Promise<void> {
+    const { mostRecentLimit, cronSchedule, timezone } = settings;
+    await this.send((api) => api.setDiskCleanUpSettings(mostRecentLimit, cronSchedule, timezone));
+  }
+
+  async updateServerVersion(latestVersion: string): Promise<void> {
+    await this.send((api) => api.performUpdate(latestVersion));
+  }
+
+  async getNginxConfig(): Promise<CaproverNginxConfig> {
+    return this.request((api) => api.getNginxConfig(), NginxConfigResponseSchema);
+  }
+
+  async setNginxConfig(baseConfig: string, captainConfig: string): Promise<void> {
+    await this.send((api) => api.setNginxConfig(baseConfig, captainConfig));
+  }
+
+  async getNetData(): Promise<CaproverNetData> {
+    return this.request((api) => api.getNetDataInfo(), NetDataResponseSchema);
+  }
+
+  async setNetDataEnabled(isEnabled: boolean): Promise<void> {
+    const current = await this.request((api) => api.getNetDataInfo(), RawNetDataResponseSchema);
+    await this.send((api) => api.updateNetDataInfo({ ...current, isEnabled }));
+  }
+
+  async getGoAccess(): Promise<CaproverGoAccess> {
+    return this.request((api) => api.getGoAccessInfo(), GoAccessResponseSchema);
+  }
+
+  async setGoAccess(request: GoAccessRequest): Promise<void> {
+    const info = {
+      isEnabled: request.isEnabled,
+      data: { rotationFrequencyCron: request.rotationFrequencyCron, logRetentionDays: request.logRetentionDays },
+    };
+    await this.send((api) => api.updateGoAccessInfo(info));
+  }
+
+  async listGoAccessReports(appName: string): Promise<CaproverGoAccessReport[]> {
+    return this.request((api) => api.getGoAccessReports(appName), GoAccessReportsResponseSchema);
+  }
+
+  async getTwoFactorStatus(): Promise<boolean> {
+    return this.request((api) => api.getOtpStatus(), TwoFactorResponseSchema);
+  }
+
+  async setPassword(newPassword: string): Promise<void> {
+    const oldPassword = this.config?.password ?? "";
+    await this.send((api) => api.changePass(oldPassword, newPassword));
+    this.apiPromise = undefined;
+  }
+
+  async getProState(): Promise<CaproverProState> {
+    return this.request((api) => api.getProFeaturesState(), ProStateResponseSchema);
+  }
+
+  async setProApiKey(apiKey: string): Promise<void> {
+    await this.send((api) => api.setProApiKey(apiKey));
+  }
+
+  async listProAlerts(): Promise<CaproverProAlert[]> {
+    return this.request((api) => api.getProConfigs(), ProAlertsResponseSchema);
+  }
+
+  async listThemes(): Promise<CaproverTheme[]> {
+    return this.request((api) => api.getAllThemes(), ThemesResponseSchema);
+  }
+
+  async getCurrentTheme(): Promise<string> {
+    return this.request((api) => api.getCurrentTheme(), CurrentThemeResponseSchema);
+  }
+
+  async setCurrentTheme(themeName: string): Promise<void> {
+    await this.send((api) => api.setCurrentTheme(themeName));
+  }
+
+  async saveTheme(request: ThemeRequest): Promise<void> {
+    const theme = { name: request.themeName, content: request.content };
+    await this.send((api) => api.saveTheme(request.previousName, theme));
+  }
+
+  async deleteTheme(themeName: string): Promise<void> {
+    await this.send((api) => api.deleteTheme(themeName));
+  }
+
+  private static buildRegistryInfo(request: RegistryRequest): {
+    id: string;
+    registryUser: string;
+    registryPassword: string;
+    registryDomain: string;
+    registryImagePrefix: string;
+    registryType: "REMOTE_REG";
+  } {
+    return {
+      id: request.registryId,
+      registryUser: request.registryUser,
+      registryPassword: request.registryPassword,
+      registryDomain: request.registryDomain,
+      registryImagePrefix: request.registryImagePrefix,
+      registryType: "REMOTE_REG",
+    };
+  }
+
+  private async callRuntimeEndpoint<Result>(call: () => Promise<Result>): Promise<Result> {
+    try {
+      return await call();
+    } catch (error) {
+      if (error instanceof CaproverRequestError && error.httpStatus === HTTP_NOT_FOUND) {
+        throw new CaproverRequestError(
+          "This CapRover version has no runtime endpoint (CapRover 1.15.5 has none). "
+          + "To see how the app runs, use `get_app_logs` and `get_build_logs`.",
+        );
+      }
+      throw error;
+    }
   }
 
   private async request<Result>(

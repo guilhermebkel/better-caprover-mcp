@@ -3,6 +3,7 @@ import type { ListOneClickAppsInput } from "@/Protocols/AppInputProtocol.ts";
 import type { CaproverClientPort } from "@/Protocols/CaproverClientProtocol.ts";
 import type { OperationPort, OperationResult } from "@/Protocols/OperationProtocol.ts";
 import { ListOneClickAppsInputSchema } from "@/Schemas/AppInputSchema.ts";
+import { ListOneClickAppsOutputSchema } from "@/Schemas/AppOutputSchema.ts";
 
 export class ListOneClickAppsOperation implements OperationPort<ListOneClickAppsInput> {
   static readonly NAME = "listOneClickApps";
@@ -15,6 +16,8 @@ export class ListOneClickAppsOperation implements OperationPort<ListOneClickApps
     + "`total` and `isTruncated`; set `limit` or `query` when `isTruncated` is true.";
 
   readonly inputSchema = ListOneClickAppsInputSchema;
+
+  readonly outputSchema = ListOneClickAppsOutputSchema;
 
   readonly risk: RiskTier = "read";
 

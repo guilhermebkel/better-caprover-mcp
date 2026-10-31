@@ -6,6 +6,7 @@ import { GetLogsInputSchema } from "@/Schemas/AppInputSchema.ts";
 import type { AppResolverService } from "@/Services/AppResolverService.ts";
 import { LogTextUtil } from "@/Utils/LogTextUtil.ts";
 import { RedactUtil } from "@/Utils/RedactUtil.ts";
+import { GetAppLogsOutputSchema } from "@/Schemas/AppOutputSchema.ts";
 
 export class GetAppLogsOperation implements OperationPort<GetLogsInput> {
   static readonly NAME = "getAppLogs";
@@ -18,6 +19,8 @@ export class GetAppLogsOperation implements OperationPort<GetLogsInput> {
     + "when `isTruncated` is true, raise `lines` (at most 500) to read more.";
 
   readonly inputSchema = GetLogsInputSchema;
+
+  readonly outputSchema = GetAppLogsOutputSchema;
 
   readonly risk: RiskTier = "read";
 

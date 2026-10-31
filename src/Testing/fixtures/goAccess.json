@@ -1,0 +1,11 @@
+{
+  "status": 100,
+  "description": "Done",
+  "data": {
+    "isEnabled": true,
+    "data": {
+      "rotationFrequencyCron": "0 0 * * *",
+      "logRetentionDays": 10
+    }
+  }
+}

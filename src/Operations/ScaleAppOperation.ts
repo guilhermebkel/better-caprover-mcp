@@ -4,6 +4,7 @@ import type { CaproverClientPort } from "@/Protocols/CaproverClientProtocol.ts";
 import type { OperationPort, OperationResult } from "@/Protocols/OperationProtocol.ts";
 import { ScaleAppInputSchema } from "@/Schemas/AppInputSchema.ts";
 import type { AppResolverService } from "@/Services/AppResolverService.ts";
+import { ScaleAppOutputSchema } from "@/Schemas/AppOutputSchema.ts";
 
 export class ScaleAppOperation implements OperationPort<ScaleAppInput> {
   static readonly NAME = "scaleApp";
@@ -13,6 +14,8 @@ export class ScaleAppOperation implements OperationPort<ScaleAppInput> {
     + "It returns the old and the new number of instances. It writes to the server; with `dry_run` it changes nothing.";
 
   readonly inputSchema = ScaleAppInputSchema;
+
+  readonly outputSchema = ScaleAppOutputSchema;
 
   readonly risk: RiskTier = "write";
 

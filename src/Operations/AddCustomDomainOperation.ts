@@ -4,6 +4,7 @@ import type { CaproverClientPort } from "@/Protocols/CaproverClientProtocol.ts";
 import type { OperationPort, OperationResult } from "@/Protocols/OperationProtocol.ts";
 import { AddCustomDomainInputSchema } from "@/Schemas/AppInputSchema.ts";
 import type { AppResolverService } from "@/Services/AppResolverService.ts";
+import { AddCustomDomainOutputSchema } from "@/Schemas/AppOutputSchema.ts";
 
 export class AddCustomDomainOperation implements OperationPort<AddCustomDomainInput> {
   static readonly NAME = "addCustomDomain";
@@ -14,6 +15,8 @@ export class AddCustomDomainOperation implements OperationPort<AddCustomDomainIn
     + "It writes to the server; with `dry_run` it changes nothing.";
 
   readonly inputSchema = AddCustomDomainInputSchema;
+
+  readonly outputSchema = AddCustomDomainOutputSchema;
 
   readonly risk: RiskTier = "write";
 

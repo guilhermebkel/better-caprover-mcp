@@ -1,0 +1,31 @@
+{
+  "status": 100,
+  "description": "Done",
+  "data": {
+    "isEnabled": true,
+    "netDataUrl": "https://netdata.example.com",
+    "data": {
+      "smtp": {
+        "to": "ops@example.com",
+        "hostname": "",
+        "server": "smtp.example.com",
+        "port": "587",
+        "allowNonTls": "",
+        "username": "mailer",
+        "password": "fake-smtp-password-42"
+      },
+      "slack": {
+        "hook": "",
+        "channel": ""
+      },
+      "telegram": {
+        "chatId": "",
+        "botToken": ""
+      },
+      "pushBullet": {
+        "apiToken": "",
+        "fallbackEmail": ""
+      }
+    }
+  }
+}
