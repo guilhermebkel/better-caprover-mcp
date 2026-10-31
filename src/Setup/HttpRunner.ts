@@ -20,6 +20,7 @@ import { EnvUtil } from "@/Utils/EnvUtil.ts";
 import { HttpBodyUtil } from "@/Utils/HttpBodyUtil.ts";
 import { LogUtil } from "@/Utils/LogUtil.ts";
 import { NetworkBindUtil } from "@/Utils/NetworkBindUtil.ts";
+import { StartupLogUtil } from "@/Utils/StartupLogUtil.ts";
 
 const HEALTH_PATH = "/health";
 const MCP_PATH = "/mcp";
@@ -48,6 +49,7 @@ export class HttpRunner {
   }
 
   static async start(env: Env = EnvUtil.read(), options: HttpRunnerStartOptions = {}): Promise<HttpServerHandle> {
+    StartupLogUtil.startLogging(env, "http");
     HttpRunner.assertBindAllowed(env);
     const getNowMs = (): number => Date.now();
     const runtime = SharedMcpRuntimeSurface.buildFromEnv(
@@ -92,7 +94,7 @@ export class HttpRunner {
     const markerPath = options.httpMarkerPath ?? HttpModeMarkerUtil.DEFAULT_MARKER_PATH;
     const port = await HttpRunner.bindHttpServer(httpServer, env.CAPROVER_MCP_HTTP_HOST, env.CAPROVER_MCP_HTTP_PORT);
     HttpModeMarkerUtil.markHttpModeActive(markerPath);
-    LogUtil.logInfo("http_server_started");
+    StartupLogUtil.logServerStarted(env, "http");
     return {
       url: `http://${NetworkBindUtil.buildUrlHost(env.CAPROVER_MCP_HTTP_HOST)}:${port}`,
       close: async () => {
