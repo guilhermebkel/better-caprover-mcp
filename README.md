@@ -15,6 +15,7 @@
   <a href="https://better-caprover-mcp.guilherr.me"><img src="https://img.shields.io/badge/Website-f4e40c" alt="Website" /></a>
   <a href="#quick-start"><img src="https://img.shields.io/badge/Quick_start-f4e40c" alt="Quick start" /></a>
   <a href="https://www.npmjs.com/package/better-caprover-mcp"><img src="https://img.shields.io/npm/v/better-caprover-mcp?color=f4e40c&label=npm" alt="npm version" /></a>
+  <a href="https://www.npmjs.com/package/better-caprover-mcp"><img src="https://img.shields.io/npm/dm/better-caprover-mcp.svg?style=flat-square" alt="npm downloads per month" /></a>
   <a href="https://github.com/guilhermebkel/better-caprover-mcp/actions/workflows/ci.yml"><img src="https://img.shields.io/github/actions/workflow/status/guilhermebkel/better-caprover-mcp/ci.yml?branch=main&label=CI" alt="CI" /></a>
   <a href="LICENSE"><img src="https://img.shields.io/badge/License-MIT-yellow" alt="License: MIT" /></a>
   <img src="https://img.shields.io/badge/Telemetry-none-2ea44f" alt="No telemetry" />
